@@ -336,6 +336,45 @@ export interface MemberStatsResponse {
   noCreditsMembers: number
 }
 
+// ─── Member management ─────────────────────────────────────────────────────
+
+export interface MemberListResponse {
+  id: number
+  email: string
+  firstName: string
+  lastName: string
+  fullName: string
+  role: UserRole
+  roleLabel: string
+  creditBalance: number
+  phone: string | null
+  memberNumber: string | null
+  profilePhotoUrl: string | null
+  isActive: boolean
+  createdAt: string
+  upcomingSessionCount: number
+}
+
+export interface MemberDetailResponse {
+  id: number
+  email: string
+  firstName: string
+  lastName: string
+  role: string
+  roleLabel: string
+  creditBalance: number
+  phone: string | null
+  memberNumber: string | null
+  profilePhotoUrl: string | null
+  dateOfBirth: DateOnly | null
+  emergencyContactName: string | null
+  emergencyContactPhone: string | null
+  isActive: boolean
+  lastLoginAt: string | null
+  createdAt: string
+}
+
+type DateOnly = string  // ISO date string "YYYY-MM-DD"
 
 // ─── My Account ───────────────────────────────────────────────────────────────
 
