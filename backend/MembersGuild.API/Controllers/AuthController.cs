@@ -45,7 +45,7 @@ public class AuthController : ControllerBase
 
         return Ok(new { userId, email, role, clubSlug });
     }
-}
+
 
 /// <summary>POST /api/auth/change-password</summary>
 [Authorize]
@@ -66,4 +66,4 @@ public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest
     await db.SaveChangesAsync();
 
     return Ok(new { message = "Password changed successfully" });
-}
+}}
