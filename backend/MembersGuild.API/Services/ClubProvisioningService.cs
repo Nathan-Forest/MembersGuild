@@ -34,7 +34,14 @@ public class ClubProvisioningService : IClubProvisioningService
     {
         var schemaName = $"club_{slug.ToLower().Replace("-", "_")}";
 
-        // 1. Create platform record
+        // 1. Create schema and all tables FIRST
+        // If this fails, no platform record is written and the seed will retry cleanly
+        await RunClubMigrationsAsync(schemaName);
+
+        // 2. Seed default settings into the new schema
+        await SeedDefaultSettingsAsync(schemaName);
+
+        // 3. Only write the platform record once schema + tables exist
         var club = new Club
         {
             Slug = slug.ToLower(),
@@ -48,7 +55,7 @@ public class ClubProvisioningService : IClubProvisioningService
         _platformDb.Clubs.Add(club);
         await _platformDb.SaveChangesAsync();
 
-        // 2. Enable all standard features by default
+        // 4. Enable all standard features
         var features = new[]
         {
             FeatureKeys.Calendar, FeatureKeys.MySessions, FeatureKeys.Attendance,
@@ -67,13 +74,7 @@ public class ClubProvisioningService : IClubProvisioningService
         }
         await _platformDb.SaveChangesAsync();
 
-        // 3. Create schema and all tables
-        await RunClubMigrationsAsync(schemaName);
-
-        // 5. Seed default settings
-        await SeedDefaultSettingsAsync(schemaName);
-
-        // 6. Seed sport-specific template if applicable
+        // 5. Sport-specific template
         if (sport == "swimming")
             await SeedSwimmingTemplateAsync(schemaName);
 
@@ -82,52 +83,48 @@ public class ClubProvisioningService : IClubProvisioningService
         return club;
     }
 
-    private async Task CreateSchemaAsync(string schemaName)
-    {
-        var connectionString = _config.GetConnectionString("Default")
-            ?? throw new InvalidOperationException("Connection string 'Default' not configured");
-
-        await using var conn = new NpgsqlConnection(connectionString);
-        await conn.OpenAsync();
-
-        // Safe schema name — only alphanumeric and underscores allowed
-        if (!System.Text.RegularExpressions.Regex.IsMatch(schemaName, @"^[a-z_][a-z0-9_]*$"))
-            throw new ArgumentException($"Invalid schema name: {schemaName}");
-
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = $"CREATE SCHEMA IF NOT EXISTS {schemaName}";
-        await cmd.ExecuteNonQueryAsync();
-
-        _logger.LogInformation("Created schema: {Schema}", schemaName);
-    }
-
     private async Task RunClubMigrationsAsync(string schemaName)
     {
-        var connectionString = _config.GetConnectionString("Default")
+        var baseConnectionString = _config.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Connection string 'Default' not configured");
 
+        // Step 1: Create the schema using a direct connection
+        await using (var conn = new NpgsqlConnection(baseConnectionString))
+        {
+            await conn.OpenAsync();
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = $"CREATE SCHEMA IF NOT EXISTS \"{schemaName}\"";
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        // Step 2: Build a connection string with SearchPath set to our schema.
+        // This tells EnsureCreatedAsync to create all tables inside this schema.
+        var builder = new NpgsqlConnectionStringBuilder(baseConnectionString)
+        {
+            SearchPath = schemaName
+        };
+
         var options = new DbContextOptionsBuilder<ClubDbContext>()
-            .UseNpgsql(connectionString)
+            .UseNpgsql(builder.ToString())
             .Options;
 
         await using var db = new ClubDbContext(options, schemaName);
+        await db.Database.EnsureCreatedAsync();
 
-        // EnsureCreatedAsync only works when no tables exist yet.
-        // We drop and recreate to guarantee a clean slate.
-        await db.Database.ExecuteSqlRawAsync($"CREATE SCHEMA IF NOT EXISTS {schemaName}");
-
-        // Get all table creation SQL and execute it
-        var script = db.Database.GenerateCreateScript();
-        await db.Database.ExecuteSqlRawAsync(script);
-
-        _logger.LogInformation("Applied schema for: {Schema}", schemaName);
+        _logger.LogInformation("Schema and tables created for: {Schema}", schemaName);
     }
 
     private async Task SeedDefaultSettingsAsync(string schemaName)
     {
         var connectionString = _config.GetConnectionString("Default")!;
+
+        var builder = new NpgsqlConnectionStringBuilder(connectionString)
+        {
+            SearchPath = schemaName
+        };
+
         var options = new DbContextOptionsBuilder<ClubDbContext>()
-            .UseNpgsql(connectionString).Options;
+            .UseNpgsql(builder.ToString()).Options;
         await using var db = new ClubDbContext(options, schemaName);
 
         db.ClubSettings.AddRange(
@@ -145,8 +142,14 @@ public class ClubProvisioningService : IClubProvisioningService
     public async Task SeedSwimmingTemplateAsync(string schemaName)
     {
         var connectionString = _config.GetConnectionString("Default")!;
+
+        var builder = new NpgsqlConnectionStringBuilder(connectionString)
+        {
+            SearchPath = schemaName
+        };
+
         var options = new DbContextOptionsBuilder<ClubDbContext>()
-            .UseNpgsql(connectionString).Options;
+            .UseNpgsql(builder.ToString()).Options;
         await using var db = new ClubDbContext(options, schemaName);
 
         var strokes = new[] { "Freestyle", "Backstroke", "Breaststroke", "Butterfly" };
@@ -168,19 +171,11 @@ public class ClubProvisioningService : IClubProvisioningService
             }
         }
 
-        // Default CATS form fields for swimming
         db.CatsFormFields.AddRange(
             new CatsFormField { FieldKey = "swam_squad_before", FieldLabel = "Have you swum in a squad before?", FieldType = "boolean", DisplayOrder = 1, IsActive = true },
             new CatsFormField { FieldKey = "freestyle_100m", FieldLabel = "Approximate 100m freestyle time", FieldType = "text", DisplayOrder = 2, IsActive = true },
-            new CatsFormField
-            {
-                FieldKey = "strokes",
-                FieldLabel = "Strokes you swim",
-                FieldType = "select",
-                FieldOptions = "[\"Freestyle\",\"Backstroke\",\"Breaststroke\",\"Butterfly\"]",
-                DisplayOrder = 3,
-                IsActive = true
-            },
+            new CatsFormField { FieldKey = "strokes", FieldLabel = "Strokes you swim", FieldType = "select",
+                FieldOptions = "[\"Freestyle\",\"Backstroke\",\"Breaststroke\",\"Butterfly\"]", DisplayOrder = 3, IsActive = true },
             new CatsFormField { FieldKey = "health_concerns", FieldLabel = "Any health concerns we should know about?", FieldType = "boolean", DisplayOrder = 4, IsActive = true },
             new CatsFormField { FieldKey = "goals", FieldLabel = "What are your swimming goals?", FieldType = "text", DisplayOrder = 5, IsActive = false }
         );
@@ -189,21 +184,22 @@ public class ClubProvisioningService : IClubProvisioningService
         _logger.LogInformation("Seeded swimming template for: {Schema}", schemaName);
     }
 
-    /// <summary>
-    /// Resets demo club data to a clean seeded state.
-    /// Called from super-admin after a demo session.
-    /// </summary>
     public async Task ResetDemoClubAsync(string slug)
     {
         var club = await _platformDb.Clubs.FirstOrDefaultAsync(c => c.Slug == slug && c.IsDemo)
             ?? throw new InvalidOperationException($"No demo club found with slug: {slug}");
 
         var connectionString = _config.GetConnectionString("Default")!;
+
+        var builder = new NpgsqlConnectionStringBuilder(connectionString)
+        {
+            SearchPath = club.SchemaName
+        };
+
         var options = new DbContextOptionsBuilder<ClubDbContext>()
-            .UseNpgsql(connectionString).Options;
+            .UseNpgsql(builder.ToString()).Options;
         await using var db = new ClubDbContext(options, club.SchemaName);
 
-        // Wipe all data tables (preserves settings and metrics)
         db.AttendanceRecords.RemoveRange(db.AttendanceRecords);
         db.SessionBookings.RemoveRange(db.SessionBookings);
         db.Sessions.RemoveRange(db.Sessions);
@@ -214,49 +210,6 @@ public class ClubProvisioningService : IClubProvisioningService
         db.Users.RemoveRange(db.Users);
         await db.SaveChangesAsync();
 
-        // Re-seed demo data
-        await SeedDemoDataAsync(db, club.SchemaName);
-
         _logger.LogInformation("Reset demo club: {Slug}", slug);
-    }
-
-    private static async Task SeedDemoDataAsync(ClubDbContext db, string schemaName)
-    {
-        // Webmaster account
-        db.Users.Add(new User
-        {
-            Email = "webmaster@forestden.demo",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Demo1234!"),
-            FirstName = "Alex",
-            LastName = "Webmaster",
-            Role = Roles.Webmaster,
-            CreditBalance = 10,
-            IsActive = true
-        });
-
-        // A few member accounts
-        var members = new[]
-        {
-            ("sarah.jones@email.com", "Sarah", "Jones", Roles.Member, 8),
-            ("james.smith@email.com", "James", "Smith", Roles.Member, 3),
-            ("coach.ron@email.com",   "Ron",   "Rhodes", Roles.Coach,  0),
-            ("fin.chen@email.com",    "Fiona", "Chen",   Roles.Finance, 0),
-        };
-
-        foreach (var (email, first, last, role, credits) in members)
-        {
-            db.Users.Add(new User
-            {
-                Email = email,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Demo1234!"),
-                FirstName = first,
-                LastName = last,
-                Role = role,
-                CreditBalance = credits,
-                IsActive = true
-            });
-        }
-
-        await db.SaveChangesAsync();
     }
 }
