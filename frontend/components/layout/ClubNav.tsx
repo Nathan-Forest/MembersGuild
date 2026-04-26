@@ -19,22 +19,22 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard' },
-  { label: 'Calendar',  href: '/calendar',    roles: undefined },
+  { label: 'Calendar', href: '/calendar', roles: undefined },
   { label: 'My Sessions', href: '/my-sessions' },
-  { label: 'Training',  href: '/training' },
-  { label: 'Swim Shop', href: '/shop',         roles: ['member','coach','committee','membership','finance','webmaster'] },
-  { label: 'My Account', href: '/my-account',  roles: ['cats','member','committee','membership','finance','webmaster'] },
-  { label: 'Attendance', href: '/attendance',  roles: ['coach','committee','membership','finance','webmaster'] },
-  { label: 'Members',   href: '/members',      roles: ['coach','committee','membership','finance','webmaster'] },
+  { label: 'Training', href: '/training' },
+  { label: 'Swim Shop', href: '/shop', roles: ['member', 'coach', 'committee', 'membership', 'finance', 'webmaster'] },
+  { label: 'My Account', href: '/my-account', roles: ['cats', 'member', 'committee', 'membership', 'finance', 'webmaster'] },
+  { label: 'Attendance', href: '/attendance', roles: ['coach', 'committee', 'membership', 'finance', 'webmaster'] },
+  { label: 'Members', href: '/members', roles: ['coach', 'committee', 'membership', 'finance', 'webmaster'] },
 ]
 
 const MANAGEMENT_ITEMS: NavItem[] = [
-  { label: 'Sessions',       href: '/management/sessions',  roles: ['coach','committee','webmaster'] },
-  { label: 'Locations',      href: '/management/locations', roles: ['webmaster'] },
-  { label: 'Training',       href: '/management/training',  roles: ['coach','committee','webmaster'] },
-  { label: 'Credits',        href: '/management/credits',   roles: ['finance','webmaster'] },
-  { label: 'Shop',           href: '/management/shop',      roles: ['webmaster'] },
-  { label: 'Site Settings',  href: '/management/settings',  roles: ['webmaster'] },
+  { label: 'Sessions', href: '/management/sessions', roles: ['coach', 'committee', 'webmaster'] },
+  { label: 'Locations', href: '/management/locations', roles: ['webmaster'] },
+  { label: 'Training', href: '/management/training', roles: ['coach', 'committee', 'webmaster'] },
+  { label: 'Credits', href: '/management/credits', roles: ['finance', 'webmaster'] },
+  { label: 'Shop', href: '/management/shop', roles: ['webmaster'] },
+  { label: 'Site Settings', href: '/management/settings', roles: ['webmaster'] },
 ]
 
 export default function ClubNav({ config }: Props) {
@@ -88,11 +88,10 @@ export default function ClubNav({ config }: Props) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  isActive(item.href)
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${isActive(item.href)
                     ? 'text-white'
                     : 'text-gray-300 hover:text-white hover:bg-gray-800'
-                }`}
+                  }`}
                 style={isActive(item.href) ? { backgroundColor: 'var(--color-primary)' } : {}}
               >
                 {item.label}
@@ -121,11 +120,10 @@ export default function ClubNav({ config }: Props) {
                           key={item.href}
                           href={item.href}
                           onClick={() => setMgmtOpen(false)}
-                          className={`block px-4 py-2 text-sm transition-colors ${
-                            isActive(item.href)
+                          className={`block px-4 py-2 text-sm transition-colors ${isActive(item.href)
                               ? 'text-white font-medium'
                               : 'text-gray-700 hover:bg-gray-50'
-                          }`}
+                            }`}
                           style={isActive(item.href) ? { backgroundColor: 'var(--color-primary)' } : {}}
                         >
                           {item.label}
@@ -178,9 +176,8 @@ export default function ClubNav({ config }: Props) {
                 key={item.href}
                 href={item.href}
                 onClick={() => setMenuOpen(false)}
-                className={`block px-3 py-2 rounded-md text-sm font-medium ${
-                  isActive(item.href) ? 'text-white' : 'text-gray-300 hover:text-white hover:bg-gray-800'
-                }`}
+                className={`block px-3 py-2 rounded-md text-sm font-medium ${isActive(item.href) ? 'text-white' : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                  }`}
                 style={isActive(item.href) ? { backgroundColor: 'var(--color-primary)' } : {}}
               >
                 {item.label}
