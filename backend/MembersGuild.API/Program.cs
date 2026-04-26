@@ -18,10 +18,6 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 builder.Services.AddDbContext<PlatformDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// Club context factory — creates per-request contexts scoped to a club schema
-builder.Services.AddDbContextFactory<ClubDbContext>((sp, options) =>
-    options.UseNpgsql(connectionString));
-
 // ── Multi-tenancy ─────────────────────────────────────────────────────────────
 
 // ClubContext is scoped — one per HTTP request, populated by ClubResolutionMiddleware

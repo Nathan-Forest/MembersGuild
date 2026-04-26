@@ -5,23 +5,18 @@ namespace MembersGuild.API.Extensions;
 
 /// <summary>
 /// Creates a ClubDbContext scoped to the current request's club schema.
-/// Injected into controllers/services that need to query club data.
-///
-/// Usage in a controller:
-///   var db = _factory.CreateForCurrentClub();
-///   var users = await db.Users.ToListAsync();
-///   // All queries automatically scoped to this club's schema
+/// Injected into controllers and services that need to query club data.
 /// </summary>
 public class ClubDbContextFactory
 {
-    private readonly IDbContextFactory<ClubDbContext> _factory;
+    private readonly IConfiguration _config;
     private readonly Middleware.ClubContext _clubContext;
 
     public ClubDbContextFactory(
-        IDbContextFactory<ClubDbContext> factory,
+        IConfiguration config,
         Middleware.ClubContext clubContext)
     {
-        _factory = factory;
+        _config = config;
         _clubContext = clubContext;
     }
 
@@ -31,22 +26,14 @@ public class ClubDbContextFactory
             throw new InvalidOperationException(
                 "ClubContext.SchemaName is not set. ClubResolutionMiddleware must run first.");
 
+        var connectionString = _config.GetConnectionString("Default")
+            ?? throw new InvalidOperationException("Connection string 'Default' not configured");
+
         return new ClubDbContext(
             new DbContextOptionsBuilder<ClubDbContext>()
-                .UseNpgsql(GetConnectionString())
+                .UseNpgsql(connectionString)
                 .Options,
             _clubContext.SchemaName
         );
-    }
-
-    private string GetConnectionString()
-    {
-        // Connection string is pulled from the factory's underlying options
-        // This works because the factory is registered with the connection string in Program.cs
-        var context = _factory.CreateDbContext();
-        var cs = context.Database.GetConnectionString()
-            ?? throw new InvalidOperationException("Connection string not configured");
-        context.Dispose();
-        return cs;
     }
 }
