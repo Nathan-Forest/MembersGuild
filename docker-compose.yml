@@ -12,7 +12,7 @@ services:
     volumes:
       - membersguild-db-data:/var/lib/postgresql/data
     ports:
-      - "5433:5432"   # Host 5433 avoids conflicts with local PostgreSQL installs
+      - "5434:5432"   # Host 5433 avoids conflicts with local PostgreSQL installs
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d membersguild"]
       interval: 10s
