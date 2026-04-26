@@ -1,0 +1,71 @@
+services:
+
+  # ── PostgreSQL ───────────────────────────────────────────────────────────────
+  membersguild-db:
+    image: postgres:16-alpine
+    container_name: membersguild-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: membersguild
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - membersguild-db-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"   # Host 5433 avoids conflicts with local PostgreSQL installs
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d membersguild"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── C# Backend ───────────────────────────────────────────────────────────────
+  membersguild-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: membersguild-backend
+    restart: unless-stopped
+    ports:
+      - "5015:5015"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: >-
+        Host=membersguild-db;
+        Port=5432;
+        Database=membersguild;
+        Username=${DB_USER};
+        Password=${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      AllowedOrigins__0: ${FRONTEND_URL}
+    depends_on:
+      membersguild-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5015/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ── Next.js Frontend ─────────────────────────────────────────────────────────
+  membersguild-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # BACKEND_URL must be the Docker service name — never localhost
+        BACKEND_URL: http://membersguild-backend:5015
+    container_name: membersguild-frontend
+    restart: unless-stopped
+    ports:
+      - "5016:3000"
+    environment:
+      NODE_ENV: production
+      BACKEND_URL: http://membersguild-backend:5015
+    depends_on:
+      membersguild-backend:
+        condition: service_healthy
+
+volumes:
+  membersguild-db-data:
+    name: membersguild-db-data

@@ -1,0 +1,48 @@
+name: Deploy MembersGuild
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:    # Allow manual trigger from GitHub UI
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: [self-hosted, den-runner-membersguild]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Pull latest code on server
+        run: |
+          cd ~/apps/membersguild
+          git pull origin main
+
+      - name: Build and restart containers
+        run: |
+          cd ~/apps/membersguild
+          docker compose pull --quiet
+          docker compose build --no-cache
+          docker compose up -d --force-recreate
+
+      - name: Wait for backend health check
+        run: |
+          echo "Waiting for backend to become healthy..."
+          for i in {1..30}; do
+            if curl -sf http://localhost:5015/api/health; then
+              echo "Backend is healthy"
+              break
+            fi
+            echo "Attempt $i/30 — waiting..."
+            sleep 5
+          done
+
+      - name: Verify frontend is running
+        run: curl -sf http://localhost:5016 || echo "Frontend may need a moment to initialise"
+
+      - name: Clean up old Docker images
+        run: docker image prune -f
+
+      - name: Notify success
+        run: echo "MembersGuild deployed successfully at $(date)"

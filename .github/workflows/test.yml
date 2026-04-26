@@ -1,0 +1,38 @@
+name: Test
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    name: C# tests
+    runs-on: [self-hosted, den-runner-membersguild]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore
+        run: dotnet restore backend/MembersGuild.sln
+
+      - name: Build
+        run: dotnet build backend/MembersGuild.sln --no-restore -c Release
+
+      - name: Test
+        run: dotnet test backend/MembersGuild.sln --no-build -c Release --verbosity normal
+
+  frontend-typecheck:
+    name: TypeScript check
+    runs-on: [self-hosted, den-runner-membersguild]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: cd frontend && npm ci
+
+      - name: Type check
+        run: cd frontend && npm run type-check
+
+      - name: Lint
+        run: cd frontend && npm run lint
