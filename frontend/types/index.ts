@@ -295,3 +295,9 @@ export interface PaginatedResponse<T> {
   page: number
   pageSize: number
 }
+
+export interface AdjustCreditsRequest {
+  userId: number
+  amount: number
+  notes: string
+}

@@ -91,3 +91,17 @@ export const publicApi = {
   catsSignup: (data: unknown) =>
     api.post('/public/signup', data, { auth: false }),
 }
+
+export const creditsApi = {
+  myAccount: () =>
+    api.get<import('@/types').MyAccountResponse>('/credits/my-account'),
+
+  adjust: (data: import('@/types/index').AdjustCreditsRequest) =>
+    api.post('/credits/adjust', data),
+
+  allBalances: () =>
+    api.get('/credits/balances'),
+
+  allTransactions: (userId?: number) =>
+    api.get(`/credits/transactions${userId ? `?userId=${userId}` : ''}`),
+}
