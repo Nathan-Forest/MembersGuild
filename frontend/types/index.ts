@@ -296,6 +296,54 @@ export interface PaginatedResponse<T> {
   pageSize: number
 }
 
+export interface TransactionResponse {
+  id: number
+  userId: number
+  userFullName: string | null
+  amount: number
+  balanceAfter: number
+  transactionType: TransactionType
+  transactionLabel: string
+  referenceId: number | null
+  referenceType: string | null
+  notes: string | null
+  createdAt: string
+}
+
+export interface MyAccountResponse {
+  creditBalance: number
+  pendingCredits: number
+  recentTransactions: TransactionResponse[]
+}
+
+export interface AdjustCreditsRequest {
+  userId: number
+  amount: number
+  notes: string
+}
+
+export interface CreditBalanceResponse {
+  userId: number
+  fullName: string
+  balance: number
+  pendingCredits: number
+}
+
+export interface MemberStatsResponse {
+  totalMembers: number
+  activeMembers: number
+  lowCreditMembers: number
+  noCreditsMembers: number
+}
+
+// ─── My Account ───────────────────────────────────────────────────────────────
+
+export interface MyAccountResponse {
+  creditBalance: number
+  pendingCredits: number
+  recentTransactions: TransactionResponse[]
+}
+
 export interface AdjustCreditsRequest {
   userId: number
   amount: number
