@@ -67,10 +67,7 @@ public class ClubProvisioningService : IClubProvisioningService
         }
         await _platformDb.SaveChangesAsync();
 
-        // 3. Create the PostgreSQL schema
-        await CreateSchemaAsync(schemaName);
-
-        // 4. Run club migrations against the new schema
+        // 3. Create schema and all tables
         await RunClubMigrationsAsync(schemaName);
 
         // 5. Seed default settings
@@ -115,9 +112,13 @@ public class ClubProvisioningService : IClubProvisioningService
 
         await using var db = new ClubDbContext(options, schemaName);
 
-        // EnsureCreated creates all tables from the model — suitable for now.
-        // When migrations are added, replace with db.Database.MigrateAsync()
-        await db.Database.EnsureCreatedAsync();
+        // EnsureCreatedAsync only works when no tables exist yet.
+        // We drop and recreate to guarantee a clean slate.
+        await db.Database.ExecuteSqlRawAsync($"CREATE SCHEMA IF NOT EXISTS {schemaName}");
+
+        // Get all table creation SQL and execute it
+        var script = db.Database.GenerateCreateScript();
+        await db.Database.ExecuteSqlRawAsync(script);
 
         _logger.LogInformation("Applied schema for: {Schema}", schemaName);
     }
@@ -171,8 +172,15 @@ public class ClubProvisioningService : IClubProvisioningService
         db.CatsFormFields.AddRange(
             new CatsFormField { FieldKey = "swam_squad_before", FieldLabel = "Have you swum in a squad before?", FieldType = "boolean", DisplayOrder = 1, IsActive = true },
             new CatsFormField { FieldKey = "freestyle_100m", FieldLabel = "Approximate 100m freestyle time", FieldType = "text", DisplayOrder = 2, IsActive = true },
-            new CatsFormField { FieldKey = "strokes", FieldLabel = "Strokes you swim", FieldType = "select",
-                FieldOptions = "[\"Freestyle\",\"Backstroke\",\"Breaststroke\",\"Butterfly\"]", DisplayOrder = 3, IsActive = true },
+            new CatsFormField
+            {
+                FieldKey = "strokes",
+                FieldLabel = "Strokes you swim",
+                FieldType = "select",
+                FieldOptions = "[\"Freestyle\",\"Backstroke\",\"Breaststroke\",\"Butterfly\"]",
+                DisplayOrder = 3,
+                IsActive = true
+            },
             new CatsFormField { FieldKey = "health_concerns", FieldLabel = "Any health concerns we should know about?", FieldType = "boolean", DisplayOrder = 4, IsActive = true },
             new CatsFormField { FieldKey = "goals", FieldLabel = "What are your swimming goals?", FieldType = "text", DisplayOrder = 5, IsActive = false }
         );
