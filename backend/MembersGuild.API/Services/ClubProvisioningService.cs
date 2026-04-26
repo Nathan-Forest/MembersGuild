@@ -85,31 +85,36 @@ public class ClubProvisioningService : IClubProvisioningService
 
     private async Task RunClubMigrationsAsync(string schemaName)
     {
-        var baseConnectionString = _config.GetConnectionString("Default")
+        var connectionString = _config.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Connection string 'Default' not configured");
 
-        // Step 1: Create the schema using a direct connection
-        await using (var conn = new NpgsqlConnection(baseConnectionString))
+        // Build a temporary context just to generate the CREATE TABLE script
+        var options = new DbContextOptionsBuilder<ClubDbContext>()
+            .UseNpgsql(connectionString)
+            .Options;
+
+        await using var db = new ClubDbContext(options, schemaName);
+
+        // Generate the full DDL script from the EF model
+        var script = db.Database.GenerateCreateScript();
+
+        // Execute it directly against the database
+        await using var conn = new NpgsqlConnection(connectionString);
+        await conn.OpenAsync();
+
+        // Create the schema first
+        await using (var cmd = conn.CreateCommand())
         {
-            await conn.OpenAsync();
-            await using var cmd = conn.CreateCommand();
             cmd.CommandText = $"CREATE SCHEMA IF NOT EXISTS \"{schemaName}\"";
             await cmd.ExecuteNonQueryAsync();
         }
 
-        // Step 2: Build a connection string with SearchPath set to our schema.
-        // This tells EnsureCreatedAsync to create all tables inside this schema.
-        var builder = new NpgsqlConnectionStringBuilder(baseConnectionString)
+        // Execute the full table creation script
+        await using (var cmd = conn.CreateCommand())
         {
-            SearchPath = schemaName
-        };
-
-        var options = new DbContextOptionsBuilder<ClubDbContext>()
-            .UseNpgsql(builder.ToString())
-            .Options;
-
-        await using var db = new ClubDbContext(options, schemaName);
-        await db.Database.EnsureCreatedAsync();
+            cmd.CommandText = script;
+            await cmd.ExecuteNonQueryAsync();
+        }
 
         _logger.LogInformation("Schema and tables created for: {Schema}", schemaName);
     }
@@ -174,8 +179,15 @@ public class ClubProvisioningService : IClubProvisioningService
         db.CatsFormFields.AddRange(
             new CatsFormField { FieldKey = "swam_squad_before", FieldLabel = "Have you swum in a squad before?", FieldType = "boolean", DisplayOrder = 1, IsActive = true },
             new CatsFormField { FieldKey = "freestyle_100m", FieldLabel = "Approximate 100m freestyle time", FieldType = "text", DisplayOrder = 2, IsActive = true },
-            new CatsFormField { FieldKey = "strokes", FieldLabel = "Strokes you swim", FieldType = "select",
-                FieldOptions = "[\"Freestyle\",\"Backstroke\",\"Breaststroke\",\"Butterfly\"]", DisplayOrder = 3, IsActive = true },
+            new CatsFormField
+            {
+                FieldKey = "strokes",
+                FieldLabel = "Strokes you swim",
+                FieldType = "select",
+                FieldOptions = "[\"Freestyle\",\"Backstroke\",\"Breaststroke\",\"Butterfly\"]",
+                DisplayOrder = 3,
+                IsActive = true
+            },
             new CatsFormField { FieldKey = "health_concerns", FieldLabel = "Any health concerns we should know about?", FieldType = "boolean", DisplayOrder = 4, IsActive = true },
             new CatsFormField { FieldKey = "goals", FieldLabel = "What are your swimming goals?", FieldType = "text", DisplayOrder = 5, IsActive = false }
         );
