@@ -2,6 +2,7 @@ using MembersGuild.API.DTOs.Members;
 using MembersGuild.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace MembersGuild.API.Controllers;
 
@@ -18,7 +19,7 @@ public class MembersController : ControllerBase
     }
 
     private int CurrentUserId => int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
-    private string CurrentRole => User.FindFirst("role")?.Value ?? "";
+   private string CurrentRole => User.FindFirst(ClaimTypes.Role)?.Value ?? "";
 
     /// <summary>GET /api/members — staff only</summary>
     [HttpGet]

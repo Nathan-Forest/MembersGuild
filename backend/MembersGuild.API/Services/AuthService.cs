@@ -70,12 +70,12 @@ public class AuthService : IAuthService
 
         var claims = new[]
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim("club_id", club.ClubId.ToString()),
-            new Claim("club_slug", club.Slug),
-            new Claim("role", user.Role),
-        };
+    new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+    new Claim(JwtRegisteredClaimNames.Email, user.Email),
+    new Claim("club_id", club.ClubId.ToString()),
+    new Claim("club_slug", club.Slug),
+    new Claim(ClaimTypes.Role, user.Role),
+};
 
         var token = new JwtSecurityToken(
             claims: claims,

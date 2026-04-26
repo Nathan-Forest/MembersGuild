@@ -1,3 +1,4 @@
+using System.Security.Claims;
 namespace MembersGuild.API.Middleware;
 
 /// <summary>
@@ -30,7 +31,7 @@ public class ClubScopeValidationMiddleware
         var tokenClubId = context.User.FindFirst("club_id")?.Value;
 
         // Platform admin (Nathan) can access any club
-        var role = context.User.FindFirst("role")?.Value;
+        var role = context.User.FindFirst(ClaimTypes.Role)?.Value;
         if (role == "platform_admin")
         {
             await _next(context);
