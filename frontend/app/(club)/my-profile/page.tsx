@@ -57,7 +57,6 @@ export default function MyProfilePage() {
     setSaving(true)
     setError('')
     setSuccess('')
-
     try {
       const updated = await api.put<Member>(`/members/${profile!.id}`, {
         firstName: form.firstName,
@@ -110,10 +109,11 @@ export default function MyProfilePage() {
   }
 
   if (loading) return (
-    <div className="space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6">
       <h1 className="page-title">My Profile</h1>
       <div className="animate-pulse space-y-4">
-        <div className="h-40 rounded-xl bg-gray-200" />
+        <div className="h-48 rounded-xl bg-gray-200" />
+        <div className="h-64 rounded-xl bg-gray-200" />
         <div className="h-64 rounded-xl bg-gray-200" />
       </div>
     </div>
@@ -121,8 +121,14 @@ export default function MyProfilePage() {
 
   if (!profile) return null
 
+  const initials = `${profile.firstName.charAt(0)}${profile.lastName.charAt(0)}`
+  const memberSince = new Date(profile.createdAt).toLocaleDateString('en-AU', {
+    month: 'long', year: 'numeric'
+  })
+
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="max-w-2xl mx-auto space-y-6">
+
       <div className="flex items-center justify-between">
         <h1 className="page-title">My Profile</h1>
         {!editing && (
@@ -139,83 +145,84 @@ export default function MyProfilePage() {
       )}
       {success && (
         <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
-          {success}
+          ✓ {success}
         </div>
       )}
 
-      {/* Profile card */}
-      <div className="card p-6">
-        {/* Avatar + role */}
-        <div className="flex items-center gap-4 mb-6">
-          <div
-            className="h-16 w-16 rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0"
-            style={{ backgroundColor: 'var(--color-primary)' }}
-          >
-            {profile.firstName.charAt(0)}{profile.lastName.charAt(0)}
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">
-              {profile.firstName} {profile.lastName}
-            </h2>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="badge badge-blue">
-                {ROLE_LABELS[profile.role]}
-              </span>
+      {/* ── Identity card ───────────────────────────────────────────── */}
+      <div className="card overflow-hidden">
+
+        {/* Coloured header band */}
+        <div className="h-24 w-full" style={{ backgroundColor: 'var(--color-primary)' }} />
+
+        {/* Avatar overlapping the band */}
+        <div className="px-6 pb-6">
+          <div className="flex items-end justify-between -mt-12 mb-4">
+            <div
+              className="h-20 w-20 rounded-full border-4 border-white flex items-center justify-center text-white text-2xl font-bold shadow-md"
+              style={{ backgroundColor: 'var(--color-secondary)' }}
+            >
+              {initials}
+            </div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="badge badge-blue">{ROLE_LABELS[profile.role]}</span>
               {profile.memberNumber && (
-                <span className="text-xs text-gray-400">#{profile.memberNumber}</span>
+                <span className="badge badge-gray">#{profile.memberNumber}</span>
               )}
             </div>
           </div>
+
+          <h2 className="text-xl font-bold text-gray-900">
+            {profile.firstName} {profile.lastName}
+          </h2>
+          <p className="text-sm text-gray-400 mt-0.5">Member since {memberSince}</p>
         </div>
+      </div>
+
+      {/* ── Personal details ─────────────────────────────────────────── */}
+      <div className="card p-6">
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-4">
+          Personal Details
+        </h3>
 
         {editing ? (
           <form onSubmit={handleSave} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="label">First name</label>
-                <input
-                  type="text" required className="input"
+                <input type="text" required className="input"
                   value={form.firstName}
-                  onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))}
-                />
+                  onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} />
               </div>
               <div>
                 <label className="label">Last name</label>
-                <input
-                  type="text" required className="input"
+                <input type="text" required className="input"
                   value={form.lastName}
-                  onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))}
-                />
+                  onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} />
               </div>
             </div>
 
             <div>
               <label className="label">Phone</label>
-              <input
-                type="tel" className="input"
+              <input type="tel" className="input"
                 value={form.phone}
-                onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-              />
+                onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
             </div>
 
             <div className="border-t border-gray-100 pt-4">
-              <p className="text-sm font-medium text-gray-700 mb-3">Emergency Contact</p>
+              <p className="text-sm font-medium text-gray-600 mb-3">Emergency Contact</p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label">Name</label>
-                  <input
-                    type="text" className="input"
+                  <input type="text" className="input"
                     value={form.emergencyContactName}
-                    onChange={e => setForm(f => ({ ...f, emergencyContactName: e.target.value }))}
-                  />
+                    onChange={e => setForm(f => ({ ...f, emergencyContactName: e.target.value }))} />
                 </div>
                 <div>
                   <label className="label">Phone</label>
-                  <input
-                    type="tel" className="input"
+                  <input type="tel" className="input"
                     value={form.emergencyContactPhone}
-                    onChange={e => setForm(f => ({ ...f, emergencyContactPhone: e.target.value }))}
-                  />
+                    onChange={e => setForm(f => ({ ...f, emergencyContactPhone: e.target.value }))} />
                 </div>
               </div>
             </div>
@@ -224,44 +231,67 @@ export default function MyProfilePage() {
               <button type="submit" disabled={saving} className="btn-primary px-6 py-2">
                 {saving ? 'Saving…' : 'Save changes'}
               </button>
-              <button
-                type="button"
-                onClick={() => setEditing(false)}
-                className="btn-secondary px-6 py-2"
-              >
+              <button type="button" onClick={() => setEditing(false)} className="btn-secondary px-6 py-2">
                 Cancel
               </button>
             </div>
           </form>
         ) : (
-          <dl className="space-y-3">
-            <ProfileRow label="Email" value={profile.email} />
-            <ProfileRow label="Phone" value={profile.phone ?? '—'} />
+          <div className="space-y-0 divide-y divide-gray-100">
+            <DetailRow label="Email"        value={profile.email} />
+            <DetailRow label="Phone"        value={profile.phone ?? '—'} />
             {profile.dateOfBirth && (
-              <ProfileRow label="Date of birth" value={
-                new Date(profile.dateOfBirth).toLocaleDateString('en-AU', {
+              <DetailRow label="Date of Birth" value={
+                new Date(profile.dateOfBirth as unknown as string).toLocaleDateString('en-AU', {
                   day: 'numeric', month: 'long', year: 'numeric'
                 })
               } />
             )}
-            {(profile.emergencyContactName || profile.emergencyContactPhone) && (
-              <>
-                <div className="border-t border-gray-100 pt-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
-                    Emergency Contact
-                  </p>
-                </div>
-                <ProfileRow label="Name" value={profile.emergencyContactName ?? '—'} />
-                <ProfileRow label="Phone" value={profile.emergencyContactPhone ?? '—'} />
-              </>
+            <DetailRow label="Member Since" value={memberSince} />
+            {profile.memberNumber && (
+              <DetailRow label="Member No." value={`#${profile.memberNumber}`} />
             )}
-          </dl>
+          </div>
         )}
       </div>
 
-      {/* Change password */}
+      {/* ── Emergency contact ────────────────────────────────────────── */}
+      {!editing && (profile.emergencyContactName || profile.emergencyContactPhone) && (
+        <div className="card p-6">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-4">
+            Emergency Contact
+          </h3>
+          <div className="space-y-0 divide-y divide-gray-100">
+            <DetailRow label="Name"  value={profile.emergencyContactName ?? '—'} />
+            <DetailRow label="Phone" value={profile.emergencyContactPhone ?? '—'} />
+          </div>
+        </div>
+      )}
+
+      {/* ── No emergency contact prompt ──────────────────────────────── */}
+      {!editing && !profile.emergencyContactName && !profile.emergencyContactPhone && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
+          <span className="text-amber-500 mt-0.5">⚠️</span>
+          <div>
+            <p className="text-sm font-medium text-amber-800">No emergency contact on file</p>
+            <p className="text-xs text-amber-600 mt-0.5">
+              Please add an emergency contact — it helps keep everyone safe at sessions.
+            </p>
+            <button
+              onClick={() => setEditing(true)}
+              className="mt-2 text-xs font-medium text-amber-700 underline underline-offset-2"
+            >
+              Add now
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Change password ──────────────────────────────────────────── */}
       <div className="card p-6">
-        <h2 className="text-base font-semibold text-gray-900 mb-4">Change Password</h2>
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-4">
+          Change Password
+        </h3>
 
         {passwordError && (
           <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 mb-4">
@@ -270,47 +300,42 @@ export default function MyProfilePage() {
         )}
         {passwordSuccess && (
           <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 mb-4">
-            {passwordSuccess}
+            ✓ {passwordSuccess}
           </div>
         )}
 
         <form onSubmit={handlePasswordChange} className="space-y-4">
           <div>
             <label className="label">Current password</label>
-            <input
-              type="password" required className="input"
+            <input type="password" required className="input"
               value={passwordForm.currentPassword}
-              onChange={e => setPasswordForm(f => ({ ...f, currentPassword: e.target.value }))}
-            />
+              onChange={e => setPasswordForm(f => ({ ...f, currentPassword: e.target.value }))} />
           </div>
           <div>
-            <label className="label">New password</label>
-            <input
-              type="password" required minLength={8} className="input"
+            <label className="label">New password <span className="text-gray-400 font-normal">(min. 8 characters)</span></label>
+            <input type="password" required minLength={8} className="input"
               value={passwordForm.newPassword}
-              onChange={e => setPasswordForm(f => ({ ...f, newPassword: e.target.value }))}
-            />
+              onChange={e => setPasswordForm(f => ({ ...f, newPassword: e.target.value }))} />
           </div>
           <div>
             <label className="label">Confirm new password</label>
-            <input
-              type="password" required className="input"
+            <input type="password" required className="input"
               value={passwordForm.confirmPassword}
-              onChange={e => setPasswordForm(f => ({ ...f, confirmPassword: e.target.value }))}
-            />
+              onChange={e => setPasswordForm(f => ({ ...f, confirmPassword: e.target.value }))} />
           </div>
           <button type="submit" disabled={savingPassword} className="btn-primary px-6 py-2">
             {savingPassword ? 'Changing…' : 'Change password'}
           </button>
         </form>
       </div>
+
     </div>
   )
 }
 
-function ProfileRow({ label, value }: { label: string; value: string }) {
+function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start gap-4">
+    <div className="flex items-center gap-4 py-3">
       <dt className="w-32 text-sm text-gray-500 flex-shrink-0">{label}</dt>
       <dd className="text-sm font-medium text-gray-900">{value}</dd>
     </div>
