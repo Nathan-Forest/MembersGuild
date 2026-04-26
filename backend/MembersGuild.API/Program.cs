@@ -50,6 +50,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IClubProvisioningService, ClubProvisioningService>();
 builder.Services.AddScoped<SeedService>();
+builder.Services.AddScoped<IMemberService, MemberService>();
+builder.Services.AddScoped<ICreditService, CreditService>();
 
 // ── API ───────────────────────────────────────────────────────────────────────
 
