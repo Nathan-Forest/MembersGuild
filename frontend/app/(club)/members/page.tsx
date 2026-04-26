@@ -17,6 +17,22 @@ const CREDIT_FILTERS = [
   { value: 'ok',   label: 'Has Credits' },
 ]
 
+type ModalTab = 'details' | 'emergency' | 'credits' | 'role'
+
+function getVisibleTabs(role: UserRole | null) {
+  const all: { key: ModalTab; label: string }[] = [
+    { key: 'details',   label: 'Details' },
+    { key: 'emergency', label: 'Emergency Contact' },
+    { key: 'credits',   label: 'Credits' },
+    { key: 'role',      label: 'Role & Access' },
+  ]
+  if (role === 'webmaster')  return all
+  if (role === 'finance')    return all.filter(t => t.key !== 'role')
+  if (role === 'membership') return all.filter(t => t.key !== 'credits')
+  // coach, committee — details and emergency only
+  return all.filter(t => t.key === 'details' || t.key === 'emergency')
+}
+
 function roleBadgeClass(role: string) {
   switch (role) {
     case 'webmaster':  return 'bg-purple-100 text-purple-800'
@@ -30,8 +46,8 @@ function roleBadgeClass(role: string) {
 }
 
 function creditClass(balance: number) {
-  if (balance <= 0)  return 'text-red-600 font-bold'
-  if (balance <= 2)  return 'text-amber-600 font-semibold'
+  if (balance <= 0) return 'text-red-600 font-bold'
+  if (balance <= 2) return 'text-amber-600 font-semibold'
   return 'text-green-700 font-semibold'
 }
 
@@ -44,7 +60,7 @@ export default function MembersPage() {
   const [creditFilter, setCreditFilter] = useState('')
   const [selected, setSelected] = useState<MemberDetailResponse | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
-  const [modalTab, setModalTab] = useState<'details' | 'credits' | 'role'>('details')
+  const [modalTab, setModalTab] = useState<ModalTab>('details')
   const [currentRole, setCurrentRole] = useState<UserRole | null>(null)
 
   useEffect(() => {
@@ -111,7 +127,7 @@ export default function MembersPage() {
   }
 
   async function handleResetPassword(id: number) {
-    if (!confirm('Reset this member\'s password? A temporary password will be generated.')) return
+    if (!confirm("Reset this member's password? A temporary password will be generated.")) return
     try {
       const result = await api.post<{ temporaryPassword: string }>(`/members/${id}/reset-password`, {})
       alert(`Temporary password: ${result.temporaryPassword}\n\nShare this with the member securely.`)
@@ -130,6 +146,7 @@ export default function MembersPage() {
   }
 
   const canManage = currentRole === 'membership' || currentRole === 'webmaster'
+  const canManageCredits = currentRole === 'finance' || currentRole === 'webmaster'
   const isWebmaster = currentRole === 'webmaster'
 
   return (
@@ -139,10 +156,10 @@ export default function MembersPage() {
       {/* Stats cards */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard label="Total Members"  value={stats.totalMembers}   color="blue" />
-          <StatCard label="Active"         value={stats.activeMembers}  color="green" />
-          <StatCard label="Low Credits"    value={stats.lowCreditMembers} color="amber" />
-          <StatCard label="No Credits"     value={stats.noCreditsMembers} color="red" />
+          <StatCard label="Total Members" value={stats.totalMembers}    color="blue" />
+          <StatCard label="Active"        value={stats.activeMembers}   color="green" />
+          <StatCard label="Low Credits"   value={stats.lowCreditMembers} color="amber" />
+          <StatCard label="No Credits"    value={stats.noCreditsMembers} color="red" />
         </div>
       )}
 
@@ -248,7 +265,6 @@ export default function MembersPage() {
         </table>
       </div>
 
-      {/* Bottom stats */}
       <p className="text-xs text-gray-400 text-right">
         {members.length} member{members.length !== 1 ? 's' : ''} shown
       </p>
@@ -281,25 +297,26 @@ export default function MembersPage() {
                 className="text-gray-400 hover:text-gray-600 p-1"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
             {/* Modal tabs */}
             <div className="flex border-b border-gray-100">
-              {(['details', 'credits', 'role'] as const).map(tab => (
+              {getVisibleTabs(currentRole).map(tab => (
                 <button
-                  key={tab}
-                  onClick={() => setModalTab(tab)}
-                  className={`flex-1 py-3 text-sm font-medium capitalize transition-colors ${
-                    modalTab === tab
+                  key={tab.key}
+                  onClick={() => setModalTab(tab.key)}
+                  className={`flex-1 py-3 text-xs font-medium transition-colors ${
+                    modalTab === tab.key
                       ? 'border-b-2 text-[var(--color-primary)]'
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
-                  style={modalTab === tab ? { borderColor: 'var(--color-primary)' } : {}}
+                  style={modalTab === tab.key ? { borderColor: 'var(--color-primary)' } : {}}
                 >
-                  {tab === 'details' ? 'Details' : tab === 'credits' ? 'Credits' : 'Role & Access'}
+                  {tab.label}
                 </button>
               ))}
             </div>
@@ -311,11 +328,11 @@ export default function MembersPage() {
               {modalTab === 'details' && (
                 <div className="space-y-4">
                   <dl className="space-y-0 divide-y divide-gray-100">
-                    <ModalRow label="Email"       value={selected.email} />
-                    <ModalRow label="Phone"       value={selected.phone ?? '—'} />
-                    <ModalRow label="Member No."  value={selected.memberNumber ? `#${selected.memberNumber}` : '—'} />
-                    <ModalRow label="Status"      value={selected.isActive ? 'Active' : 'Inactive'} />
-                    <ModalRow label="Credits"     value={String(selected.creditBalance)} />
+                    <ModalRow label="Email"      value={selected.email} />
+                    <ModalRow label="Phone"      value={selected.phone ?? '—'} />
+                    <ModalRow label="Member No." value={selected.memberNumber ? `#${selected.memberNumber}` : '—'} />
+                    <ModalRow label="Status"     value={selected.isActive ? 'Active' : 'Inactive'} />
+                    <ModalRow label="Credits"    value={String(selected.creditBalance)} />
                     {selected.dateOfBirth && (
                       <ModalRow label="Date of Birth" value={
                         new Date(selected.dateOfBirth as unknown as string)
@@ -331,28 +348,16 @@ export default function MembersPage() {
                     )}
                   </dl>
 
-                  {(selected.emergencyContactName || selected.emergencyContactPhone) && (
-                    <>
-                      <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 pt-2">
-                        Emergency Contact
-                      </p>
-                      <dl className="space-y-0 divide-y divide-gray-100">
-                        <ModalRow label="Name"  value={selected.emergencyContactName ?? '—'} />
-                        <ModalRow label="Phone" value={selected.emergencyContactPhone ?? '—'} />
-                      </dl>
-                    </>
-                  )}
-
-                  {/* Actions */}
                   {canManage && (
                     <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
                       <button
                         onClick={() => handleToggleActive(selected.id, selected.isActive)}
-                        className={selected.isActive ? 'btn-secondary text-xs px-3 py-1.5' : 'btn-primary text-xs px-3 py-1.5'}
+                        className={selected.isActive
+                          ? 'btn-secondary text-xs px-3 py-1.5'
+                          : 'btn-primary text-xs px-3 py-1.5'}
                       >
                         {selected.isActive ? 'Deactivate' : 'Activate'}
                       </button>
-
                       {isWebmaster && (
                         <>
                           <button
@@ -374,6 +379,43 @@ export default function MembersPage() {
                 </div>
               )}
 
+              {/* Emergency Contact tab */}
+              {modalTab === 'emergency' && (
+                <div className="space-y-4">
+                  {(selected.emergencyContactName || selected.emergencyContactPhone) ? (
+                    <>
+                      <div className="rounded-xl bg-red-50 border border-red-100 p-4 flex items-start gap-3">
+                        <span className="text-red-500 text-lg mt-0.5">🚨</span>
+                        <div>
+                          <p className="text-sm font-semibold text-red-800">Emergency Contact</p>
+                          <p className="text-xs text-red-600 mt-0.5">For use in medical emergencies only</p>
+                        </div>
+                      </div>
+                      <dl className="space-y-0 divide-y divide-gray-100">
+                        <ModalRow label="Name"  value={selected.emergencyContactName ?? '—'} />
+                        <ModalRow label="Phone" value={selected.emergencyContactPhone ?? '—'} />
+                      </dl>
+                      {selected.emergencyContactPhone && (
+                        <a
+                          href={`tel:${selected.emergencyContactPhone}`}
+                          className="btn-primary w-full py-2.5 text-center block text-sm"
+                        >
+                          📞 Call {selected.emergencyContactName ?? 'Emergency Contact'}
+                        </a>
+                      )}
+                    </>
+                  ) : (
+                    <div className="rounded-xl bg-amber-50 border border-amber-200 p-6 text-center">
+                      <p className="text-2xl mb-2">⚠️</p>
+                      <p className="text-sm font-semibold text-amber-800">No emergency contact on file</p>
+                      <p className="text-xs text-amber-600 mt-1">
+                        Ask {selected.firstName} to update their profile
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Credits tab */}
               {modalTab === 'credits' && (
                 <div className="space-y-4">
@@ -384,7 +426,7 @@ export default function MembersPage() {
                     <p className="text-white text-sm opacity-70 mt-1">credits</p>
                   </div>
 
-                  {canManage && (
+                  {canManageCredits && (
                     <CreditAdjustForm
                       memberId={selected.id}
                       onAdjusted={async () => {
@@ -397,15 +439,15 @@ export default function MembersPage() {
                 </div>
               )}
 
-              {/* Role tab */}
+              {/* Role & Access tab */}
               {modalTab === 'role' && (
                 <div className="space-y-4">
                   <p className="text-sm text-gray-500">
-                    Current role: <span className="font-semibold text-gray-900">
+                    Current role:{' '}
+                    <span className="font-semibold text-gray-900">
                       {ROLE_LABELS[selected.role as UserRole]}
                     </span>
                   </p>
-
                   {canManage ? (
                     <div className="space-y-2">
                       <label className="label">Change role</label>
@@ -429,6 +471,7 @@ export default function MembersPage() {
                   )}
                 </div>
               )}
+
             </div>
           </div>
         </div>
@@ -440,7 +483,9 @@ export default function MembersPage() {
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function StatCard({ label, value, color }: {
-  label: string; value: number; color: 'blue' | 'green' | 'amber' | 'red'
+  label: string
+  value: number
+  color: 'blue' | 'green' | 'amber' | 'red'
 }) {
   const colors = {
     blue:  'bg-blue-50 text-blue-700 border-blue-100',
