@@ -26,7 +26,8 @@ interface JwtPayload {
   email: string
   club_id: string
   club_slug: string
-  role: UserRole
+  role: string
+  'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'?: string
   exp: number
 }
 
@@ -34,6 +35,14 @@ export function parseToken(token: string): JwtPayload | null {
   try {
     const payload = token.split('.')[1]
     const decoded = JSON.parse(atob(payload))
+
+    // ASP.NET maps ClaimTypes.Role to a long URI key in the JWT
+    // Normalise it to just 'role' for frontend use
+    const roleUri = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
+    if (!decoded.role && decoded[roleUri]) {
+      decoded.role = decoded[roleUri]
+    }
+
     return decoded as JwtPayload
   } catch {
     return null
