@@ -119,16 +119,16 @@ function PlatformLandingPage() {
         {/* Hero */}
         <div className="mgl-hero">
           <div className="mgl-nav">
+            <img src="/logo.png" alt="MembersGuild" style={{ height: '36px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
+            <a href="mailto:hello@membersguild.com.au" className="mgl-nav-cta">Get in touch →</a>
+          </div>
+
+          <div className="mgl-hero-body">
             <img
               src="/logo.png"
               alt="MembersGuild"
               style={{ height: '180px', width: 'auto', filter: 'brightness(0) invert(1)', opacity: 0.85, marginBottom: '2rem' }}
             />
-            <a href="mailto:hello@membersguild.com.au" className="mgl-nav-cta">Get in touch →</a>
-          </div>
-
-          <div className="mgl-hero-body">
-            <img src="/logo.png" alt="MembersGuild" style={{ height: '110px', width: 'auto', filter: 'brightness(0) invert(1)', opacity: 0.85, marginBottom: '2rem' }} />
             <div className="mgl-badge"><span>🇦🇺</span> Built in Australia for community sport</div>
             <h1 className="mgl-h1">The membership platform<br /><span>clubs actually want</span></h1>
             <p className="mgl-sub">Session booking, credit management, attendance tracking, and member management — all in one white-labelled portal your club installs in a day.</p>
