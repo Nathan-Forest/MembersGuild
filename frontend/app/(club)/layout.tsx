@@ -508,8 +508,11 @@ function PlatformLandingPage() {
         <div className="hero">
           <nav>
             <a href="/" className="nav-logo">
-              <div className="nav-logo-mark">🏰</div>
-              <span className="nav-logo-text">MembersGuild</span>
+              <img
+                src="/logo.png"
+                alt="MembersGuild"
+                style={{ height: '40px', width: 'auto', filter: 'brightness(0) invert(1)' }}
+              />
             </a>
             <a href="mailto:hello@membersguild.com.au" className="nav-cta">
               Get in touch →
@@ -517,6 +520,17 @@ function PlatformLandingPage() {
           </nav>
 
           <div className="hero-content">
+            <img
+              src="/logo.png"
+              alt="MembersGuild"
+              style={{
+                height: '120px',
+                width: 'auto',
+                filter: 'brightness(0) invert(1)',
+                opacity: 0.9,
+                marginBottom: '2rem'
+              }}
+            />
             <div className="hero-badge">
               <span>🇦🇺</span>
               Built in Australia for community sport
@@ -637,11 +651,13 @@ function PlatformLandingPage() {
 
         {/* ── Footer ────────────────────────────────────────────────── */}
         <footer>
-          <div className="footer-logo">🏰 MembersGuild</div>
+          <img
+            src="/logo.png"
+            alt="MembersGuild"
+            style={{ height: '48px', width: 'auto', opacity: 0.25, marginBottom: '0.75rem' }}
+          />
           <div className="footer-tagline">Built for clubs · Trusted by members</div>
-          <div style={{ marginTop: '1rem', fontSize: '0.75rem', color: '#1e293b' }}>
-            © {new Date().getFullYear()} MembersGuild · Brisbane, Australia · ABN registered
-          </div>
+          ...
         </footer>
 
       </body>
