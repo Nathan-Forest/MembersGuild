@@ -127,7 +127,7 @@ function PlatformLandingPage() {
             <img
               src="/logo.png"
               alt="MembersGuild"
-              style={{ height: '180px', width: 'auto', filter: 'brightness(0) invert(1)', opacity: 0.85, marginBottom: '2rem' }}
+              style={{ height: '250px', width: 'auto', filter: 'brightness(0) invert(1)', opacity: 0.85, marginBottom: '2rem' }}
             />
             <div className="mgl-badge"><span>🇦🇺</span> Built in Australia for community sport</div>
             <h1 className="mgl-h1">The membership platform<br /><span>clubs actually want</span></h1>
