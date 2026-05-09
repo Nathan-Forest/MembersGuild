@@ -16,10 +16,15 @@ export function middleware(request: NextRequest) {
 
   // Pass through Next.js internals and static files
   if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon') ||
-    pathname.startsWith('/manifest') ||
-    pathname.startsWith('/icons')
+  pathname.startsWith('/_next') ||
+  pathname.startsWith('/favicon') ||
+  pathname.startsWith('/manifest') ||
+  pathname.startsWith('/icons') ||
+  pathname.endsWith('.png') ||
+  pathname.endsWith('.jpg') ||
+  pathname.endsWith('.svg') ||
+  pathname.endsWith('.ico') ||
+  pathname.endsWith('.webp')
   ) {
     return NextResponse.next()
   }
