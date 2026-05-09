@@ -8,7 +8,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const host = headersList.get('host') ?? ''
   const config = await getClubConfig(host)
   return {
-    title: config ? `${config.displayName} | MembersGuild` : 'MembersGuild — Built for clubs. Trusted by members.',
+    title: config ? `${config.displayName} | MembersGuild` : 'Members Guild',
     manifest: '/manifest.json',
   }
 }
@@ -117,94 +117,89 @@ function PlatformLandingPage() {
       <div className="mgl">
 
         {/* Hero */}
-        <div className="mgl-hero">
-          <div className="mgl-nav">
-            <img src="/logo.png" alt="MembersGuild" style={{ height: '36px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
-            <a href="mailto:hello@membersguild.com.au" className="mgl-nav-cta">Get in touch →</a>
+        <div className="mgl-hero-body">
+          <img
+            src="/logo.png"
+            alt="MembersGuild"
+            style={{ height: '350px', width: 'auto', filter: 'brightness(0) invert(1)', opacity: 0.85, marginBottom: '2rem' }}
+          />
+          <div className="mgl-badge"><span>🇦🇺</span> Built in Australia for community sport</div>
+          <h1 className="mgl-h1">The membership platform<br /><span>clubs actually want</span></h1>
+          <p className="mgl-sub">Session booking, credit management, attendance tracking, and member management — all in one white-labelled portal your club installs in a day.</p>
+          <div className="mgl-actions">
+            <a href="mailto:hello@membersguild.com.au" className="mgl-btn">Register your club</a>
+            <a href="https://forestden.membersguild.com.au" className="mgl-btn-ghost">View live demo →</a>
           </div>
-
-          <div className="mgl-hero-body">
-            <img
-              src="/logo.png"
-              alt="MembersGuild"
-              style={{ height: '350px', width: 'auto', filter: 'brightness(0) invert(1)', opacity: 0.85, marginBottom: '2rem' }}
-            />
-            <div className="mgl-badge"><span>🇦🇺</span> Built in Australia for community sport</div>
-            <h1 className="mgl-h1">The membership platform<br /><span>clubs actually want</span></h1>
-            <p className="mgl-sub">Session booking, credit management, attendance tracking, and member management — all in one white-labelled portal your club installs in a day.</p>
-            <div className="mgl-actions">
-              <a href="mailto:hello@membersguild.com.au" className="mgl-btn">Register your club</a>
-              <a href="https://forestden.membersguild.com.au" className="mgl-btn-ghost">View live demo →</a>
-            </div>
-            <div className="mgl-stats">
-              <div><div className="mgl-stat-val">1 day</div><div className="mgl-stat-lbl">To go live</div></div>
-              <div><div className="mgl-stat-val">$199</div><div className="mgl-stat-lbl">Setup fee</div></div>
-              <div><div className="mgl-stat-val">$49</div><div className="mgl-stat-lbl">From per month</div></div>
-            </div>
+          <div className="mgl-stats">
+            <div><div className="mgl-stat-val">1 day</div><div className="mgl-stat-lbl">To go live</div></div>
+            <div><div className="mgl-stat-val">$199</div><div className="mgl-stat-lbl">Setup fee</div></div>
+            <div><div className="mgl-stat-val">$49</div><div className="mgl-stat-lbl">From per month</div></div>
           </div>
         </div>
+      </div>
 
-        {/* Features */}
-        <div className="mgl-sec mgl-features-bg">
-          <div className="mgl-inner">
-            <div className="mgl-lbl">What&apos;s included</div>
-            <h2 className="mgl-h2">Everything your club needs.<br />Nothing it doesn&apos;t.</h2>
-            <p className="mgl-sub2">Built from real feedback from real clubs. Every feature earns its place.</p>
-            <div className="mgl-grid">
-              {features.map(f => (
-                <div key={f.title} className="mgl-card">
-                  <div className="mgl-card-icon">{f.icon}</div>
-                  <div className="mgl-card-title">{f.title}</div>
-                  <div className="mgl-card-desc">{f.description}</div>
-                </div>
-              ))}
-            </div>
+      {/* Features */}
+      <div className="mgl-sec mgl-features-bg">
+        <div className="mgl-inner">
+          <div className="mgl-lbl">What&apos;s included</div>
+          <h2 className="mgl-h2">Everything your club needs.<br />Nothing it doesn&apos;t.</h2>
+          <p className="mgl-sub2">Built from real feedback from real clubs. Every feature earns its place.</p>
+          <div className="mgl-grid">
+            {features.map(f => (
+              <div key={f.title} className="mgl-card">
+                <div className="mgl-card-icon">{f.icon}</div>
+                <div className="mgl-card-title">{f.title}</div>
+                <div className="mgl-card-desc">{f.description}</div>
+              </div>
+            ))}
           </div>
         </div>
+      </div>
 
-        {/* Pricing */}
-        <div className="mgl-sec">
-          <div className="mgl-inner">
-            <div className="mgl-lbl">Simple pricing</div>
-            <h2 className="mgl-h2">Pay for what you need.<br />Upgrade as you grow.</h2>
-            <p className="mgl-sub2">All plans include every feature. Pricing scales with your member count. Plus a one-time $199 setup fee.</p>
-            <div className="mgl-pgrid">
-              {pricing.map(p => (
-                <div key={p.name} className={p.featured ? 'mgl-pcard mgl-pcard-featured' : 'mgl-pcard'}>
-                  {p.featured && <div className="mgl-pbadge">Most popular</div>}
-                  <div className="mgl-pname">{p.name}</div>
-                  <div className="mgl-pmembers">{p.members}</div>
-                  <div><span className="mgl-pprice">{p.price}</span><span className="mgl-pperiod"> /month</span></div>
-                  <div className="mgl-pdiv" />
-                  <ul className="mgl-pfeatures">
-                    {p.features.map(f => <li key={f} className="mgl-pfeature">{f}</li>)}
-                  </ul>
-                  <a href="mailto:hello@membersguild.com.au" className="mgl-pcta">Get started</a>
-                </div>
-              ))}
-            </div>
-            <p className="mgl-note">All plans include a $199 one-time setup fee · No lock-in contracts · Cancel anytime</p>
+      {/* Pricing */}
+      <div className="mgl-sec">
+        <div className="mgl-inner">
+          <div className="mgl-lbl">Simple pricing</div>
+          <h2 className="mgl-h2">Pay for what you need.<br />Upgrade as you grow.</h2>
+          <p className="mgl-sub2">All plans include every feature. Pricing scales with your member count. Plus a one-time $199 setup fee.</p>
+          <div className="mgl-pgrid">
+            {pricing.map(p => (
+              <div key={p.name} className={p.featured ? 'mgl-pcard mgl-pcard-featured' : 'mgl-pcard'}>
+                {p.featured && <div className="mgl-pbadge">Most popular</div>}
+                <div className="mgl-pname">{p.name}</div>
+                <div className="mgl-pmembers">{p.members}</div>
+                <div><span className="mgl-pprice">{p.price}</span><span className="mgl-pperiod"> /month</span></div>
+                <div className="mgl-pdiv" />
+                <ul className="mgl-pfeatures">
+                  {p.features.map(f => <li key={f} className="mgl-pfeature">{f}</li>)}
+                </ul>
+                <a href="mailto:hello@membersguild.com.au" className="mgl-pcta">Get started</a>
+              </div>
+            ))}
+          </div>
+          <p className="mgl-note">All plans include a $199 one-time setup fee · No lock-in contracts · Cancel anytime</p>
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div className="mgl-sec mgl-cta-bg">
+        <div className="mgl-inner">
+          <div className="mgl-lbl">Ready to get started?</div>
+          <h2 className="mgl-h2">Your club portal,<br />live in one day.</h2>
+          <p className="mgl-sub2" style={{ margin: '0 auto 2.5rem', textAlign: 'center' }}>We handle the setup. You handle the sport. Get in touch and we&apos;ll have your club live within 24 hours.</p>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <a href="mailto:hello@membersguild.com.au" className="mgl-btn">hello@membersguild.com.au</a>
+            <a href="https://forestden.membersguild.com.au" className="mgl-btn-ghost">View live demo →</a>
           </div>
         </div>
+      </div>
 
-        {/* CTA */}
-        <div className="mgl-sec mgl-cta-bg">
-          <div className="mgl-inner">
-            <div className="mgl-lbl">Ready to get started?</div>
-            <h2 className="mgl-h2">Your club portal,<br />live in one day.</h2>
-            <p className="mgl-sub2" style={{ margin: '0 auto 2.5rem', textAlign: 'center' }}>We handle the setup. You handle the sport. Get in touch and we&apos;ll have your club live within 24 hours.</p>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <a href="mailto:hello@membersguild.com.au" className="mgl-btn">hello@membersguild.com.au</a>
-              <a href="https://forestden.membersguild.com.au" className="mgl-btn-ghost">View live demo →</a>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="mgl-footer">
-          <img src="/logo.png" alt="MembersGuild" style={{ height: '52px', width: 'auto', opacity: 0.2, marginBottom: '0.75rem', display: 'block', margin: '0 auto 0.75rem' }} />
-          <div className="mgl-footer-tag">Built for clubs · Trusted by members</div>
-          <div className="mgl-footer-copy">© {new Date().getFullYear()} MembersGuild · Brisbane, Australia · ABN registered</div>
+      {/* Footer */}
+      <div className="mgl-footer">
+        <img src="/logo.png" alt="MembersGuild" style={{ height: '52px', width: 'auto', opacity: 0.2, marginBottom: '0.75rem', display: 'block', margin: '0 auto 0.75rem' }} />
+        <div className="mgl-footer-tag">Built for clubs · Trusted by members</div>
+        <div className="mgl-footer-copy">
+          © {new Date().getFullYear()} Members Guild by Digital Guildhall · Brisbane, Australia
         </div>
 
       </div>
