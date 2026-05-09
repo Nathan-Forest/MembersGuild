@@ -8,21 +8,26 @@ const BACKEND_URL = process.env.BACKEND_URL ?? 'http://membersguild-backend:5015
  * Result is passed down to inject CSS variables and nav config.
  */
 export async function getClubConfig(host: string): Promise<ClubConfig | null> {
-  // Extract slug from subdomain: "bsm.membersguild.com.au" → "bsm"
-  // In development: "bsm.localhost:3000" → "bsm"
-  const slug = host.split('.')[0]
+  const hostWithoutPort = host.split(':')[0]
+  const parts = hostWithoutPort.split('.')
 
-  // "www" or "membersguild" means it's the platform site, not a club portal
-  if (!slug || slug === 'www' || slug === 'membersguild' || slug === 'localhost') {
+  // membersguild.com.au = 3 parts → no slug
+  // forestden.membersguild.com.au = 4 parts → slug is "forestden"
+  // localhost = 1 part → no slug
+  const isComAu = parts.slice(-2).join('.') === 'com.au'
+  const expectedParts = isComAu ? 4 : 3
+
+  const slug = parts.length >= expectedParts ? parts[0] : null
+
+  if (!slug || slug === 'www' || slug === 'localhost' || /^\d+$/.test(slug)) {
     return null
   }
 
   try {
     const response = await fetch(`${BACKEND_URL}/api/public/club-config`, {
       headers: { 'X-Club-Slug': slug },
-      next: { revalidate: 60 }, // Cache for 60 seconds — branding rarely changes
+      next: { revalidate: 60 },
     })
-
     if (!response.ok) return null
     return response.json() as Promise<ClubConfig>
   } catch {
