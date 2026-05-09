@@ -7,7 +7,7 @@ on:
 jobs:
   backend-tests:
     name: C# tests
-    runs-on: [self-hosted, den-runner-membersguild]
+    runs-on: [self-hosted, Membersguild]
 
     steps:
       - uses: actions/checkout@v4
