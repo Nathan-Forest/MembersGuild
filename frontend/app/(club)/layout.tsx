@@ -119,7 +119,11 @@ function PlatformLandingPage() {
         {/* Hero */}
         <div className="mgl-hero">
           <div className="mgl-nav">
-            <img src="/logo.png" alt="MembersGuild" style={{ height: '36px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
+            <img
+              src="/logo.png"
+              alt="MembersGuild"
+              style={{ height: '180px', width: 'auto', filter: 'brightness(0) invert(1)', opacity: 0.85, marginBottom: '2rem' }}
+            />
             <a href="mailto:hello@membersguild.com.au" className="mgl-nav-cta">Get in touch →</a>
           </div>
 
