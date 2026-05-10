@@ -101,7 +101,7 @@ public class AttendanceController : ControllerBase
         var bookings = await db.SessionBookings
             .Include(b => b.User)
             .Where(b => b.SessionId == id)
-            .OrderBy(b => b.User.FirstName)
+            .OrderBy(b => b.User!.FirstName)
             .ToListAsync();
 
         var records = await db.AttendanceRecords
@@ -113,7 +113,7 @@ public class AttendanceController : ControllerBase
             var record = records.FirstOrDefault(r => r.UserId == b.UserId);
             return new AttendanceSheetMember(
                 b.UserId,
-                $"{b.User.FirstName} {b.User.LastName}",
+                $"{b.User!.FirstName} {b.User.LastName}",
                 b.User.Email,
                 b.User.Role,
                 record?.Status,
