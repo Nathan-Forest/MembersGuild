@@ -372,6 +372,7 @@ export interface MemberDetailResponse {
   isActive: boolean
   lastLoginAt: string | null
   createdAt: string
+  generatedPassword?: string
 }
 
 type DateOnly = string  // ISO date string "YYYY-MM-DD"

@@ -11,23 +11,23 @@ import type { UserRole } from '@/types'
 const ROLES: UserRole[] = ['cats', 'member', 'coach', 'committee', 'membership', 'finance', 'webmaster']
 
 const CREDIT_FILTERS = [
-  { value: '',     label: 'All Members' },
+  { value: '', label: 'All Members' },
   { value: 'none', label: 'No Credits' },
-  { value: 'low',  label: 'Low Credits (1-2)' },
-  { value: 'ok',   label: 'Has Credits' },
+  { value: 'low', label: 'Low Credits (1-2)' },
+  { value: 'ok', label: 'Has Credits' },
 ]
 
 type ModalTab = 'details' | 'emergency' | 'credits' | 'role'
 
 function getVisibleTabs(role: UserRole | null) {
   const all: { key: ModalTab; label: string }[] = [
-    { key: 'details',   label: 'Details' },
+    { key: 'details', label: 'Details' },
     { key: 'emergency', label: 'Emergency Contact' },
-    { key: 'credits',   label: 'Credits' },
-    { key: 'role',      label: 'Role & Access' },
+    { key: 'credits', label: 'Credits' },
+    { key: 'role', label: 'Role & Access' },
   ]
-  if (role === 'webmaster')  return all
-  if (role === 'finance')    return all.filter(t => t.key !== 'role')
+  if (role === 'webmaster') return all
+  if (role === 'finance') return all.filter(t => t.key !== 'role')
   if (role === 'membership') return all.filter(t => t.key !== 'credits')
   // coach, committee — details and emergency only
   return all.filter(t => t.key === 'details' || t.key === 'emergency')
@@ -35,13 +35,13 @@ function getVisibleTabs(role: UserRole | null) {
 
 function roleBadgeClass(role: string) {
   switch (role) {
-    case 'webmaster':  return 'bg-purple-100 text-purple-800'
-    case 'coach':      return 'bg-blue-100 text-blue-800'
-    case 'finance':    return 'bg-green-100 text-green-800'
+    case 'webmaster': return 'bg-purple-100 text-purple-800'
+    case 'coach': return 'bg-blue-100 text-blue-800'
+    case 'finance': return 'bg-green-100 text-green-800'
     case 'membership': return 'bg-indigo-100 text-indigo-800'
-    case 'committee':  return 'bg-cyan-100 text-cyan-800'
-    case 'cats':       return 'bg-amber-100 text-amber-800'
-    default:           return 'bg-gray-100 text-gray-700'
+    case 'committee': return 'bg-cyan-100 text-cyan-800'
+    case 'cats': return 'bg-amber-100 text-amber-800'
+    default: return 'bg-gray-100 text-gray-700'
   }
 }
 
@@ -62,6 +62,14 @@ export default function MembersPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [modalTab, setModalTab] = useState<ModalTab>('details')
   const [currentRole, setCurrentRole] = useState<UserRole | null>(null)
+  const [addModalOpen, setAddModalOpen] = useState(false)
+  const [addForm, setAddForm] = useState({
+    firstName: '', lastName: '', email: '',
+    phone: '', role: 'member', memberNumber: '',
+  })
+  const [addLoading, setAddLoading] = useState(false)
+  const [addError, setAddError] = useState('')
+  const [newMemberPassword, setNewMemberPassword] = useState<string | null>(null)
 
   useEffect(() => {
     const user = getCurrentUser()
@@ -93,7 +101,7 @@ export default function MembersPage() {
     try {
       const data = await api.get<MemberListResponse[]>(`/members?${params}`)
       setMembers(data)
-    } catch {}
+    } catch { }
   }
 
   useEffect(() => {
@@ -107,7 +115,7 @@ export default function MembersPage() {
       setSelected(detail)
       setModalTab('details')
       setModalOpen(true)
-    } catch {}
+    } catch { }
   }
 
   async function handleRoleChange(id: number, role: string) {
@@ -115,7 +123,7 @@ export default function MembersPage() {
       await api.put(`/members/${id}/role`, { role })
       await loadData()
       if (selected) setSelected({ ...selected, role })
-    } catch {}
+    } catch { }
   }
 
   async function handleToggleActive(id: number, current: boolean) {
@@ -123,7 +131,7 @@ export default function MembersPage() {
       await api.put(`/members/${id}/active`, !current)
       await loadData()
       if (selected) setSelected({ ...selected, isActive: !current })
-    } catch {}
+    } catch { }
   }
 
   async function handleResetPassword(id: number) {
@@ -131,7 +139,7 @@ export default function MembersPage() {
     try {
       const result = await api.post<{ temporaryPassword: string }>(`/members/${id}/reset-password`, {})
       alert(`Temporary password: ${result.temporaryPassword}\n\nShare this with the member securely.`)
-    } catch {}
+    } catch { }
   }
 
   async function handleDelete(id: number, name: string) {
@@ -142,7 +150,33 @@ export default function MembersPage() {
       setModalOpen(false)
       setSelected(null)
       await loadData()
-    } catch {}
+    } catch { }
+  }
+
+  async function handleAddMember(e: React.FormEvent) {
+    e.preventDefault()
+    setAddError('')
+    setAddLoading(true)
+    try {
+      const result = await api.post<{ generatedPassword?: string } & MemberDetailResponse>(
+        '/members',
+        {
+          firstName: addForm.firstName,
+          lastName: addForm.lastName,
+          email: addForm.email,
+          phone: addForm.phone || null,
+          role: addForm.role,
+          memberNumber: addForm.memberNumber || null,
+        }
+      )
+      setNewMemberPassword(result.generatedPassword ?? null)
+      setAddForm({ firstName: '', lastName: '', email: '', phone: '', role: 'member', memberNumber: '' })
+      await loadData()
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : 'Failed to create member')
+    } finally {
+      setAddLoading(false)
+    }
   }
 
   const canManage = currentRole === 'membership' || currentRole === 'webmaster'
@@ -151,15 +185,25 @@ export default function MembersPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="page-title">Members</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="page-title">Members</h1>
+        {canManage && (
+          <button
+            onClick={() => { setAddModalOpen(true); setNewMemberPassword(null); setAddError('') }}
+            className="btn-primary px-4 py-2"
+          >
+            + Add Member
+          </button>
+        )}
+      </div>
 
       {/* Stats cards */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard label="Total Members" value={stats.totalMembers}    color="blue" />
-          <StatCard label="Active"        value={stats.activeMembers}   color="green" />
-          <StatCard label="Low Credits"   value={stats.lowCreditMembers} color="amber" />
-          <StatCard label="No Credits"    value={stats.noCreditsMembers} color="red" />
+          <StatCard label="Total Members" value={stats.totalMembers} color="blue" />
+          <StatCard label="Active" value={stats.activeMembers} color="green" />
+          <StatCard label="Low Credits" value={stats.lowCreditMembers} color="amber" />
+          <StatCard label="No Credits" value={stats.noCreditsMembers} color="red" />
         </div>
       )}
 
@@ -309,11 +353,10 @@ export default function MembersPage() {
                 <button
                   key={tab.key}
                   onClick={() => setModalTab(tab.key)}
-                  className={`flex-1 py-3 text-xs font-medium transition-colors ${
-                    modalTab === tab.key
-                      ? 'border-b-2 text-[var(--color-primary)]'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
+                  className={`flex-1 py-3 text-xs font-medium transition-colors ${modalTab === tab.key
+                    ? 'border-b-2 text-[var(--color-primary)]'
+                    : 'text-gray-500 hover:text-gray-700'
+                    }`}
                   style={modalTab === tab.key ? { borderColor: 'var(--color-primary)' } : {}}
                 >
                   {tab.label}
@@ -328,11 +371,11 @@ export default function MembersPage() {
               {modalTab === 'details' && (
                 <div className="space-y-4">
                   <dl className="space-y-0 divide-y divide-gray-100">
-                    <ModalRow label="Email"      value={selected.email} />
-                    <ModalRow label="Phone"      value={selected.phone ?? '—'} />
+                    <ModalRow label="Email" value={selected.email} />
+                    <ModalRow label="Phone" value={selected.phone ?? '—'} />
                     <ModalRow label="Member No." value={selected.memberNumber ? `#${selected.memberNumber}` : '—'} />
-                    <ModalRow label="Status"     value={selected.isActive ? 'Active' : 'Inactive'} />
-                    <ModalRow label="Credits"    value={String(selected.creditBalance)} />
+                    <ModalRow label="Status" value={selected.isActive ? 'Active' : 'Inactive'} />
+                    <ModalRow label="Credits" value={String(selected.creditBalance)} />
                     {selected.dateOfBirth && (
                       <ModalRow label="Date of Birth" value={
                         new Date(selected.dateOfBirth as unknown as string)
@@ -392,7 +435,7 @@ export default function MembersPage() {
                         </div>
                       </div>
                       <dl className="space-y-0 divide-y divide-gray-100">
-                        <ModalRow label="Name"  value={selected.emergencyContactName ?? '—'} />
+                        <ModalRow label="Name" value={selected.emergencyContactName ?? '—'} />
                         <ModalRow label="Phone" value={selected.emergencyContactPhone ?? '—'} />
                       </dl>
                       {selected.emergencyContactPhone && (
@@ -488,10 +531,10 @@ function StatCard({ label, value, color }: {
   color: 'blue' | 'green' | 'amber' | 'red'
 }) {
   const colors = {
-    blue:  'bg-blue-50 text-blue-700 border-blue-100',
+    blue: 'bg-blue-50 text-blue-700 border-blue-100',
     green: 'bg-green-50 text-green-700 border-green-100',
     amber: 'bg-amber-50 text-amber-700 border-amber-100',
-    red:   'bg-red-50 text-red-700 border-red-100',
+    red: 'bg-red-50 text-red-700 border-red-100',
   }
   return (
     <div className={`rounded-xl border p-4 ${colors[color]}`}>
