@@ -33,6 +33,7 @@ public class Session
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public Location? Location { get; set; }
+    public int? LanesCount { get; set; }
     public User? Coach { get; set; }
     public ICollection<SessionBooking> Bookings { get; set; } = new List<SessionBooking>();
     public ICollection<AttendanceRecord> AttendanceRecords { get; set; } = new List<AttendanceRecord>();
