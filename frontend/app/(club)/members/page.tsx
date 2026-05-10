@@ -29,7 +29,6 @@ function getVisibleTabs(role: UserRole | null) {
   if (role === 'webmaster') return all
   if (role === 'finance') return all.filter(t => t.key !== 'role')
   if (role === 'membership') return all.filter(t => t.key !== 'credits')
-  // coach, committee — details and emergency only
   return all.filter(t => t.key === 'details' || t.key === 'emergency')
 }
 
@@ -313,12 +312,10 @@ export default function MembersPage() {
         {members.length} member{members.length !== 1 ? 's' : ''} shown
       </p>
 
-      {/* Member detail modal */}
+      {/* ── Member detail modal ───────────────────────────────────────────── */}
       {modalOpen && selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-
-            {/* Modal header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 <div
@@ -336,27 +333,21 @@ export default function MembersPage() {
                   </span>
                 </div>
               </div>
-              <button
-                onClick={() => setModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-1"
-              >
+              <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
-            {/* Modal tabs */}
             <div className="flex border-b border-gray-100">
               {getVisibleTabs(currentRole).map(tab => (
                 <button
                   key={tab.key}
                   onClick={() => setModalTab(tab.key)}
-                  className={`flex-1 py-3 text-xs font-medium transition-colors ${modalTab === tab.key
-                    ? 'border-b-2 text-[var(--color-primary)]'
-                    : 'text-gray-500 hover:text-gray-700'
-                    }`}
+                  className={`flex-1 py-3 text-xs font-medium transition-colors ${
+                    modalTab === tab.key ? 'border-b-2 text-[var(--color-primary)]' : 'text-gray-500 hover:text-gray-700'
+                  }`}
                   style={modalTab === tab.key ? { borderColor: 'var(--color-primary)' } : {}}
                 >
                   {tab.label}
@@ -364,10 +355,7 @@ export default function MembersPage() {
               ))}
             </div>
 
-            {/* Modal body */}
             <div className="p-6">
-
-              {/* Details tab */}
               {modalTab === 'details' && (
                 <div className="space-y-4">
                   <dl className="space-y-0 divide-y divide-gray-100">
@@ -390,29 +378,20 @@ export default function MembersPage() {
                       } />
                     )}
                   </dl>
-
                   {canManage && (
                     <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
                       <button
                         onClick={() => handleToggleActive(selected.id, selected.isActive)}
-                        className={selected.isActive
-                          ? 'btn-secondary text-xs px-3 py-1.5'
-                          : 'btn-primary text-xs px-3 py-1.5'}
+                        className={selected.isActive ? 'btn-secondary text-xs px-3 py-1.5' : 'btn-primary text-xs px-3 py-1.5'}
                       >
                         {selected.isActive ? 'Deactivate' : 'Activate'}
                       </button>
                       {isWebmaster && (
                         <>
-                          <button
-                            onClick={() => handleResetPassword(selected.id)}
-                            className="btn-secondary text-xs px-3 py-1.5"
-                          >
+                          <button onClick={() => handleResetPassword(selected.id)} className="btn-secondary text-xs px-3 py-1.5">
                             Reset Password
                           </button>
-                          <button
-                            onClick={() => handleDelete(selected.id, selected.firstName)}
-                            className="btn-danger text-xs px-3 py-1.5"
-                          >
+                          <button onClick={() => handleDelete(selected.id, selected.firstName)} className="btn-danger text-xs px-3 py-1.5">
                             Delete Member
                           </button>
                         </>
@@ -422,7 +401,6 @@ export default function MembersPage() {
                 </div>
               )}
 
-              {/* Emergency Contact tab */}
               {modalTab === 'emergency' && (
                 <div className="space-y-4">
                   {(selected.emergencyContactName || selected.emergencyContactPhone) ? (
@@ -439,10 +417,7 @@ export default function MembersPage() {
                         <ModalRow label="Phone" value={selected.emergencyContactPhone ?? '—'} />
                       </dl>
                       {selected.emergencyContactPhone && (
-                        <a
-                          href={`tel:${selected.emergencyContactPhone}`}
-                          className="btn-primary w-full py-2.5 text-center block text-sm"
-                        >
+                        <a href={`tel:${selected.emergencyContactPhone}`} className="btn-primary w-full py-2.5 text-center block text-sm">
                           📞 Call {selected.emergencyContactName ?? 'Emergency Contact'}
                         </a>
                       )}
@@ -451,24 +426,19 @@ export default function MembersPage() {
                     <div className="rounded-xl bg-amber-50 border border-amber-200 p-6 text-center">
                       <p className="text-2xl mb-2">⚠️</p>
                       <p className="text-sm font-semibold text-amber-800">No emergency contact on file</p>
-                      <p className="text-xs text-amber-600 mt-1">
-                        Ask {selected.firstName} to update their profile
-                      </p>
+                      <p className="text-xs text-amber-600 mt-1">Ask {selected.firstName} to update their profile</p>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Credits tab */}
               {modalTab === 'credits' && (
                 <div className="space-y-4">
-                  <div className="rounded-xl p-4 text-center"
-                    style={{ backgroundColor: 'var(--color-primary)' }}>
+                  <div className="rounded-xl p-4 text-center" style={{ backgroundColor: 'var(--color-primary)' }}>
                     <p className="text-white text-sm opacity-80">Current Balance</p>
                     <p className="text-white text-4xl font-bold mt-1">{selected.creditBalance}</p>
                     <p className="text-white text-sm opacity-70 mt-1">credits</p>
                   </div>
-
                   {canManageCredits && (
                     <CreditAdjustForm
                       memberId={selected.id}
@@ -482,43 +452,140 @@ export default function MembersPage() {
                 </div>
               )}
 
-              {/* Role & Access tab */}
               {modalTab === 'role' && (
                 <div className="space-y-4">
                   <p className="text-sm text-gray-500">
                     Current role:{' '}
-                    <span className="font-semibold text-gray-900">
-                      {ROLE_LABELS[selected.role as UserRole]}
-                    </span>
+                    <span className="font-semibold text-gray-900">{ROLE_LABELS[selected.role as UserRole]}</span>
                   </p>
                   {canManage ? (
                     <div className="space-y-2">
                       <label className="label">Change role</label>
-                      <select
-                        className="input"
-                        value={selected.role}
-                        onChange={e => handleRoleChange(selected.id, e.target.value)}
-                      >
-                        {ROLES.map(r => (
-                          <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-                        ))}
+                      <select className="input" value={selected.role} onChange={e => handleRoleChange(selected.id, e.target.value)}>
+                        {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                       </select>
-                      <p className="text-xs text-gray-400">
-                        Role changes take effect immediately across the entire portal.
-                      </p>
+                      <p className="text-xs text-gray-400">Role changes take effect immediately across the entire portal.</p>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-400">
-                      You don't have permission to change roles.
-                    </p>
+                    <p className="text-sm text-gray-400">You don&apos;t have permission to change roles.</p>
                   )}
                 </div>
               )}
-
             </div>
           </div>
         </div>
       )}
+
+      {/* ── Add Member modal ──────────────────────────────────────────────── */}
+      {addModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <h2 className="font-bold text-gray-900">Add New Member</h2>
+              <button
+                onClick={() => { setAddModalOpen(false); setNewMemberPassword(null) }}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6">
+              {newMemberPassword ? (
+                <div className="space-y-4">
+                  <div className="rounded-xl bg-green-50 border border-green-200 p-4 text-center">
+                    <p className="text-sm font-semibold text-green-800 mb-1">Member created successfully</p>
+                    <p className="text-xs text-green-600">Share this temporary password with them securely</p>
+                  </div>
+                  <div className="rounded-xl bg-amber-50 border border-amber-200 p-4">
+                    <p className="text-xs font-semibold text-amber-700 mb-2 uppercase tracking-wide">
+                      Temporary Password — shown once only
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-lg font-mono font-bold text-amber-900 bg-amber-100 px-3 py-2 rounded-lg">
+                        {newMemberPassword}
+                      </code>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(newMemberPassword)}
+                        className="btn-secondary text-xs px-3 py-2 flex-shrink-0"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => { setNewMemberPassword(null); setAddForm({ firstName: '', lastName: '', email: '', phone: '', role: 'member', memberNumber: '' }) }}
+                      className="btn-primary flex-1 py-2"
+                    >
+                      Add Another
+                    </button>
+                    <button
+                      onClick={() => { setAddModalOpen(false); setNewMemberPassword(null) }}
+                      className="btn-secondary flex-1 py-2"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleAddMember} className="space-y-4">
+                  {addError && (
+                    <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                      {addError}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="label">First name <span className="text-red-500">*</span></label>
+                      <input type="text" required className="input" value={addForm.firstName}
+                        onChange={e => setAddForm(f => ({ ...f, firstName: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="label">Last name <span className="text-red-500">*</span></label>
+                      <input type="text" required className="input" value={addForm.lastName}
+                        onChange={e => setAddForm(f => ({ ...f, lastName: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="label">Email <span className="text-red-500">*</span></label>
+                    <input type="email" required className="input" value={addForm.email}
+                      onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="label">Phone</label>
+                      <input type="tel" className="input" value={addForm.phone}
+                        onChange={e => setAddForm(f => ({ ...f, phone: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="label">Member No.</label>
+                      <input type="text" className="input" placeholder="Optional" value={addForm.memberNumber}
+                        onChange={e => setAddForm(f => ({ ...f, memberNumber: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="label">Role <span className="text-red-500">*</span></label>
+                    <select className="input" value={addForm.role}
+                      onChange={e => setAddForm(f => ({ ...f, role: e.target.value }))}>
+                      {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+                    </select>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    A temporary password will be auto-generated and shown once after creation.
+                  </p>
+                  <button type="submit" disabled={addLoading} className="btn-primary w-full py-2.5">
+                    {addLoading ? 'Creating…' : 'Create Member'}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
@@ -526,9 +593,7 @@ export default function MembersPage() {
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function StatCard({ label, value, color }: {
-  label: string
-  value: number
-  color: 'blue' | 'green' | 'amber' | 'red'
+  label: string; value: number; color: 'blue' | 'green' | 'amber' | 'red'
 }) {
   const colors = {
     blue: 'bg-blue-50 text-blue-700 border-blue-100',
@@ -554,8 +619,7 @@ function ModalRow({ label, value }: { label: string; value: string }) {
 }
 
 function CreditAdjustForm({ memberId, onAdjusted }: {
-  memberId: number
-  onAdjusted: () => void
+  memberId: number; onAdjusted: () => void
 }) {
   const [amount, setAmount] = useState('')
   const [notes, setNotes] = useState('')
@@ -568,7 +632,6 @@ function CreditAdjustForm({ memberId, onAdjusted }: {
     const n = parseInt(amount)
     if (isNaN(n) || n === 0) { setError('Enter a non-zero amount'); return }
     if (!notes.trim()) { setError('Notes are required'); return }
-
     setSaving(true)
     try {
       await api.post('/credits/adjust', { userId: memberId, amount: n, notes })
@@ -585,33 +648,17 @@ function CreditAdjustForm({ memberId, onAdjusted }: {
   return (
     <form onSubmit={handleSubmit} className="space-y-3 border-t border-gray-100 pt-4">
       <p className="text-sm font-medium text-gray-700">Adjust Credits</p>
-
       {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
-          {error}
-        </div>
+        <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">{error}</div>
       )}
-
       <div>
-        <label className="label text-xs">
-          Amount <span className="text-gray-400">(positive to add, negative to remove)</span>
-        </label>
-        <input
-          type="number" className="input" placeholder="e.g. 10 or -1"
-          value={amount}
-          onChange={e => setAmount(e.target.value)}
-        />
+        <label className="label text-xs">Amount <span className="text-gray-400">(positive to add, negative to remove)</span></label>
+        <input type="number" className="input" placeholder="e.g. 10 or -1" value={amount} onChange={e => setAmount(e.target.value)} />
       </div>
-
       <div>
         <label className="label text-xs">Notes <span className="text-red-500">*</span></label>
-        <input
-          type="text" className="input" placeholder="e.g. Payment received for 10-credit pack"
-          value={notes}
-          onChange={e => setNotes(e.target.value)}
-        />
+        <input type="text" className="input" placeholder="e.g. Payment received for 10-credit pack" value={notes} onChange={e => setNotes(e.target.value)} />
       </div>
-
       <button type="submit" disabled={saving} className="btn-primary w-full py-2">
         {saving ? 'Saving…' : 'Apply adjustment'}
       </button>
