@@ -135,4 +135,67 @@ public class SessionsController : ControllerBase
 
         return Ok(bookings);
     }
+
+    /// <summary>GET /api/sessions/my-sessions — current user's bookings and stats</summary>
+    [HttpGet("my-sessions")]
+    public async Task<IActionResult> GetMySessions()
+    {
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var userId = CurrentUserId;
+        var now = DateTime.UtcNow;
+        var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var allBookings = await db.SessionBookings
+            .Include(b => b.Session).ThenInclude(s => s.Location)
+            .Include(b => b.Session).ThenInclude(s => s.Coach)
+            .Include(b => b.Session).ThenInclude(s => s.Bookings)
+            .Where(b => b.UserId == userId)
+            .OrderBy(b => b.Session.StartTime)
+            .ToListAsync();
+
+        var upcoming = allBookings
+            .Where(b => b.Session.StartTime > now && !b.Session.IsCancelled)
+            .Select(b => new
+            {
+                id = b.Session.Id,
+                title = b.Session.Title,
+                description = b.Session.Description,
+                locationName = b.Session.Location != null ? b.Session.Location.Name : null,
+                coachName = b.Session.Coach != null
+                                    ? $"{b.Session.Coach.FirstName} {b.Session.Coach.LastName}" : null,
+                startTime = b.Session.StartTime,
+                endTime = b.Session.EndTime,
+                capacity = b.Session.Capacity,
+                creditCost = b.Session.CreditCost,
+                registrationCutoffHours = b.Session.RegistrationCutoffHours,
+                bookedCount = b.Session.Bookings.Count,
+                isBooked = true,
+            }).ToList();
+
+        var past = allBookings
+            .Where(b => b.Session.StartTime <= now)
+            .OrderByDescending(b => b.Session.StartTime)
+            .Take(30)
+            .Select(b => new
+            {
+                sessionId = b.Session.Id,
+                sessionTitle = b.Session.Title,
+                startTime = b.Session.StartTime,
+                locationName = b.Session.Location != null ? b.Session.Location.Name : null,
+                coachName = b.Session.Coach != null
+                                ? $"{b.Session.Coach.FirstName} {b.Session.Coach.LastName}" : null,
+            }).ToList();
+
+        return Ok(new
+        {
+            stats = new
+            {
+                upcomingBookings = upcoming.Count,
+                thisMonthSessions = allBookings.Count(b => b.Session.StartTime >= startOfMonth),
+                lifetimeSessions = allBookings.Count,
+            },
+            upcoming,
+            past,
+        });
+    }
 }
