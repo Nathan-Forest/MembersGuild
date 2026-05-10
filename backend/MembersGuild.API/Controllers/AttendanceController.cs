@@ -288,7 +288,7 @@ public class AttendanceController : ControllerBase
 
         var existing = await db.AttendanceRecords
             .FirstOrDefaultAsync(a => a.SessionId == id && a.UserId == userId);
-
+        
         if (existing is null)
         {
             db.AttendanceRecords.Add(new AttendanceRecord
@@ -307,7 +307,7 @@ public class AttendanceController : ControllerBase
         }
 
         await db.SaveChangesAsync();
-        return Ok();
+        return Ok(new { success = true });
     }
 
     // ── GET /api/attendance/sessions/{id}/qr ────────────────────────────────

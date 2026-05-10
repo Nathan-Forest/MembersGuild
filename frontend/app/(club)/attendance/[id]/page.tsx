@@ -44,31 +44,31 @@ interface AllMember {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'attended', label: '✓ Attended',  color: 'bg-green-500 text-white' },
-  { value: 'late',     label: '◷ Late',      color: 'bg-amber-500 text-white' },
-  { value: 'nsba',     label: '↩ NSBA',      color: 'bg-blue-500 text-white' },
-  { value: 'absent',   label: '✕ Absent',    color: 'bg-red-500 text-white' },
+  { value: 'attended', label: '✓ Attended', color: 'bg-green-500 text-white' },
+  { value: 'late', label: '◷ Late', color: 'bg-amber-500 text-white' },
+  { value: 'nsba', label: '↩ NSBA', color: 'bg-blue-500 text-white' },
+  { value: 'absent', label: '✕ Absent', color: 'bg-red-500 text-white' },
 ]
 
 function statusStyle(status: string | null) {
   switch (status) {
     case 'attended': return 'bg-green-100 text-green-800 border-green-200'
-    case 'late':     return 'bg-amber-100 text-amber-800 border-amber-200'
-    case 'nsba':     return 'bg-blue-100 text-blue-800 border-blue-200'
-    case 'absent':   return 'bg-red-100 text-red-800 border-red-200'
-    case 'noshow':   return 'bg-red-100 text-red-800 border-red-200'
-    default:         return 'bg-gray-100 text-gray-500 border-gray-200'
+    case 'late': return 'bg-amber-100 text-amber-800 border-amber-200'
+    case 'nsba': return 'bg-blue-100 text-blue-800 border-blue-200'
+    case 'absent': return 'bg-red-100 text-red-800 border-red-200'
+    case 'noshow': return 'bg-red-100 text-red-800 border-red-200'
+    default: return 'bg-gray-100 text-gray-500 border-gray-200'
   }
 }
 
 function statusLabel(status: string | null) {
   switch (status) {
     case 'attended': return '✓ Attended'
-    case 'late':     return '◷ Late'
-    case 'nsba':     return '↩ NSBA'
-    case 'absent':   return '✕ Absent'
-    case 'noshow':   return '✕ No Show'
-    default:         return '— Unmarked'
+    case 'late': return '◷ Late'
+    case 'nsba': return '↩ NSBA'
+    case 'absent': return '✕ Absent'
+    case 'noshow': return '✕ No Show'
+    default: return '— Unmarked'
   }
 }
 
@@ -103,6 +103,14 @@ export default function AttendanceSheetPage() {
     setCurrentRole(user.role as UserRole)
     loadSheet()
   }, [router, sessionId])
+
+  // Auto-refresh every 30 seconds so QR check-ins appear automatically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadSheet()
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [sessionId])
 
   async function loadSheet() {
     setLoading(true)
@@ -195,15 +203,15 @@ export default function AttendanceSheetPage() {
   })
 
   const attended = data?.members.filter(m => m.status === 'attended').length ?? 0
-  const marked   = data?.members.filter(m => m.status).length ?? 0
-  const total    = data?.members.length ?? 0
+  const marked = data?.members.filter(m => m.status).length ?? 0
+  const total = data?.members.length ?? 0
 
   if (loading) {
     return (
       <div className="space-y-6">
         <div className="h-8 w-64 bg-gray-200 rounded animate-pulse" />
         <div className="space-y-3">
-          {[1,2,3,4,5].map(i => <div key={i} className="card p-4 h-16 animate-pulse bg-gray-100" />)}
+          {[1, 2, 3, 4, 5].map(i => <div key={i} className="card p-4 h-16 animate-pulse bg-gray-100" />)}
         </div>
       </div>
     )
@@ -301,6 +309,16 @@ export default function AttendanceSheetPage() {
           >
             {markingAll ? 'Marking…' : 'Mark All Attended'}
           </button>
+          <button
+            onClick={loadSheet}
+            className="btn-secondary text-sm px-3 py-2 flex items-center gap-1.5"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh
+          </button>
         </div>
       </div>
 
@@ -326,9 +344,8 @@ export default function AttendanceSheetPage() {
         <div className="space-y-2">
           {members.map(m => (
             <div key={m.userId}
-              className={`card p-4 flex items-center gap-4 border transition-colors ${
-                m.status ? 'border-transparent' : 'border-gray-200'
-              } ${statusStyle(m.status).replace('border-', 'border-l-4 border-l-').split(' ').filter(c => c.includes('border-l')).join(' ')}`}
+              className={`card p-4 flex items-center gap-4 border transition-colors ${m.status ? 'border-transparent' : 'border-gray-200'
+                } ${statusStyle(m.status).replace('border-', 'border-l-4 border-l-').split(' ').filter(c => c.includes('border-l')).join(' ')}`}
             >
               {/* Avatar */}
               <div
@@ -358,11 +375,10 @@ export default function AttendanceSheetPage() {
                     key={opt.value}
                     onClick={() => markAttendance(m.userId, opt.value)}
                     disabled={marking === m.userId}
-                    className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${
-                      m.status === opt.value
-                        ? opt.color + ' ring-2 ring-offset-1 ring-current'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
+                    className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${m.status === opt.value
+                      ? opt.color + ' ring-2 ring-offset-1 ring-current'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
                   >
                     {marking === m.userId ? '…' : opt.label}
                   </button>
