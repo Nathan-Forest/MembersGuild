@@ -30,6 +30,14 @@ interface CoachOption {
   fullName: string
 }
 
+interface BookingRecord {
+  userId: number
+  fullName: string
+  email: string
+  role: string
+  bookedAt: string
+}
+
 const emptyForm = {
   title: '', description: '', locationId: '',
   coachId: '', startTime: '', endTime: '',
@@ -71,6 +79,11 @@ export default function ManageSessionsPage() {
   const [coaches, setCoaches] = useState<CoachOption[]>([])
   const [loading, setLoading] = useState(true)
   const [currentRole, setCurrentRole] = useState<UserRole | null>(null)
+  const [bookingsModalOpen, setBookingsModalOpen] = useState(false)
+  const [bookingsSession, setBookingsSession] = useState<SessionResponse | null>(null)
+  const [bookings, setBookings] = useState<BookingRecord[]>([])
+  const [bookingsLoading, setBookingsLoading] = useState(false)
+  const [unbookingId, setUnbookingId] = useState<number | null>(null)
 
   // Single session modal
   const [modalOpen, setModalOpen] = useState(false)
@@ -130,14 +143,14 @@ export default function ManageSessionsPage() {
   function openEdit(s: SessionResponse) {
     setEditing(s)
     setForm({
-      title:                   s.title,
-      description:             s.description ?? '',
-      locationId:              s.locationId?.toString() ?? '',
-      coachId:                 s.coachId?.toString() ?? '',
-      startTime:               toLocalDateTimeInput(s.startTime),
-      endTime:                 toLocalDateTimeInput(s.endTime),
-      capacity:                s.capacity.toString(),
-      creditCost:              s.creditCost.toString(),
+      title: s.title,
+      description: s.description ?? '',
+      locationId: s.locationId?.toString() ?? '',
+      coachId: s.coachId?.toString() ?? '',
+      startTime: toLocalDateTimeInput(s.startTime),
+      endTime: toLocalDateTimeInput(s.endTime),
+      capacity: s.capacity.toString(),
+      creditCost: s.creditCost.toString(),
       registrationCutoffHours: s.registrationCutoffHours.toString(),
     })
     setError('')
@@ -150,14 +163,14 @@ export default function ManageSessionsPage() {
     setSaving(true)
     try {
       const payload = {
-        title:                   form.title.trim(),
-        description:             form.description.trim() || null,
-        locationId:              form.locationId ? parseInt(form.locationId) : null,
-        coachId:                 form.coachId ? parseInt(form.coachId) : null,
-        startTime:               new Date(form.startTime).toISOString(),
-        endTime:                 new Date(form.endTime).toISOString(),
-        capacity:                parseInt(form.capacity),
-        creditCost:              parseInt(form.creditCost),
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        locationId: form.locationId ? parseInt(form.locationId) : null,
+        coachId: form.coachId ? parseInt(form.coachId) : null,
+        startTime: new Date(form.startTime).toISOString(),
+        endTime: new Date(form.endTime).toISOString(),
+        capacity: parseInt(form.capacity),
+        creditCost: parseInt(form.creditCost),
         registrationCutoffHours: parseInt(form.registrationCutoffHours),
       }
       if (editing) {
@@ -195,17 +208,17 @@ export default function ManageSessionsPage() {
     setRecurringLoading(true)
     try {
       await api.post('/sessions/recurring', {
-        title:                   recurring.title.trim(),
-        description:             recurring.description.trim() || null,
-        locationId:              recurring.locationId ? parseInt(recurring.locationId) : null,
-        coachId:                 recurring.coachId ? parseInt(recurring.coachId) : null,
-        startTime:               recurring.startTime,
-        endTime:                 recurring.endTime,
-        daysOfWeek:              recurring.days,
-        startDate:               recurring.startDate,
-        endDate:                 recurring.endDate,
-        capacity:                parseInt(recurring.capacity),
-        creditCost:              parseInt(recurring.creditCost),
+        title: recurring.title.trim(),
+        description: recurring.description.trim() || null,
+        locationId: recurring.locationId ? parseInt(recurring.locationId) : null,
+        coachId: recurring.coachId ? parseInt(recurring.coachId) : null,
+        startTime: recurring.startTime,
+        endTime: recurring.endTime,
+        daysOfWeek: recurring.days,
+        startDate: recurring.startDate,
+        endDate: recurring.endDate,
+        capacity: parseInt(recurring.capacity),
+        creditCost: parseInt(recurring.creditCost),
         registrationCutoffHours: parseInt(recurring.registrationCutoffHours),
       })
       setRecurringOpen(false)
@@ -216,6 +229,33 @@ export default function ManageSessionsPage() {
     } finally {
       setRecurringLoading(false)
     }
+  }
+
+  async function openBookings(s: SessionResponse) {
+    setBookingsSession(s)
+    setBookings([])
+    setBookingsLoading(true)
+    setBookingsModalOpen(true)
+    try {
+      const data = await api.get<BookingRecord[]>(`/sessions/${s.id}/bookings`)
+      setBookings(data)
+    } catch { }
+    finally { setBookingsLoading(false) }
+  }
+
+  async function handleUnbookMember(sessionId: number, userId: number) {
+    if (!confirm('Unregister this member? Their credit will be refunded.')) return
+    setUnbookingId(userId)
+    try {
+      await api.delete(`/sessions/${sessionId}/book?userId=${userId}`)
+      const data = await api.get<BookingRecord[]>(`/sessions/${sessionId}/bookings`)
+      setBookings(data)
+      await loadAll()
+      if (bookingsSession) {
+        setBookingsSession(prev => prev ? { ...prev, bookedCount: prev.bookedCount - 1 } : null)
+      }
+    } catch { }
+    finally { setUnbookingId(null) }
   }
 
   function toggleDay(day: number) {
@@ -270,7 +310,7 @@ export default function ManageSessionsPage() {
               </h2>
               <div className="space-y-3">
                 {upcomingSessions.map(s => (
-                  <SessionCard key={s.id} session={s} onEdit={openEdit} onDelete={handleDelete} />
+                  <SessionCard key={s.id} session={s} onEdit={openEdit} onDelete={handleDelete} onViewBookings={openBookings} />
                 ))}
               </div>
             </div>
@@ -283,7 +323,7 @@ export default function ManageSessionsPage() {
               </h2>
               <div className="space-y-3 opacity-60">
                 {pastSessions.slice(0, 10).map(s => (
-                  <SessionCard key={s.id} session={s} onEdit={openEdit} onDelete={handleDelete} />
+                  <SessionCard key={s.id} session={s} onEdit={openEdit} onDelete={handleDelete} onViewBookings={openBookings} />
                 ))}
               </div>
             </div>
@@ -421,11 +461,10 @@ export default function ManageSessionsPage() {
                   {DAY_NAMES.map((day, i) => (
                     <button key={i} type="button"
                       onClick={() => toggleDay(i)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                        recurring.days.includes(i)
-                          ? 'text-white border-transparent'
-                          : 'text-gray-600 border-gray-200 hover:border-gray-300'
-                      }`}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${recurring.days.includes(i)
+                        ? 'text-white border-transparent'
+                        : 'text-gray-600 border-gray-200 hover:border-gray-300'
+                        }`}
                       style={recurring.days.includes(i) ? { backgroundColor: 'var(--color-primary)', borderColor: 'var(--color-primary)' } : {}}
                     >
                       {day}
@@ -513,6 +552,81 @@ export default function ManageSessionsPage() {
           </div>
         </div>
       )}
+
+      {/* ── Bookings Modal ───────────────────────────────────────────────── */}
+      {bookingsModalOpen && bookingsSession && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
+              <div>
+                <h2 className="font-bold text-gray-900">Registered Members</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {bookingsSession.title} · {new Date(bookingsSession.startTime).toLocaleDateString('en-AU', {
+                    weekday: 'short', day: 'numeric', month: 'short'
+                  })}
+                </p>
+              </div>
+              <button onClick={() => setBookingsModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-6">
+              {bookingsLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />)}
+                </div>
+              ) : bookings.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-3xl mb-2">👥</p>
+                  <p className="text-sm text-gray-500">No members registered yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {bookings.map(b => (
+                    <div key={b.userId} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                      <div
+                        className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                        style={{ backgroundColor: 'var(--color-primary)' }}
+                      >
+                        {b.fullName.charAt(0)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{b.fullName}</p>
+                        <p className="text-xs text-gray-400 truncate">{b.email}</p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs text-gray-400 capitalize">{b.role}</span>
+                        {['committee', 'membership', 'finance', 'webmaster'].includes(currentRole ?? '') && (
+                          <button
+                            onClick={() => handleUnbookMember(bookingsSession.id, b.userId)}
+                            disabled={unbookingId === b.userId}
+                            className="btn-danger text-xs px-2 py-1"
+                          >
+                            {unbookingId === b.userId ? '…' : 'Remove'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-gray-100 flex-shrink-0">
+              <p className="text-xs text-gray-400 text-center">
+                {bookings.length} of {bookingsSession.capacity} spots filled
+                {bookingsSession.capacity - bookings.length > 0
+                  ? ` · ${bookingsSession.capacity - bookings.length} remaining`
+                  : ' · Full'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
@@ -523,10 +637,12 @@ function SessionCard({
   session: s,
   onEdit,
   onDelete,
+  onViewBookings,
 }: {
   session: SessionResponse
   onEdit: (s: SessionResponse) => void
   onDelete: (s: SessionResponse) => void
+  onViewBookings: (s: SessionResponse) => void
 }) {
   const remaining = s.capacity - s.bookedCount
 
@@ -565,9 +681,16 @@ function SessionCard({
 
       {/* Actions */}
       <div className="flex items-center gap-2 flex-shrink-0">
+        <button
+          onClick={() => onViewBookings(s)}
+          className="btn-secondary text-xs px-3 py-1.5"
+        >
+          Registered ({s.bookedCount})
+        </button>
         <button onClick={() => onEdit(s)} className="btn-secondary text-xs px-3 py-1.5">Edit</button>
         <button onClick={() => onDelete(s)} className="btn-danger text-xs px-3 py-1.5">Delete</button>
       </div>
+
     </div>
   )
 }

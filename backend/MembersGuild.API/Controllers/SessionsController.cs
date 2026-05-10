@@ -3,6 +3,8 @@ using MembersGuild.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using MembersGuild.API.Extensions;
+using Microsoft.EntityFrameworkCore;
 
 namespace MembersGuild.API.Controllers;
 
@@ -12,10 +14,12 @@ namespace MembersGuild.API.Controllers;
 public class SessionsController : ControllerBase
 {
     private readonly ISessionService _sessions;
+    private readonly ClubDbContextFactory _dbFactory;
 
-    public SessionsController(ISessionService sessions)
+    public SessionsController(ISessionService sessions, ClubDbContextFactory dbFactory)
     {
         _sessions = sessions;
+        _dbFactory = dbFactory;
     }
 
     private int CurrentUserId => int.Parse(
@@ -104,5 +108,31 @@ public class SessionsController : ControllerBase
         var success = await _sessions.UnbookSessionAsync(
             id, targetUserId, CurrentRole, CurrentUserId);
         return success ? NoContent() : NotFound();
+    }
+
+    /// <summary>GET /api/sessions/{id}/bookings — Staff only</summary>
+    [HttpGet("{id:int}/bookings")]
+    public async Task<IActionResult> GetBookings(int id)
+    {
+        var canView = CurrentRole is "coach" or "committee" or "membership" or "finance" or "webmaster";
+        if (!canView) return Forbid();
+
+        await using var db = _dbFactory.CreateForCurrentClub();
+
+        var bookings = await db.SessionBookings
+            .Include(b => b.User)
+            .Where(b => b.SessionId == id)
+            .OrderBy(b => b.User.FirstName)
+            .Select(b => new
+            {
+                userId = b.UserId,
+                fullName = b.User.FirstName + " " + b.User.LastName,
+                email = b.User.Email,
+                role = b.User.Role,
+                bookedAt = b.CreatedAt,
+            })
+            .ToListAsync();
+
+        return Ok(bookings);
     }
 }
