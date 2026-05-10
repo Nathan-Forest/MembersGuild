@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       })
       await transporter.sendMail({
         from: 'Members Guild <hello@digitalguildhall.com.au>',
-        to:      process.env.CONTACT_EMAIL || 'hello@membersguild.com.au',
+        to:      process.env.CONTACT_EMAIL || 'hello@digitalguildhall.com.au',
         replyTo: email,
         subject: `Members Guild Enquiry — ${name}${club ? ` (${club})` : ''}`,
         text:    `MEMBERS GUILD ENQUIRY\n\nName: ${name}\nEmail: ${email}\nPhone: ${phone || 'Not provided'}\nClub: ${club || 'Not provided'}\n\nMessage:\n${message || 'No message provided'}`,
