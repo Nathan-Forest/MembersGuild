@@ -33,7 +33,7 @@ export default function LoginPage() {
       // The actual JWT stays in localStorage only
       document.cookie = `mg_session=1; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
 
-      router.replace(from)
+      window.location.href = from
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
