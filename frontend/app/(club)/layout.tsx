@@ -52,7 +52,7 @@ function PlatformLandingPage() {
     { icon: '💳', title: 'Credit System',         desc: 'Members purchase credit packs. Finance confirms bank transfers. Credits release instantly.' },
     { icon: '📋', title: 'Attendance Tracking',   desc: 'Coaches mark attendance with QR codes. Credits refunded automatically. Full audit trail.' },
     { icon: '👥', title: 'Member Management',     desc: 'Full member database with role-based access. Emergency contacts. Credit history. One-tap call.' },
-    { icon: '🏪', title: 'Swim Shop',             desc: 'Sell credit packs and merchandise. Finance confirms payments. Orders tracked end to end.' },
+    { icon: '🏪', title: 'Club Shop',             desc: 'Sell credit packs and merchandise. Finance confirms payments. Orders tracked end to end.' },
     { icon: '📱', title: 'Mobile Ready',           desc: 'Installs on iPhone and Android from the browser. No App Store needed. Works offline.' },
   ]
 
