@@ -2,6 +2,7 @@ using MembersGuild.API.DTOs.Credits;
 using MembersGuild.API.Extensions;
 using MembersGuild.Data.Models.Club;
 using Microsoft.EntityFrameworkCore;
+using MembersGuild.API.DTOs.Shop;
 
 namespace MembersGuild.API.Services;
 

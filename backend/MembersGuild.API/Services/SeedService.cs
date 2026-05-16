@@ -2,6 +2,7 @@ using MembersGuild.Data.Contexts;
 using MembersGuild.Data.Models.Club;
 using MembersGuild.Data.Models.Platform;
 using Microsoft.EntityFrameworkCore;
+using MembersGuild.API.DTOs.Shop;
 
 namespace MembersGuild.API.Services;
 
