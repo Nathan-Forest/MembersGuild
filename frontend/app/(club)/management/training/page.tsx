@@ -206,12 +206,14 @@ export default function ManageTrainingPage() {
       setSetSaving(false) }
   }
 
-  async function handleSetOfWeek(id: number) {
-    try {
-      await api.put(`/training/sets/${id}/week`, {})
-      await loadSets()
-    } catch { }
+async function handleSetOfWeek(id: number) {
+  try {
+    await api.put(`/training/sets/${id}/week`, {})
+    await loadSets()
+  } catch {
+    // TODO: toast "Failed to update set of the week"
   }
+}
 
   async function handleDeleteSet(s: TrainingSet) {
     if (!confirm(`Remove "${s.title}" from the library?`)) return
