@@ -53,6 +53,7 @@ builder.Services.AddScoped<SeedService>();
 builder.Services.AddScoped<IMemberService, MemberService>();
 builder.Services.AddScoped<ICreditService, CreditService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
+builder.Services.AddScoped<ShopService>();
 
 // ── API ───────────────────────────────────────────────────────────────────────
 
