@@ -37,6 +37,7 @@ public class ClubDbContext : DbContext
     public DbSet<ClubSetting> ClubSettings => Set<ClubSetting>();
     public DbSet<CatsFormField> CatsFormFields => Set<CatsFormField>();
     public DbSet<PaymentSettings> PaymentSettings => Set<PaymentSettings>();
+    public DbSet<ClubUpdate> ClubUpdates => Set<ClubUpdate>();
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -259,5 +260,17 @@ public class ClubDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("NOW()");
         });
+
+        modelBuilder.Entity<ClubUpdate>(entity =>
+{
+    entity.ToTable("club_updates");
+    entity.HasKey(e => e.Id);
+    entity.Property(e => e.Title).HasMaxLength(200).IsRequired();
+    entity.Property(e => e.Content).HasMaxLength(1000).IsRequired();
+    entity.Property(e => e.IsActive).HasDefaultValue(true);
+    entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
+    entity.HasOne(e => e.Author).WithMany().HasForeignKey(e => e.CreatedBy)
+        .OnDelete(DeleteBehavior.Restrict);
+});
     }
 }
