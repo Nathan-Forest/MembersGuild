@@ -279,7 +279,7 @@ public class TrainingController : ControllerBase
         set.IsSetOfWeek = true;
 
         await db.SaveChangesAsync();
-        return Ok();
+        return Ok(new { success = true });
     }
 
     // ── GET /api/training/videos ─────────────────────────────────────────────

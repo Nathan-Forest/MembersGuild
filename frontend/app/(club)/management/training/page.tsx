@@ -210,7 +210,9 @@ async function handleSetOfWeek(id: number) {
   try {
     await api.put(`/training/sets/${id}/week`, {})
     setSets(prev => prev.map(s => ({ ...s, isSetOfWeek: s.id === id })))
-  } catch { }
+  } catch (err) {
+    console.error('SetOfWeek failed:', err) // would have caught this immediately
+  }
 }
 
   async function handleDeleteSet(s: TrainingSet) {
