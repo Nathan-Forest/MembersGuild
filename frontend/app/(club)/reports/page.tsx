@@ -51,6 +51,19 @@ interface CoachesReport {
   coaches: { userId: number; name: string; sessionsAssigned: number; sessionsCompleted: number; sessionsCancelled: number }[]
 }
 
+function exportCsv(filename: string, headers: string[], rows: (string | number)[][]) {
+  const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`
+  const lines = [
+    headers.map(escape).join(','),
+    ...rows.map(r => r.map(escape).join(',')),
+  ]
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = `${filename}.csv`; a.click()
+  URL.revokeObjectURL(url)
+}
+
 // ── Period helpers ────────────────────────────────────────────────────────────
 
 type Period = 'week' | 'month' | 'quarter' | 'year' | 'custom'
@@ -65,25 +78,25 @@ function getPeriodDates(period: Period, customStart?: string, customEnd?: string
   let start: Date, end: Date
 
   if (period === 'week') {
-    const day  = now.getDay()
+    const day = now.getDay()
     const diff = day === 0 ? -6 : 1 - day
-    start = new Date(now); start.setDate(now.getDate() + diff); start.setHours(0,0,0,0)
-    end   = new Date(start); end.setDate(start.getDate() + 6); end.setHours(23,59,59,999)
+    start = new Date(now); start.setDate(now.getDate() + diff); start.setHours(0, 0, 0, 0)
+    end = new Date(start); end.setDate(start.getDate() + 6); end.setHours(23, 59, 59, 999)
   } else if (period === 'month') {
     start = new Date(now.getFullYear(), now.getMonth(), 1)
-    end   = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
   } else if (period === 'quarter') {
     const q = Math.floor(now.getMonth() / 3)
     start = new Date(now.getFullYear(), q * 3, 1)
-    end   = new Date(now.getFullYear(), q * 3 + 3, 0)
+    end = new Date(now.getFullYear(), q * 3 + 3, 0)
   } else {
     start = new Date(now.getFullYear(), 0, 1)
-    end   = new Date(now.getFullYear(), 11, 31)
+    end = new Date(now.getFullYear(), 11, 31)
   }
 
   return {
     start: start.toISOString().split('T')[0],
-    end:   end.toISOString().split('T')[0],
+    end: end.toISOString().split('T')[0],
   }
 }
 
@@ -103,12 +116,12 @@ const PERIOD_LABELS: Record<Period, string> = {
 }
 
 const TABS = [
-  { key: 'financial',  label: '💰 Financial'  },
+  { key: 'financial', label: '💰 Financial' },
   { key: 'membership', label: '👥 Membership' },
-  { key: 'cats',       label: '🏊 CATS'       },
+  { key: 'cats', label: '🏊 CATS' },
   { key: 'attendance', label: '📊 Attendance' },
-  { key: 'lanes',      label: '🏊 Lanes'      },
-  { key: 'coaches',    label: '🏋️ Coaches'    },
+  { key: 'lanes', label: '🏊 Lanes' },
+  { key: 'coaches', label: '🏋️ Coaches' },
 ]
 
 // ── Stat Card ─────────────────────────────────────────────────────────────────
@@ -118,12 +131,12 @@ function StatCard({ label, value, sub, color = 'gray' }: {
   color?: 'blue' | 'green' | 'amber' | 'red' | 'purple' | 'gray'
 }) {
   const colors = {
-    blue:   'bg-blue-50 border-blue-100 text-blue-900',
-    green:  'bg-green-50 border-green-100 text-green-900',
-    amber:  'bg-amber-50 border-amber-100 text-amber-900',
-    red:    'bg-red-50 border-red-100 text-red-900',
+    blue: 'bg-blue-50 border-blue-100 text-blue-900',
+    green: 'bg-green-50 border-green-100 text-green-900',
+    amber: 'bg-amber-50 border-amber-100 text-amber-900',
+    red: 'bg-red-50 border-red-100 text-red-900',
     purple: 'bg-purple-50 border-purple-100 text-purple-900',
-    gray:   'bg-gray-50 border-gray-100 text-gray-900',
+    gray: 'bg-gray-50 border-gray-100 text-gray-900',
   }
   return (
     <div className={`rounded-xl border p-4 ${colors[color]}`}>
@@ -175,21 +188,21 @@ function Table({ headers, rows, empty = 'No data' }: {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ReportsPage() {
-  const user   = getCurrentUser()
+  const user = getCurrentUser()
   const router = useRouter()
 
-  const [period, setPeriod]           = useState<Period>('month')
+  const [period, setPeriod] = useState<Period>('month')
   const [customStart, setCustomStart] = useState('')
-  const [customEnd, setCustomEnd]     = useState('')
-  const [activeTab, setActiveTab]     = useState('financial')
-  const [loading, setLoading]         = useState(false)
+  const [customEnd, setCustomEnd] = useState('')
+  const [activeTab, setActiveTab] = useState('financial')
+  const [loading, setLoading] = useState(false)
 
-  const [financial,  setFinancial]  = useState<FinancialReport | null>(null)
+  const [financial, setFinancial] = useState<FinancialReport | null>(null)
   const [membership, setMembership] = useState<MembershipReport | null>(null)
-  const [cats,       setCats]       = useState<CatsReport | null>(null)
+  const [cats, setCats] = useState<CatsReport | null>(null)
   const [attendance, setAttendance] = useState<AttendanceReport | null>(null)
-  const [lanes,      setLanes]      = useState<LanesReport | null>(null)
-  const [coaches,    setCoaches]    = useState<CoachesReport | null>(null)
+  const [lanes, setLanes] = useState<LanesReport | null>(null)
+  const [coaches, setCoaches] = useState<CoachesReport | null>(null)
 
   const allowedRoles = ['committee', 'membership', 'finance', 'webmaster', 'coach']
   useEffect(() => {
@@ -204,12 +217,12 @@ export default function ReportsPage() {
     const params = `?start=${start}&end=${end}`
     try {
       switch (activeTab) {
-        case 'financial':  setFinancial(await api.get(`/reports/financial${params}`));  break
+        case 'financial': setFinancial(await api.get(`/reports/financial${params}`)); break
         case 'membership': setMembership(await api.get(`/reports/membership${params}`)); break
-        case 'cats':       setCats(await api.get(`/reports/cats${params}`));             break
+        case 'cats': setCats(await api.get(`/reports/cats${params}`)); break
         case 'attendance': setAttendance(await api.get(`/reports/attendance${params}`)); break
-        case 'lanes':      setLanes(await api.get(`/reports/lanes${params}`));           break
-        case 'coaches':    setCoaches(await api.get(`/reports/coaches${params}`));       break
+        case 'lanes': setLanes(await api.get(`/reports/lanes${params}`)); break
+        case 'coaches': setCoaches(await api.get(`/reports/coaches${params}`)); break
       }
     } catch (err) {
       console.error('Report failed:', err)
@@ -237,9 +250,8 @@ export default function ReportsPage() {
         <div className="flex gap-2 flex-wrap">
           {(Object.keys(PERIOD_LABELS) as Period[]).map(p => (
             <button key={p} onClick={() => setPeriod(p)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                period === p ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${period === p ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
               style={period === p ? { backgroundColor: 'var(--color-primary)' } : {}}>
               {PERIOD_LABELS[p]}
             </button>
@@ -265,11 +277,10 @@ export default function ReportsPage() {
         <nav className="flex gap-1 overflow-x-auto">
           {TABS.map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`pb-3 px-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                activeTab === tab.key
-                  ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}>
+              className={`pb-3 px-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${activeTab === tab.key
+                ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}>
               {tab.label}
             </button>
           ))}
@@ -280,7 +291,7 @@ export default function ReportsPage() {
       {loading && (
         <div className="space-y-4 animate-pulse">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[1,2,3,4].map(i => <div key={i} className="h-20 rounded-xl bg-gray-100" />)}
+            {[1, 2, 3, 4].map(i => <div key={i} className="h-20 rounded-xl bg-gray-100" />)}
           </div>
           <div className="h-48 rounded-xl bg-gray-100" />
         </div>
@@ -293,19 +304,19 @@ export default function ReportsPage() {
             <div className="space-y-6">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <StatCard label="Confirmed Revenue" value={`$${financial.confirmedRevenue.toFixed(2)}`} color="green" />
-                <StatCard label="Pending Revenue"   value={`$${financial.pendingRevenue.toFixed(2)}`}   color="amber" />
-                <StatCard label="Credits Issued"    value={financial.totalCreditsIssued}                color="blue"  />
-                <StatCard label="Total Orders"      value={financial.totalOrders}                       color="gray"  />
+                <StatCard label="Pending Revenue" value={`$${financial.pendingRevenue.toFixed(2)}`} color="amber" />
+                <StatCard label="Credits Issued" value={financial.totalCreditsIssued} color="blue" />
+                <StatCard label="Total Orders" value={financial.totalOrders} color="gray" />
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <StatCard label="Pending"    value={financial.pendingOrders}    />
-                <StatCard label="Confirmed"  value={financial.confirmedOrders}  color="blue"  />
-                <StatCard label="Delivered"  value={financial.deliveredOrders}  color="green" />
-                <StatCard label="Cancelled"  value={financial.cancelledOrders}  color="red"   />
+                <StatCard label="Pending" value={financial.pendingOrders} />
+                <StatCard label="Confirmed" value={financial.confirmedOrders} color="blue" />
+                <StatCard label="Delivered" value={financial.deliveredOrders} color="green" />
+                <StatCard label="Cancelled" value={financial.cancelledOrders} color="red" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <StatCard label="Credit Pack Revenue"  value={`$${financial.creditPackRevenue.toFixed(2)}`}  color="blue"   />
-                <StatCard label="Merchandise Revenue"  value={`$${financial.merchandiseRevenue.toFixed(2)}`} color="purple" />
+                <StatCard label="Credit Pack Revenue" value={`$${financial.creditPackRevenue.toFixed(2)}`} color="blue" />
+                <StatCard label="Merchandise Revenue" value={`$${financial.merchandiseRevenue.toFixed(2)}`} color="purple" />
               </div>
               <div className="card p-6">
                 <h3 className="font-semibold text-gray-900 mb-4">Top Selling Items</h3>
@@ -318,6 +329,13 @@ export default function ReportsPage() {
                   ])}
                   empty="No sales in this period"
                 />
+                <button onClick={() => exportCsv(
+                  `financial-report-${start}-${end}`,
+                  ['Item', 'Qty Sold', 'Revenue ($)'],
+                  financial.topItems.map(i => [i.name, i.quantitySold, i.revenue.toFixed(2)])
+                )} className="btn-secondary text-sm px-3 py-1.5 mt-4">
+                  ↓ Export Top Items CSV
+                </button>
               </div>
             </div>
           )}
@@ -326,10 +344,10 @@ export default function ReportsPage() {
           {activeTab === 'membership' && membership && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <StatCard label="Total Members"       value={membership.totalMembers}       color="blue"  />
-                <StatCard label="Active"              value={membership.activeMembers}       color="green" />
-                <StatCard label="Inactive"            value={membership.inactiveMembers}     color="gray"  />
-                <StatCard label="New This Period"     value={membership.newMembersInPeriod}  color="purple"/>
+                <StatCard label="Total Members" value={membership.totalMembers} color="blue" />
+                <StatCard label="Active" value={membership.activeMembers} color="green" />
+                <StatCard label="Inactive" value={membership.inactiveMembers} color="gray" />
+                <StatCard label="New This Period" value={membership.newMembersInPeriod} color="purple" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="card p-6">
@@ -350,6 +368,13 @@ export default function ReportsPage() {
                     ])}
                     empty="No new members in this period"
                   />
+                  <button onClick={() => exportCsv(
+                    `membership-report-${start}-${end}`,
+                    ['Name', 'Email', 'Role', 'Joined'],
+                    membership.newMembersList.map(m => [m.name, m.email, m.role, fmtDate(m.createdAt)])
+                  )} className="btn-secondary text-sm px-3 py-1.5 mt-4">
+                    ↓ Export New Members CSV
+                  </button>
                 </div>
               </div>
             </div>
@@ -359,10 +384,10 @@ export default function ReportsPage() {
           {activeTab === 'cats' && cats && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <StatCard label="Active CATS"       value={cats.totalActiveCats}                            color="blue"   />
-                <StatCard label="New This Period"   value={cats.newCatsInPeriod}                            color="purple" />
-                <StatCard label="Converted (Total)" value={cats.convertedAllTime}                           color="green"  />
-                <StatCard label="Conversion Rate"   value={`${cats.conversionRateAllTime}%`}
+                <StatCard label="Active CATS" value={cats.totalActiveCats} color="blue" />
+                <StatCard label="New This Period" value={cats.newCatsInPeriod} color="purple" />
+                <StatCard label="Converted (Total)" value={cats.convertedAllTime} color="green" />
+                <StatCard label="Conversion Rate" value={`${cats.conversionRateAllTime}%`}
                   sub="All time approx." color="amber" />
               </div>
               <div className="card p-4 bg-blue-50 border border-blue-100 text-sm text-blue-700">
@@ -397,6 +422,13 @@ export default function ReportsPage() {
                     ])}
                     empty="No active CATS"
                   />
+                  <button onClick={() => exportCsv(
+                    `cats-report-${start}-${end}`,
+                    ['Name', 'Email', 'Credits Remaining', 'Joined'],
+                    cats.activeCatsList.map(c => [c.name, c.email, c.creditBalance, fmtDate(c.createdAt)])
+                  )} className="btn-secondary text-sm px-3 py-1.5 mt-4">
+                    ↓ Export Active CATS CSV
+                  </button>
                 </div>
               </div>
             </div>
@@ -406,17 +438,17 @@ export default function ReportsPage() {
           {activeTab === 'attendance' && attendance && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <StatCard label="Sessions"         value={attendance.totalSessions}                        color="blue"   />
-                <StatCard label="Avg Attendance"   value={attendance.averageAttendance}                    color="purple" />
-                <StatCard label="Attendance Rate"  value={`${attendance.attendanceRate}%`}                 color="green"  />
-                <StatCard label="Total Attended"   value={attendance.totalAttended}                        color="gray"   />
+                <StatCard label="Sessions" value={attendance.totalSessions} color="blue" />
+                <StatCard label="Avg Attendance" value={attendance.averageAttendance} color="purple" />
+                <StatCard label="Attendance Rate" value={`${attendance.attendanceRate}%`} color="green" />
+                <StatCard label="Total Attended" value={attendance.totalAttended} color="gray" />
               </div>
               <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
-                <StatCard label="Attended" value={attendance.statusAttended} color="green"  />
-                <StatCard label="Late"     value={attendance.statusLate}     color="amber"  />
-                <StatCard label="NSBA"     value={attendance.statusNsba}     color="blue"   />
-                <StatCard label="Absent"   value={attendance.statusAbsent}   color="red"    />
-                <StatCard label="No Show"  value={attendance.statusNoShow}   color="gray"   />
+                <StatCard label="Attended" value={attendance.statusAttended} color="green" />
+                <StatCard label="Late" value={attendance.statusLate} color="amber" />
+                <StatCard label="NSBA" value={attendance.statusNsba} color="blue" />
+                <StatCard label="Absent" value={attendance.statusAbsent} color="red" />
+                <StatCard label="No Show" value={attendance.statusNoShow} color="gray" />
               </div>
               <div className="card p-6">
                 <h3 className="font-semibold text-gray-900 mb-4">Session Breakdown</h3>
@@ -435,6 +467,16 @@ export default function ReportsPage() {
                   ])}
                   empty="No sessions in this period"
                 />
+                <button onClick={() => exportCsv(
+                  `attendance-report-${start}-${end}`,
+                  ['Date', 'Session', 'Location', 'Coach', 'Registered', 'Attended', 'Late', 'NSBA', 'Absent'],
+                  attendance.sessions.map(s => [
+                    fmtDateTime(s.startTime), s.title, s.location ?? '', s.coachName ?? '',
+                    s.registered, s.attended, s.late, s.nsba, s.absent
+                  ])
+                )} className="btn-secondary text-sm px-3 py-1.5 mt-4">
+                  ↓ Export Attendance CSV
+                </button>
               </div>
             </div>
           )}
@@ -443,9 +485,9 @@ export default function ReportsPage() {
           {activeTab === 'lanes' && lanes && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <StatCard label="Avg Lanes Used"    value={lanes.overallAvgLanes}      color="blue"   />
-                <StatCard label="Avg Attendees"     value={lanes.overallAvgAttendees}   color="purple" />
-                <StatCard label="Sessions w/ Data"  value={lanes.sessionsWithLaneData}  color="gray"   />
+                <StatCard label="Avg Lanes Used" value={lanes.overallAvgLanes} color="blue" />
+                <StatCard label="Avg Attendees" value={lanes.overallAvgAttendees} color="purple" />
+                <StatCard label="Sessions w/ Data" value={lanes.sessionsWithLaneData} color="gray" />
               </div>
               {lanes.sessionsWithLaneData === 0 && (
                 <div className="card p-4 bg-amber-50 border border-amber-100 text-sm text-amber-700">
@@ -477,6 +519,15 @@ export default function ReportsPage() {
                   ])}
                   empty="No sessions in this period"
                 />
+                <button onClick={() => exportCsv(
+                  `lanes-report-${start}-${end}`,
+                  ['Date', 'Day', 'Session', 'Lanes', 'Attended'],
+                  lanes.sessions.map(s => [
+                    fmtDate(s.date), s.dayOfWeek, s.title, s.lanes ?? '', s.attended
+                  ])
+                )} className="btn-secondary text-sm px-3 py-1.5 mt-4">
+                  ↓ Export Lanes CSV
+                </button>
               </div>
             </div>
           )}
@@ -509,6 +560,13 @@ export default function ReportsPage() {
                   ])}
                   empty="No sessions with assigned coaches in this period"
                 />
+                <button onClick={() => exportCsv(
+                  `coaches-report-${start}-${end}`,
+                  ['Coach', 'Assigned', 'Completed', 'Cancelled'],
+                  coaches.coaches.map(c => [c.name, c.sessionsAssigned, c.sessionsCompleted, c.sessionsCancelled])
+                )} className="btn-secondary text-sm px-3 py-1.5 mt-4">
+                  ↓ Export Coaches CSV
+                </button>
               </div>
             </div>
           )}
