@@ -52,44 +52,51 @@ const emptyCategory = { name: '', slug: '', displayOrder: 0 }
 
 export default function ManageShopPage() {
   const user = getCurrentUser()
-  const router   = useRouter()
+  const router = useRouter()
 
-  const [activeTab, setActiveTab]       = useState<'items' | 'categories' | 'settings'>('items')
-  const [categories, setCategories]     = useState<ShopCategory[]>([])
-  const [items, setItems]               = useState<ShopItem[]>([])
-  const [loading, setLoading]           = useState(true)
+  const [activeTab, setActiveTab] = useState<'items' | 'categories' | 'settings'>('items')
+  const [categories, setCategories] = useState<ShopCategory[]>([])
+  const [items, setItems] = useState<ShopItem[]>([])
+  const [loading, setLoading] = useState(true)
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
   // Item modal
-  const [showItemModal, setShowItemModal]   = useState(false)
-  const [editingItem, setEditingItem]       = useState<ShopItem | null>(null)
-  const [itemForm, setItemForm]             = useState({ ...emptyItem })
-  const [itemSaving, setItemSaving]         = useState(false)
-  const [itemError, setItemError]           = useState('')
+  const [showItemModal, setShowItemModal] = useState(false)
+  const [editingItem, setEditingItem] = useState<ShopItem | null>(null)
+  const [itemForm, setItemForm] = useState({ ...emptyItem })
+  const [itemSaving, setItemSaving] = useState(false)
+  const [itemError, setItemError] = useState('')
 
   // Variant modal
   const [showVariantModal, setShowVariantModal] = useState(false)
-  const [variantItem, setVariantItem]           = useState<ShopItem | null>(null)
-  const [editingVariant, setEditingVariant]     = useState<ShopItemVariant | null>(null)
-  const [variantForm, setVariantForm]           = useState({ ...emptyVariant })
-  const [variantSaving, setVariantSaving]       = useState(false)
+  const [variantItem, setVariantItem] = useState<ShopItem | null>(null)
+  const [editingVariant, setEditingVariant] = useState<ShopItemVariant | null>(null)
+  const [variantForm, setVariantForm] = useState({ ...emptyVariant })
+  const [variantSaving, setVariantSaving] = useState(false)
 
   // Category modal
-  const [showCatModal, setShowCatModal]   = useState(false)
-  const [editingCat, setEditingCat]       = useState<ShopCategory | null>(null)
-  const [catForm, setCatForm]             = useState({ ...emptyCategory })
-  const [catSaving, setCatSaving]         = useState(false)
-  const [catError, setCatError]           = useState('')
+  const [showCatModal, setShowCatModal] = useState(false)
+  const [editingCat, setEditingCat] = useState<ShopCategory | null>(null)
+  const [catForm, setCatForm] = useState({ ...emptyCategory })
+  const [catSaving, setCatSaving] = useState(false)
+  const [catError, setCatError] = useState('')
 
   // Settings
-  const [creditPrice, setCreditPrice]     = useState<number>(5)
+  const [creditPrice, setCreditPrice] = useState<number>(5)
   const [newCreditPrice, setNewCreditPrice] = useState('')
-  const [priceSaving, setPriceSaving]     = useState(false)
-  const [priceSuccess, setPriceSuccess]   = useState(false)
+  const [priceSaving, setPriceSaving] = useState(false)
+  const [priceSuccess, setPriceSuccess] = useState(false)
+
+  // Payment settings state
+  const [paymentForm, setPaymentForm] = useState({
+    bankName: '', accountName: '', bsb: '', accountNumber: '', paymentInstructions: ''
+  })
+  const [paymentSaving, setPaymentSaving] = useState(false)
+  const [paymentSuccess, setPaymentSuccess] = useState(false)
 
   // Image upload
   const imageInputRef = useRef<HTMLInputElement>(null)
-  const [uploadingFor, setUploadingFor]   = useState<number | null>(null)
+  const [uploadingFor, setUploadingFor] = useState<number | null>(null)
 
   const isWebmaster = user?.role === 'webmaster'
 
@@ -117,8 +124,18 @@ export default function ManageShopPage() {
     } finally {
       setLoading(false)
     }
-  }
 
+    const payment = await api.get<any>('/settings/payment').catch(() => null)
+    if (payment) {
+      setPaymentForm({
+        bankName: payment.bankName ?? '',
+        accountName: payment.accountName ?? '',
+        bsb: payment.bsb ?? '',
+        accountNumber: payment.accountNumber ?? '',
+        paymentInstructions: payment.paymentInstructions ?? '',
+      })
+    }
+  }
   // ── Items ─────────────────────────────────────────────────────────────────
 
   function openAddItem() {
@@ -161,6 +178,19 @@ export default function ManageShopPage() {
     }
   }
 
+  async function savePaymentSettings() {
+    setPaymentSaving(true)
+    try {
+      await api.put('/settings/payment', paymentForm)
+      setPaymentSuccess(true)
+      setTimeout(() => setPaymentSuccess(false), 3000)
+    } catch (err: any) {
+      alert(err.message ?? 'Failed to save payment details.')
+    } finally {
+      setPaymentSaving(false)
+    }
+  }
+
   async function deleteItem(item: ShopItem) {
     if (item.isSystem) return
     if (!confirm(`Remove "${item.name}"? This cannot be undone.`)) return
@@ -180,8 +210,8 @@ export default function ManageShopPage() {
       const formData = new FormData()
       formData.append('file', file)
       const token = document.cookie.match(/token=([^;]+)/)?.[1] ?? ''
-      const slug  = window.location.hostname.split('.')[0]
-      const res   = await fetch(`/api/shop/items/${itemId}/image`, {
+      const slug = window.location.hostname.split('.')[0]
+      const res = await fetch(`/api/shop/items/${itemId}/image`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -330,7 +360,7 @@ export default function ManageShopPage() {
 
   if (loading) return (
     <div className="p-6 space-y-4">
-      {[1,2,3].map(i => <div key={i} className="card p-4 h-20 animate-pulse bg-gray-100" />)}
+      {[1, 2, 3].map(i => <div key={i} className="card p-4 h-20 animate-pulse bg-gray-100" />)}
     </div>
   )
 
@@ -343,11 +373,10 @@ export default function ManageShopPage() {
         <nav className="flex gap-6">
           {(['items', 'categories', 'settings'] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`pb-3 text-sm font-medium capitalize border-b-2 transition-colors ${
-                activeTab === tab
-                  ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}>
+              className={`pb-3 text-sm font-medium capitalize border-b-2 transition-colors ${activeTab === tab
+                ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}>
               {tab === 'items' ? 'Shop Items' : tab === 'categories' ? 'Categories' : 'Settings'}
             </button>
           ))}
@@ -361,19 +390,17 @@ export default function ManageShopPage() {
             {/* Category filter pills */}
             <div className="flex gap-2 flex-wrap">
               <button onClick={() => setCategoryFilter('all')}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                  categoryFilter === 'all'
-                    ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${categoryFilter === 'all'
+                  ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
                 style={categoryFilter === 'all' ? { backgroundColor: 'var(--color-primary)' } : {}}>
                 All
               </button>
               {activeCategories.map(cat => (
                 <button key={cat.slug} onClick={() => setCategoryFilter(cat.slug)}
-                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                    categoryFilter === cat.slug
-                      ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
+                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${categoryFilter === cat.slug
+                    ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
                   style={categoryFilter === cat.slug ? { backgroundColor: 'var(--color-primary)' } : {}}>
                   {cat.name}
                 </button>
@@ -535,29 +562,26 @@ export default function ManageShopPage() {
       {/* ── Settings Tab ──────────────────────────────────────────────────── */}
       {activeTab === 'settings' && (
         <div className="space-y-6 max-w-lg">
+
+          {/* Credit Price card — already exists, keep it */}
           <div className="card p-6 space-y-4">
             <div>
               <h3 className="font-semibold text-gray-900">Credit Price</h3>
               <p className="text-sm text-gray-500 mt-1">
-                Sets the price per credit. Updating this automatically recalculates the
-                standard 1, 5, and 10 credit pack prices.
+                Sets the price per credit. Updating this automatically recalculates
+                the standard 1, 5, and 10 credit pack prices.
               </p>
             </div>
             <div className="flex items-center gap-3">
               <div className="relative flex-1">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                <input
-                  type="number" min="0.01" step="0.01"
+                <input type="number" min="0.01" step="0.01"
                   value={newCreditPrice}
                   onChange={e => setNewCreditPrice(e.target.value)}
-                  className="input pl-7 w-full"
-                  placeholder="5.00"
-                />
+                  className="input pl-7 w-full" placeholder="5.00" />
               </div>
               <span className="text-sm text-gray-500">AUD per credit</span>
-              <button
-                onClick={saveCreditPrice}
-                disabled={priceSaving}
+              <button onClick={saveCreditPrice} disabled={priceSaving}
                 className="btn-primary px-4 py-2 text-sm">
                 {priceSaving ? 'Saving...' : 'Update'}
               </button>
@@ -567,10 +591,61 @@ export default function ManageShopPage() {
                 ✓ Credit price updated. Standard pack prices recalculated.
               </p>
             )}
-            <p className="text-xs text-gray-400">
-              Current price: ${creditPrice.toFixed(2)} per credit
-            </p>
+            <p className="text-xs text-gray-400">Current price: ${creditPrice.toFixed(2)} per credit</p>
           </div>
+
+          {/* Payment / Bank Details */}
+          <div className="card p-6 space-y-4">
+            <div>
+              <h3 className="font-semibold text-gray-900">Bank Transfer Details</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Shown to members after placing an order so they know where to transfer payment.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
+                <input className="input w-full" placeholder="e.g. Commonwealth Bank"
+                  value={paymentForm.bankName}
+                  onChange={e => setPaymentForm(f => ({ ...f, bankName: e.target.value }))} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
+                <input className="input w-full" placeholder="e.g. Brisbane Southside Masters Swimming Club"
+                  value={paymentForm.accountName}
+                  onChange={e => setPaymentForm(f => ({ ...f, accountName: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">BSB</label>
+                  <input className="input w-full font-mono" placeholder="062-000"
+                    value={paymentForm.bsb}
+                    onChange={e => setPaymentForm(f => ({ ...f, bsb: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
+                  <input className="input w-full font-mono" placeholder="12345678"
+                    value={paymentForm.accountNumber}
+                    onChange={e => setPaymentForm(f => ({ ...f, accountNumber: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Additional Instructions</label>
+                <textarea className="input w-full h-20 resize-none"
+                  placeholder="e.g. Please include your member number in the description."
+                  value={paymentForm.paymentInstructions}
+                  onChange={e => setPaymentForm(f => ({ ...f, paymentInstructions: e.target.value }))} />
+              </div>
+            </div>
+            {paymentSuccess && (
+              <p className="text-sm text-green-600">✓ Payment details saved.</p>
+            )}
+            <button onClick={savePaymentSettings} disabled={paymentSaving}
+              className="btn-primary px-4 py-2 text-sm">
+              {paymentSaving ? 'Saving...' : 'Save Bank Details'}
+            </button>
+          </div>
+
         </div>
       )}
 
