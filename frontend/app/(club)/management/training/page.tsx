@@ -209,10 +209,8 @@ export default function ManageTrainingPage() {
 async function handleSetOfWeek(id: number) {
   try {
     await api.put(`/training/sets/${id}/week`, {})
-    await loadSets()
-  } catch {
-    // TODO: toast "Failed to update set of the week"
-  }
+    setSets(prev => prev.map(s => ({ ...s, isSetOfWeek: s.id === id })))
+  } catch { }
 }
 
   async function handleDeleteSet(s: TrainingSet) {
