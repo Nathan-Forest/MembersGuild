@@ -1,5 +1,5 @@
 using MembersGuild.API.DTOs.Shop;
-using MembersGuild.Data.Contexts;
+using MembersGuild.API.Extensions;
 using MembersGuild.Data.Models.Club;
 using Microsoft.EntityFrameworkCore;
  
