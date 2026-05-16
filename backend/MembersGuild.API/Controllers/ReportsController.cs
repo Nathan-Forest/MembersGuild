@@ -18,8 +18,14 @@ public class ReportsController : ControllerBase
 
     private static (DateTime start, DateTime end) ParseDates(string? start, string? end)
     {
-        var s = DateTime.TryParse(start, out var sd) ? sd : DateTime.UtcNow.AddMonths(-1);
-        var e = DateTime.TryParse(end,   out var ed) ? ed.AddDays(1).AddTicks(-1) : DateTime.UtcNow;
+        var s = DateTime.TryParse(start, out var sd)
+            ? DateTime.SpecifyKind(sd, DateTimeKind.Utc)
+            : DateTime.UtcNow.AddMonths(-1);
+
+        var e = DateTime.TryParse(end, out var ed)
+            ? DateTime.SpecifyKind(ed, DateTimeKind.Utc).AddDays(1).AddTicks(-1)
+            : DateTime.UtcNow;
+
         return (s, e);
     }
 
