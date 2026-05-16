@@ -98,6 +98,10 @@ export default function AttendanceSheetPage() {
   // Mark all
   const [markingAll, setMarkingAll] = useState(false)
 
+  // Add these with your other useState declarations at the TOP (before any if/return)
+  const [lanesCount, setLanesCount] = useState<number | ''>('')
+  const [savingLanes, setSavingLanes] = useState(false)
+
   useEffect(() => {
     const user = getCurrentUser()
     if (!user) { router.replace('/login'); return }
@@ -118,6 +122,7 @@ export default function AttendanceSheetPage() {
     try {
       const d = await api.get<SheetData>(`/attendance/sessions/${sessionId}/sheet`)
       setData(d)
+      if (d.session.lanesCount) setLanesCount(d.session.lanesCount)  // ← add this
     } catch { }
     finally { setLoading(false) }
   }
@@ -221,9 +226,6 @@ export default function AttendanceSheetPage() {
   if (!data) return null
 
   const { session, members } = data
-
-  const [lanesCount, setLanesCount] = useState<number | ''>(session?.lanesCount ?? '')
-  const [savingLanes, setSavingLanes] = useState(false)
 
   async function handleLanesChange(value: string) {
     const num = value === '' ? '' : parseInt(value)
