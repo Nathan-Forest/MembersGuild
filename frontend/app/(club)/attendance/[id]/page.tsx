@@ -101,7 +101,7 @@ export default function AttendanceSheetPage() {
   // Add these with your other useState declarations at the TOP (before any if/return)
   const [lanesCount, setLanesCount] = useState<number | ''>('')
   const [savingLanes, setSavingLanes] = useState(false)
-  const [lanesSaved, setLanesSaved] = useState(false) 
+  const [lanesSaved, setLanesSaved] = useState(false)
 
   useEffect(() => {
     const user = getCurrentUser()
@@ -316,8 +316,8 @@ export default function AttendanceSheetPage() {
             className="w-14 text-2xl font-bold text-center text-purple-600 bg-transparent border-0 border-b-2 border-purple-200 focus:border-purple-500 focus:outline-none"
             placeholder="—"
           />
-          <p className="text-xs text-gray-400 uppercase tracking-wide mt-0.5">
-            {savingLanes ? 'Saving...' : 'Lanes Used'}
+          <p className={`text-xs uppercase tracking-wide mt-0.5 ${lanesSaved ? 'text-green-600' : 'text-gray-400'}`}>
+            {savingLanes ? 'Saving...' : lanesSaved ? '✓ Saved' : 'Lanes Used'}
           </p>
         </div>
 
