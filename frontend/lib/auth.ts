@@ -29,6 +29,8 @@ interface JwtPayload {
   role?: string
   [ROLE_URI]?: string
   exp: number
+  firstName?: string
+  lastName?: string
 }
 
 export interface ParsedUser {
@@ -38,6 +40,8 @@ export interface ParsedUser {
   club_slug: string
   role: UserRole
   exp: number
+  firstName: string 
+  lastName: string 
   isAuthenticated: true
 }
 
@@ -57,6 +61,8 @@ export function parseToken(token: string): ParsedUser | null {
       club_slug:      decoded.club_slug,
       role,
       exp:            decoded.exp,
+      firstName:       decoded.firstName ?? '',
+      lastName:        decoded.lastName  ?? '',
       isAuthenticated: true,
     }
   } catch {

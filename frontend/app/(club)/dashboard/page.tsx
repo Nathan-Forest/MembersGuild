@@ -31,37 +31,36 @@ interface ClubUpdate {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [firstName, setFirstName]   = useState('')
-  const [role, setRole]             = useState<UserRole | ''>('')
-  const [stats, setStats]           = useState<DashboardStats | null>(null)
-  const [updates, setUpdates]       = useState<ClubUpdate[]>([])
+  const [firstName, setFirstName] = useState('')
+  const [role, setRole] = useState<UserRole | ''>('')
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [updates, setUpdates] = useState<ClubUpdate[]>([])
   const [updateIndex, setUpdateIndex] = useState(0)
-  const [loading, setLoading]       = useState(true)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const u = getCurrentUser()
     if (!u) { router.replace('/login'); return }
+
+    setFirstName(u.firstName)   // ← direct from token, no API call needed
     setRole(u.role as UserRole)
 
     const noCredits = u.role === 'coach'
 
     Promise.all([
-      authApi.profile(),
       api.get<DashboardStats>('/sessions/my-sessions').catch(() => null),
       noCredits ? Promise.resolve(null) : api.get<{ creditBalance: number }>('/credits/my-account').catch(() => null),
       api.get<ClubUpdate[]>('/updates').catch(() => []),
-    ]).then(([profile, sessionData, creditData, clubUpdates]) => {
-      setFirstName(profile.firstName)
+    ]).then(([sessionData, creditData, clubUpdates]) => {
       setStats({
-        creditBalance:     creditData?.creditBalance,
+        creditBalance: creditData?.creditBalance,
         sessionsThisMonth: sessionData?.sessionsThisMonth ?? 0,
-        upcomingBookings:  sessionData?.upcomingBookings ?? 0,
-        lifetimeSessions:  sessionData?.lifetimeSessions ?? 0,
-        upcomingSessions:  sessionData?.upcomingSessions ?? [],
+        upcomingBookings: sessionData?.upcomingBookings ?? 0,
+        lifetimeSessions: sessionData?.lifetimeSessions ?? 0,
+        upcomingSessions: sessionData?.upcomingSessions ?? [],
       })
       setUpdates(clubUpdates as ClubUpdate[])
-    }).catch(console.error)
-    .finally(() => setLoading(false))
+    }).finally(() => setLoading(false))
   }, [router])
 
   const roleLabel = role ? (ROLE_LABELS[role] ?? role) : ''
@@ -71,7 +70,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="h-10 w-48 bg-gray-200 rounded animate-pulse" />
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[1,2,3,4].map(i => <div key={i} className="card h-20 animate-pulse bg-gray-100" />)}
+        {[1, 2, 3, 4].map(i => <div key={i} className="card h-20 animate-pulse bg-gray-100" />)}
       </div>
     </div>
   )

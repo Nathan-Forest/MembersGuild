@@ -75,6 +75,8 @@ public class AuthService : IAuthService
     new Claim("club_id", club.ClubId.ToString()),
     new Claim("club_slug", club.Slug),
     new Claim(ClaimTypes.Role, user.Role),
+    new Claim("firstName", user.FirstName),
+    new Claim("lastName",  user.LastName),
 };
 
         var token = new JwtSecurityToken(
