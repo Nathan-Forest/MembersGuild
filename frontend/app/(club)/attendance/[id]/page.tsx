@@ -234,7 +234,7 @@ export default function AttendanceSheetPage() {
     setSavingLanes(true)
     setLanesSaved(false)
     try {
-      await api.patch(`/attendance/sessions/${sessionId}/lanes`, { lanesCount: num })
+      await api.patch(`/attendance/sessions/${sessionId}/lanes`, num)
       setLanesSaved(true)
       setTimeout(() => setLanesSaved(false), 2000)
     } catch (err) {
