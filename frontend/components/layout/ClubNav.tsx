@@ -26,6 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'My Account', href: '/my-account', roles: ['member', 'committee', 'membership', 'finance', 'webmaster'] },
   { label: 'Attendance', href: '/attendance', roles: ['coach', 'committee', 'membership', 'finance', 'webmaster'] },
   { label: 'Members', href: '/members', roles: ['coach', 'committee', 'membership', 'finance', 'webmaster'] },
+  { label: 'Attendance', href: '/attendance', roles: ['committee', 'membership', 'finance', 'webmaster'] },
 ]
 
 const MANAGEMENT_ITEMS: NavItem[] = [
