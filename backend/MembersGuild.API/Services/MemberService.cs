@@ -25,13 +25,13 @@ public class MemberService : IMemberService
 
     private static readonly Dictionary<string, string> RoleLabels = new()
     {
-        ["cats"]       = "CATS",
-        ["member"]     = "Member",
-        ["coach"]      = "Coach",
-        ["committee"]  = "Committee",
+        ["cats"] = "CATS",
+        ["member"] = "Member",
+        ["coach"] = "Coach",
+        ["committee"] = "Committee",
         ["membership"] = "Membership",
-        ["finance"]    = "Finance",
-        ["webmaster"]  = "Webmaster",
+        ["finance"] = "Finance",
+        ["webmaster"] = "Webmaster",
     };
 
     public MemberService(ClubDbContextFactory dbFactory, IAuthService auth)
@@ -61,9 +61,9 @@ public class MemberService : IMemberService
         query = creditFilter switch
         {
             "none" => query.Where(u => u.CreditBalance <= 0),
-            "low"  => query.Where(u => u.CreditBalance > 0 && u.CreditBalance <= 2),
-            "ok"   => query.Where(u => u.CreditBalance > 2),
-            _      => query
+            "low" => query.Where(u => u.CreditBalance > 0 && u.CreditBalance <= 2),
+            "ok" => query.Where(u => u.CreditBalance > 2),
+            _ => query
         };
 
         var users = await query.OrderBy(u => u.LastName).ThenBy(u => u.FirstName).ToListAsync();
@@ -108,18 +108,18 @@ public class MemberService : IMemberService
 
         var user = new User
         {
-            Email                 = request.Email.ToLower(),
-            PasswordHash          = _auth.HashPassword(password),
-            FirstName             = request.FirstName.Trim(),
-            LastName              = request.LastName.Trim(),
-            Phone                 = request.Phone?.Trim(),
-            MemberNumber          = request.MemberNumber?.Trim(),
-            DateOfBirth           = request.DateOfBirth,
-            EmergencyContactName  = request.EmergencyContactName?.Trim(),
+            Email = request.Email.ToLower(),
+            PasswordHash = _auth.HashPassword(password),
+            FirstName = request.FirstName.Trim(),
+            LastName = request.LastName.Trim(),
+            Phone = request.Phone?.Trim(),
+            MemberNumber = request.MemberNumber?.Trim(),
+            DateOfBirth = request.DateOfBirth,
+            EmergencyContactName = request.EmergencyContactName?.Trim(),
             EmergencyContactPhone = request.EmergencyContactPhone?.Trim(),
-            Role                  = request.Role,
-            CreditBalance         = 0,
-            IsActive              = true,
+            Role = request.Role,
+            CreditBalance = 0,
+            IsActive = true,
         };
 
         db.Users.Add(user);
@@ -133,14 +133,15 @@ public class MemberService : IMemberService
         var user = await db.Users.FindAsync(id);
         if (user is null) return null;
 
-        user.FirstName             = request.FirstName.Trim();
-        user.LastName              = request.LastName.Trim();
-        user.Phone                 = request.Phone?.Trim();
-        user.MemberNumber          = request.MemberNumber?.Trim();
-        user.DateOfBirth           = request.DateOfBirth;
-        user.EmergencyContactName  = request.EmergencyContactName?.Trim();
+        user.FirstName = request.FirstName.Trim();
+        user.LastName = request.LastName.Trim();
+        user.Phone = request.Phone?.Trim();
+        user.MemberNumber = request.MemberNumber?.Trim();
+        user.DateOfBirth = request.DateOfBirth;
+        user.EmergencyContactName = request.EmergencyContactName?.Trim();
         user.EmergencyContactPhone = request.EmergencyContactPhone?.Trim();
-        user.UpdatedAt             = DateTime.UtcNow;
+        user.JoinedAt = request.JoinedAt;
+        user.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
         return MapDetail(user);
@@ -154,7 +155,14 @@ public class MemberService : IMemberService
         var user = await db.Users.FindAsync(id);
         if (user is null) return false;
 
-        user.Role      = role;
+        // Auto-track CATS → Member conversion
+        if (user.Role == Roles.Cats && role != Roles.Cats)
+        {
+            user.ConvertedFromCats = true;
+            user.CatsConvertedAt = DateTime.UtcNow;
+        }
+
+        user.Role = role;
         user.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return true;
@@ -166,7 +174,7 @@ public class MemberService : IMemberService
         var user = await db.Users.FindAsync(id);
         if (user is null) return false;
 
-        user.IsActive  = isActive;
+        user.IsActive = isActive;
         user.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return true;
@@ -180,7 +188,7 @@ public class MemberService : IMemberService
 
         var temp = _auth.GenerateTemporaryPassword();
         user.PasswordHash = _auth.HashPassword(temp);
-        user.UpdatedAt    = DateTime.UtcNow;
+        user.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return temp;
     }
@@ -215,6 +223,8 @@ public class MemberService : IMemberService
         u.Id, u.Email, u.FirstName, u.LastName, u.Role,
         u.Role, u.CreditBalance, u.Phone, u.MemberNumber,
         u.ProfilePhotoUrl, u.DateOfBirth, u.EmergencyContactName,
-        u.EmergencyContactPhone, u.IsActive, u.LastLoginAt, u.CreatedAt
+        u.EmergencyContactPhone, u.IsActive, u.LastLoginAt, u.CreatedAt,
+        u.JoinedAt,
+        u.EffectiveJoinDate            
     );
 }

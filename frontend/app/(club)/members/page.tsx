@@ -69,6 +69,7 @@ export default function MembersPage() {
   const [addLoading, setAddLoading] = useState(false)
   const [addError, setAddError] = useState('')
   const [newMemberPassword, setNewMemberPassword] = useState<string | null>(null)
+  const [joinedAtEdit, setJoinedAtEdit] = useState('')
 
   useEffect(() => {
     const user = getCurrentUser()
@@ -345,9 +346,8 @@ export default function MembersPage() {
                 <button
                   key={tab.key}
                   onClick={() => setModalTab(tab.key)}
-                  className={`flex-1 py-3 text-xs font-medium transition-colors ${
-                    modalTab === tab.key ? 'border-b-2 text-[var(--color-primary)]' : 'text-gray-500 hover:text-gray-700'
-                  }`}
+                  className={`flex-1 py-3 text-xs font-medium transition-colors ${modalTab === tab.key ? 'border-b-2 text-[var(--color-primary)]' : 'text-gray-500 hover:text-gray-700'
+                    }`}
                   style={modalTab === tab.key ? { borderColor: 'var(--color-primary)' } : {}}
                 >
                   {tab.label}
@@ -364,6 +364,11 @@ export default function MembersPage() {
                     <ModalRow label="Member No." value={selected.memberNumber ? `#${selected.memberNumber}` : '—'} />
                     <ModalRow label="Status" value={selected.isActive ? 'Active' : 'Inactive'} />
                     <ModalRow label="Credits" value={String(selected.creditBalance)} />
+                    <ModalRow label="Member Since" value={
+                      new Date(selected.effectiveJoinDate ?? selected.createdAt).toLocaleDateString('en-AU', {
+                        day: 'numeric', month: 'short', year: 'numeric'
+                      })
+                    } />
                     {selected.dateOfBirth && (
                       <ModalRow label="Date of Birth" value={
                         new Date(selected.dateOfBirth as unknown as string)
@@ -395,7 +400,47 @@ export default function MembersPage() {
                             Delete Member
                           </button>
                         </>
+
                       )}
+                    </div>
+                  )}
+                  {canManage && (
+                    <div className="pt-3 border-t border-gray-100">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        Actual Join Date
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="date"
+                          className="input text-sm flex-1"
+                          defaultValue={selected.joinedAt
+                            ? new Date(selected.joinedAt).toISOString().split('T')[0]
+                            : ''}
+                          onChange={e => setJoinedAtEdit(e.target.value)}
+                        />
+                        <button
+                          onClick={async () => {
+                            if (!joinedAtEdit) return
+                            await api.put(`/members/${selected.id}`, {
+                              firstName: selected.firstName,
+                              lastName: selected.lastName,
+                              phone: selected.phone,
+                              memberNumber: selected.memberNumber,
+                              dateOfBirth: selected.dateOfBirth,
+                              emergencyContactName: selected.emergencyContactName,
+                              emergencyContactPhone: selected.emergencyContactPhone,
+                              joinedAt: joinedAtEdit ? new Date(joinedAtEdit).toISOString() : null,
+                            })
+                            const detail = await api.get<MemberDetailResponse>(`/members/${selected.id}`)
+                            setSelected(detail)
+                          }}
+                          className="btn-secondary text-xs px-3">
+                          Save
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Set the actual club join date (leave blank to use system entry date)
+                      </p>
                     </div>
                   )}
                 </div>

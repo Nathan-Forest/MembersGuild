@@ -36,7 +36,9 @@ public record MemberDetailResponse(
     string? EmergencyContactPhone,
     bool IsActive,
     DateTime? LastLoginAt,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    DateTime? JoinedAt,
+    DateTime EffectiveJoinDate
 );
 
 public record CreateMemberRequest(
@@ -59,7 +61,8 @@ public record UpdateMemberRequest(
     string? MemberNumber,
     DateOnly? DateOfBirth,
     string? EmergencyContactName,
-    string? EmergencyContactPhone
+    string? EmergencyContactPhone,
+    DateTime? JoinedAt    
 );
 
 public record UpdateRoleRequest(

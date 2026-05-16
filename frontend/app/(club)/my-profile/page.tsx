@@ -122,7 +122,7 @@ export default function MyProfilePage() {
   if (!profile) return null
 
   const initials = `${profile.firstName.charAt(0)}${profile.lastName.charAt(0)}`
-  const memberSince = new Date(profile.createdAt).toLocaleDateString('en-AU', {
+  const memberSince = new Date(profile.effectiveJoinDate ?? profile.createdAt).toLocaleDateString('en-AU', {
     month: 'long', year: 'numeric'
   })
 

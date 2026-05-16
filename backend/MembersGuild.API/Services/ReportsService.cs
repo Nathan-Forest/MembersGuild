@@ -16,13 +16,13 @@ public class ReportsService
 
     private static readonly Dictionary<string, string> RoleLabels = new()
     {
-        ["cats"]       = "CATS",
-        ["member"]     = "Member",
-        ["coach"]      = "Coach",
-        ["committee"]  = "Committee",
+        ["cats"] = "CATS",
+        ["member"] = "Member",
+        ["coach"] = "Coach",
+        ["committee"] = "Committee",
         ["membership"] = "Membership",
-        ["finance"]    = "Finance",
-        ["webmaster"]  = "Webmaster",
+        ["finance"] = "Finance",
+        ["webmaster"] = "Webmaster",
     };
 
     // ── Financial ─────────────────────────────────────────────────────────────
@@ -36,7 +36,7 @@ public class ReportsService
             .Where(o => o.CreatedAt >= start && o.CreatedAt <= end)
             .ToListAsync();
 
-        var active   = orders.Where(o => o.Status != "cancelled").ToList();
+        var active = orders.Where(o => o.Status != "cancelled").ToList();
         var confirmed = orders.Where(o => o.Status is "payment_confirmed" or "pending_delivery" or "delivered").ToList();
 
         var creditPackRevenue = confirmed
@@ -61,18 +61,18 @@ public class ReportsService
             .ToList();
 
         return new FinancialReport(
-            TotalRevenue:       active.Sum(o => o.TotalAmount),
-            ConfirmedRevenue:   confirmed.Sum(o => o.TotalAmount),
-            PendingRevenue:     orders.Where(o => o.Status == "pending").Sum(o => o.TotalAmount),
-            TotalOrders:        orders.Count,
-            PendingOrders:      orders.Count(o => o.Status == "pending"),
-            ConfirmedOrders:    orders.Count(o => o.Status == "payment_confirmed"),
-            DeliveredOrders:    orders.Count(o => o.Status == "delivered"),
-            CancelledOrders:    orders.Count(o => o.Status == "cancelled"),
-            CreditPackRevenue:  creditPackRevenue,
+            TotalRevenue: active.Sum(o => o.TotalAmount),
+            ConfirmedRevenue: confirmed.Sum(o => o.TotalAmount),
+            PendingRevenue: orders.Where(o => o.Status == "pending").Sum(o => o.TotalAmount),
+            TotalOrders: orders.Count,
+            PendingOrders: orders.Count(o => o.Status == "pending"),
+            ConfirmedOrders: orders.Count(o => o.Status == "payment_confirmed"),
+            DeliveredOrders: orders.Count(o => o.Status == "delivered"),
+            CancelledOrders: orders.Count(o => o.Status == "cancelled"),
+            CreditPackRevenue: creditPackRevenue,
             MerchandiseRevenue: merchRevenue,
             TotalCreditsIssued: confirmed.Sum(o => o.TotalCredits),
-            TopItems:           topItems);
+            TopItems: topItems);
     }
 
     // ── Membership ────────────────────────────────────────────────────────────
@@ -82,11 +82,11 @@ public class ReportsService
         await using var db = _dbFactory.CreateForCurrentClub();
 
         var allUsers = await db.Users.ToListAsync();
-        var nonCats  = allUsers.Where(u => u.Role != "cats").ToList();
+        var nonCats = allUsers.Where(u => u.Role != "cats").ToList();
 
         var newInPeriod = nonCats
-            .Where(u => u.CreatedAt >= start && u.CreatedAt <= end)
-            .OrderByDescending(u => u.CreatedAt)
+            .Where(u => u.EffectiveJoinDate >= start && u.EffectiveJoinDate <= end)
+            .OrderByDescending(u => u.EffectiveJoinDate)
             .ToList();
 
         var roleBreakdown = nonCats
@@ -99,13 +99,13 @@ public class ReportsService
             .ToList();
 
         return new MembershipReport(
-            TotalMembers:      nonCats.Count,
-            ActiveMembers:     nonCats.Count(u => u.IsActive),
-            InactiveMembers:   nonCats.Count(u => !u.IsActive),
+            TotalMembers: nonCats.Count,
+            ActiveMembers: nonCats.Count(u => u.IsActive),
+            InactiveMembers: nonCats.Count(u => !u.IsActive),
             NewMembersInPeriod: newInPeriod.Count,
-            RoleBreakdown:     roleBreakdown,
-            NewMembersList:    newInPeriod.Select(u => new NewMemberItem(
-                u.Id, u.FullName, u.Email, u.Role, u.CreatedAt)).ToList());
+            RoleBreakdown: roleBreakdown,
+            NewMembersList: newInPeriod.Select(u => new NewMemberItem(
+                u.Id, u.FullName, u.Email, u.Role, u.EffectiveJoinDate)).ToList());
     }
 
     // ── CATS ──────────────────────────────────────────────────────────────────
@@ -115,7 +115,7 @@ public class ReportsService
         await using var db = _dbFactory.CreateForCurrentClub();
 
         var allUsers = await db.Users.ToListAsync();
-        var cats     = allUsers.Where(u => u.Role == "cats").ToList();
+        var cats = allUsers.Where(u => u.Role == "cats").ToList();
 
         // Approximate conversion: users who had cats_initial credit but are now not cats
         var catsInitialUserIds = await db.CreditTransactions
@@ -124,29 +124,27 @@ public class ReportsService
             .Distinct()
             .ToListAsync();
 
-        var convertedAllTime = allUsers
-            .Count(u => u.Role != "cats" && catsInitialUserIds.Contains(u.Id));
-
-        var totalEverCats    = cats.Count + convertedAllTime;
-        var conversionRate   = totalEverCats > 0
+        var convertedAllTime = allUsers.Count(u => u.ConvertedFromCats);
+        var totalEverCats = cats.Count + convertedAllTime;
+        var conversionRate = totalEverCats > 0
             ? Math.Round((decimal)convertedAllTime / totalEverCats * 100, 1)
             : 0;
 
-        var newCatsInPeriod  = allUsers
+        var newCatsInPeriod = allUsers
             .Where(u => u.Role == "cats" && u.CreatedAt >= start && u.CreatedAt <= end)
             .OrderByDescending(u => u.CreatedAt)
             .ToList();
 
         return new CatsReport(
-            TotalActiveCats:      cats.Count,
-            NewCatsInPeriod:      newCatsInPeriod.Count,
-            ConvertedAllTime:     convertedAllTime,
+            TotalActiveCats: cats.Count,
+            NewCatsInPeriod: newCatsInPeriod.Count,
+            ConvertedAllTime: convertedAllTime,
             ConversionRateAllTime: conversionRate,
-            NewCatsList:  newCatsInPeriod.Select(u => new CatsMemberItem(
-                u.Id, u.FullName, u.Email, u.CreditBalance, u.CreatedAt)).ToList(),
-            ActiveCatsList: cats.OrderBy(u => u.CreatedAt)
-                .Select(u => new CatsMemberItem(
-                    u.Id, u.FullName, u.Email, u.CreditBalance, u.CreatedAt)).ToList());
+            NewCatsList: newCatsInPeriod.Select(u => new CatsMemberItem(
+    u.Id, u.FullName, u.Email, u.CreditBalance, u.EffectiveJoinDate)).ToList(),
+ActiveCatsList: cats.OrderBy(u => u.EffectiveJoinDate)
+    .Select(u => new CatsMemberItem(
+        u.Id, u.FullName, u.Email, u.CreditBalance, u.EffectiveJoinDate)).ToList());
     }
 
     // ── Attendance ────────────────────────────────────────────────────────────
@@ -166,16 +164,16 @@ public class ReportsService
 
         var allRecords = sessions.SelectMany(s => s.AttendanceRecords).ToList();
 
-        var attended  = allRecords.Count(r => r.Status == "attended");
-        var absent    = allRecords.Count(r => r.Status == "absent");
-        var late      = allRecords.Count(r => r.Status == "late");
-        var nsba      = allRecords.Count(r => r.Status == "nsba");
-        var noshow    = allRecords.Count(r => r.Status == "noshow");
-        var totalReg  = sessions.Sum(s => s.Bookings.Count);
-        var avgAtt    = sessions.Count > 0
+        var attended = allRecords.Count(r => r.Status == "attended");
+        var absent = allRecords.Count(r => r.Status == "absent");
+        var late = allRecords.Count(r => r.Status == "late");
+        var nsba = allRecords.Count(r => r.Status == "nsba");
+        var noshow = allRecords.Count(r => r.Status == "noshow");
+        var totalReg = sessions.Sum(s => s.Bookings.Count);
+        var avgAtt = sessions.Count > 0
             ? sessions.Average(s => s.AttendanceRecords.Count(r => r.Status == "attended"))
             : 0;
-        var attRate   = totalReg > 0
+        var attRate = totalReg > 0
             ? Math.Round((double)attended / totalReg * 100, 1)
             : 0;
 
@@ -192,17 +190,17 @@ public class ReportsService
         )).ToList();
 
         return new AttendanceReport(
-            TotalSessions:      sessions.Count,
+            TotalSessions: sessions.Count,
             TotalRegistrations: totalReg,
-            TotalAttended:      attended,
-            AverageAttendance:  Math.Round(avgAtt, 1),
-            AttendanceRate:     attRate,
-            StatusAttended:     attended,
-            StatusAbsent:       absent,
-            StatusLate:         late,
-            StatusNsba:         nsba,
-            StatusNoShow:       noshow,
-            Sessions:           sessionItems);
+            TotalAttended: attended,
+            AverageAttendance: Math.Round(avgAtt, 1),
+            AttendanceRate: attRate,
+            StatusAttended: attended,
+            StatusAbsent: absent,
+            StatusLate: late,
+            StatusNsba: nsba,
+            StatusNoShow: noshow,
+            Sessions: sessionItems);
     }
 
     // ── Lanes ─────────────────────────────────────────────────────────────────
@@ -224,9 +222,9 @@ public class ReportsService
             .OrderBy(g => g.Key)
             .Select(g =>
             {
-                var withL   = g.Where(s => s.LanesCount.HasValue).ToList();
+                var withL = g.Where(s => s.LanesCount.HasValue).ToList();
                 var avgLanes = withL.Count > 0 ? withL.Average(s => s.LanesCount!.Value) : 0;
-                var avgAtt   = g.Any()
+                var avgAtt = g.Any()
                     ? g.Average(s => s.AttendanceRecords.Count(r => r.Status == "attended"))
                     : 0;
                 return new DayLanesItem(
@@ -243,12 +241,12 @@ public class ReportsService
         )).ToList();
 
         return new LanesReport(
-            OverallAvgLanes:    withLanes.Count > 0 ? Math.Round(withLanes.Average(s => s.LanesCount!.Value), 1) : 0,
+            OverallAvgLanes: withLanes.Count > 0 ? Math.Round(withLanes.Average(s => s.LanesCount!.Value), 1) : 0,
             OverallAvgAttendees: sessions.Count > 0
                 ? Math.Round(sessions.Average(s => s.AttendanceRecords.Count(r => r.Status == "attended")), 1) : 0,
             SessionsWithLaneData: withLanes.Count,
-            ByDayOfWeek:        byDay,
-            Sessions:           sessionItems);
+            ByDayOfWeek: byDay,
+            Sessions: sessionItems);
     }
 
     // ── Coaches ───────────────────────────────────────────────────────────────
@@ -276,6 +274,6 @@ public class ReportsService
 
         return new CoachesReport(
             TotalSessions: sessions.Count,
-            Coaches:       coachStats);
+            Coaches: coachStats);
     }
 }

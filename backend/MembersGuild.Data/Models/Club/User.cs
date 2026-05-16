@@ -26,6 +26,12 @@ public class User
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public string FullName => $"{FirstName} {LastName}";
+    public DateTime? JoinedAt { get; set; }           // actual club join date, null = use CreatedAt
+    public bool ConvertedFromCats { get; set; }        // auto-set when cats → any other role
+    public DateTime? CatsConvertedAt { get; set; }     // when the conversion happened
+
+    // Convenience — always returns the real join date
+    public DateTime EffectiveJoinDate => JoinedAt ?? CreatedAt;
 }
 
 /// <summary>
@@ -33,13 +39,13 @@ public class User
 /// </summary>
 public static class Roles
 {
-    public const string Cats       = "cats";
-    public const string Member     = "member";
-    public const string Coach      = "coach";
-    public const string Committee  = "committee";
+    public const string Cats = "cats";
+    public const string Member = "member";
+    public const string Coach = "coach";
+    public const string Committee = "committee";
     public const string Membership = "membership";
-    public const string Finance    = "finance";
-    public const string Webmaster  = "webmaster";
+    public const string Finance = "finance";
+    public const string Webmaster = "webmaster";
 
     // Nathan's platform-level super-admin (not a club role)
     public const string PlatformAdmin = "platform_admin";

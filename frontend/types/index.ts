@@ -271,6 +271,8 @@ export interface Member extends AuthUser {
   emergencyContactPhone: string | null
   lastLoginAt: string | null
   createdAt: string
+  joinedAt?: string           // ← add
+  effectiveJoinDate: string
 }
 
 // ─── CATS signup ──────────────────────────────────────────────────────────────
@@ -352,6 +354,8 @@ export interface MemberListResponse {
   profilePhotoUrl: string | null
   isActive: boolean
   createdAt: string
+  joinedAt?: string           // ← add
+  effectiveJoinDate: string
   upcomingSessionCount: number
 }
 
@@ -372,6 +376,8 @@ export interface MemberDetailResponse {
   isActive: boolean
   lastLoginAt: string | null
   createdAt: string
+  joinedAt?: string           // ← add
+  effectiveJoinDate: string
   generatedPassword?: string
 }
 

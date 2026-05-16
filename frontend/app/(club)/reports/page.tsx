@@ -390,10 +390,6 @@ export default function ReportsPage() {
                 <StatCard label="Conversion Rate" value={`${cats.conversionRateAllTime}%`}
                   sub="All time approx." color="amber" />
               </div>
-              <div className="card p-4 bg-blue-50 border border-blue-100 text-sm text-blue-700">
-                💡 Conversion rate is approximate until the Phase 8 CATS conversion flag is added.
-                Once active, each conversion is tracked precisely with date.
-              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="card p-6">
                   <h3 className="font-semibold text-gray-900 mb-4">
