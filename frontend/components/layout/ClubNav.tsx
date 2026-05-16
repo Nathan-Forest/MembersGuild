@@ -43,14 +43,17 @@ const MANAGEMENT_ITEMS: NavItem[] = [
 export default function ClubNav({ config }: Props) {
   const pathname = usePathname()
   const [role, setRole] = useState<UserRole | null>(null)
+  const [firstName, setFirstName] = useState<string>('')
   const [menuOpen, setMenuOpen] = useState(false)
   const [mgmtOpen, setMgmtOpen] = useState(false)
 
   useEffect(() => {
     const user = getCurrentUser()
-    if (user) setRole(user.role as UserRole)
+    if (user) {
+      setRole(user.role as UserRole)
+      setFirstName(user.firstName)
+    }
   }, [])
-
   const canSee = (item: NavItem) => {
     if (!item.roles) return true
     if (!role) return false
@@ -92,8 +95,8 @@ export default function ClubNav({ config }: Props) {
                 key={item.href}
                 href={item.href}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${isActive(item.href)
-                    ? 'text-white'
-                    : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                  ? 'text-white'
+                  : 'text-gray-300 hover:text-white hover:bg-gray-800'
                   }`}
                 style={isActive(item.href) ? { backgroundColor: 'var(--color-primary)' } : {}}
               >
@@ -124,8 +127,8 @@ export default function ClubNav({ config }: Props) {
                           href={item.href}
                           onClick={() => setMgmtOpen(false)}
                           className={`block px-4 py-2 text-sm transition-colors ${isActive(item.href)
-                              ? 'text-white font-medium'
-                              : 'text-gray-700 hover:bg-gray-50'
+                            ? 'text-white font-medium'
+                            : 'text-gray-700 hover:bg-gray-50'
                             }`}
                           style={isActive(item.href) ? { backgroundColor: 'var(--color-primary)' } : {}}
                         >
@@ -147,7 +150,7 @@ export default function ClubNav({ config }: Props) {
               style={{ backgroundColor: 'var(--color-primary)' }}
               title="My Profile"
             >
-              {role?.charAt(0).toUpperCase() ?? '?'}
+              {firstName?.charAt(0).toUpperCase() ?? role?.charAt(0).toUpperCase() ?? '?'}
             </Link>
 
             <button

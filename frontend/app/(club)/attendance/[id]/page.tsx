@@ -23,6 +23,7 @@ interface SessionInfo {
   locationName: string | null
   coachName: string | null
   capacity: number
+  lanesCount?: number
 }
 
 interface SheetData {
@@ -221,6 +222,23 @@ export default function AttendanceSheetPage() {
 
   const { session, members } = data
 
+  const [lanesCount, setLanesCount] = useState<number | ''>(session?.lanesCount ?? '')
+  const [savingLanes, setSavingLanes] = useState(false)
+
+  async function handleLanesChange(value: string) {
+    const num = value === '' ? '' : parseInt(value)
+    setLanesCount(num)
+    if (num === '' || isNaN(num as number)) return
+    setSavingLanes(true)
+    try {
+      await api.patch(`/attendance/sessions/${sessionId}/lanes`, { lanesCount: num })
+    } catch (err) {
+      console.error('Failed to save lanes:', err)
+    } finally {
+      setSavingLanes(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -276,6 +294,23 @@ export default function AttendanceSheetPage() {
           <p className="text-2xl font-bold text-gray-600">{total}</p>
           <p className="text-xs text-gray-400 uppercase tracking-wide">Registered</p>
         </div>
+
+        {/* Lanes Used */}
+        <div className="text-center">
+          <input
+            type="number"
+            min="1"
+            max="20"
+            value={lanesCount}
+            onChange={e => handleLanesChange(e.target.value)}
+            className="w-14 text-2xl font-bold text-center text-purple-600 bg-transparent border-0 border-b-2 border-purple-200 focus:border-purple-500 focus:outline-none"
+            placeholder="—"
+          />
+          <p className="text-xs text-gray-400 uppercase tracking-wide mt-0.5">
+            {savingLanes ? 'Saving...' : 'Lanes Used'}
+          </p>
+        </div>
+
         <div className="flex-1" />
 
         {/* Progress bar */}
