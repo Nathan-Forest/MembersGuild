@@ -101,6 +101,7 @@ export default function AttendanceSheetPage() {
   // Add these with your other useState declarations at the TOP (before any if/return)
   const [lanesCount, setLanesCount] = useState<number | ''>('')
   const [savingLanes, setSavingLanes] = useState(false)
+  const [lanesSaved, setLanesSaved] = useState(false) 
 
   useEffect(() => {
     const user = getCurrentUser()
@@ -228,12 +229,14 @@ export default function AttendanceSheetPage() {
   const { session, members } = data
 
   async function handleLanesChange(value: string) {
-    const num = value === '' ? '' : parseInt(value)
-    setLanesCount(num)
-    if (num === '' || isNaN(num as number)) return
+    const num = parseInt(value)
+    if (isNaN(num)) return
     setSavingLanes(true)
+    setLanesSaved(false)
     try {
       await api.patch(`/attendance/sessions/${sessionId}/lanes`, { lanesCount: num })
+      setLanesSaved(true)
+      setTimeout(() => setLanesSaved(false), 2000)
     } catch (err) {
       console.error('Failed to save lanes:', err)
     } finally {
@@ -304,7 +307,12 @@ export default function AttendanceSheetPage() {
             min="1"
             max="20"
             value={lanesCount}
-            onChange={e => handleLanesChange(e.target.value)}
+            onChange={e => setLanesCount(e.target.value === '' ? '' : parseInt(e.target.value))}
+            onBlur={() => {
+              if (lanesCount !== '' && !isNaN(lanesCount as number)) {
+                handleLanesChange(String(lanesCount))
+              }
+            }}
             className="w-14 text-2xl font-bold text-center text-purple-600 bg-transparent border-0 border-b-2 border-purple-200 focus:border-purple-500 focus:outline-none"
             placeholder="—"
           />
