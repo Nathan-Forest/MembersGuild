@@ -23,7 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'My Sessions', href: '/my-sessions' },
   { label: 'Training', href: '/training' },
   { label: 'Swim Shop', href: '/shop', roles: ['member', 'coach', 'committee', 'membership', 'finance', 'webmaster'] },
-  { label: 'My Account', href: '/my-account', roles: ['cats', 'member', 'committee', 'membership', 'finance', 'webmaster'] },
+  { label: 'My Account', href: '/my-account', roles: ['member', 'committee', 'membership', 'finance', 'webmaster'] },
   { label: 'Attendance', href: '/attendance', roles: ['coach', 'committee', 'membership', 'finance', 'webmaster'] },
   { label: 'Members', href: '/members', roles: ['coach', 'committee', 'membership', 'finance', 'webmaster'] },
 ]
