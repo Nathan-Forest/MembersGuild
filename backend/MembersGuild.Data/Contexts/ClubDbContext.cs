@@ -29,6 +29,7 @@ public class ClubDbContext : DbContext
     public DbSet<ShopItemVariant> ShopItemVariants => Set<ShopItemVariant>();
     public DbSet<ShopOrder> ShopOrders => Set<ShopOrder>();
     public DbSet<ShopOrderItem> ShopOrderItems => Set<ShopOrderItem>();
+    public DbSet<ShopCategory> ShopCategories => Set<ShopCategory>();
     public DbSet<TrainingMetric> TrainingMetrics => Set<TrainingMetric>();
     public DbSet<MemberTime> MemberTimes => Set<MemberTime>();
     public DbSet<SwimSet> SwimSets => Set<SwimSet>();
@@ -36,6 +37,7 @@ public class ClubDbContext : DbContext
     public DbSet<ClubSetting> ClubSettings => Set<ClubSetting>();
     public DbSet<CatsFormField> CatsFormFields => Set<CatsFormField>();
     public DbSet<PaymentSettings> PaymentSettings => Set<PaymentSettings>();
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -154,6 +156,12 @@ public class ClubDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("NOW()");
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId);
             entity.HasMany(e => e.Items).WithOne(i => i.Order).HasForeignKey(i => i.OrderId);
+            entity.HasOne(e => e.ConfirmedByUser).WithMany()
+    .HasForeignKey(e => e.PaymentConfirmedBy).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.DeliveredByUser).WithMany()
+                .HasForeignKey(e => e.DeliveredBy).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.CancelledByUser).WithMany()
+                .HasForeignKey(e => e.CancelledBy).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ShopOrderItem>(entity =>
@@ -163,6 +171,20 @@ public class ClubDbContext : DbContext
             entity.Property(e => e.Quantity).HasDefaultValue(1);
             entity.Property(e => e.UnitPrice).HasPrecision(10, 2);
             entity.Property(e => e.CreditValue).HasDefaultValue(0);
+            entity.HasOne(e => e.ShopItem).WithMany().HasForeignKey(e => e.ShopItemId);
+            entity.HasOne(e => e.Variant).WithMany().HasForeignKey(e => e.VariantId);
+        });
+
+        modelBuilder.Entity<ShopCategory>(entity =>
+        {
+            entity.ToTable("shop_categories");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Slug).IsUnique();
+            entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Slug).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.IsSystem).HasDefaultValue(false);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.DisplayOrder).HasDefaultValue(0);
         });
 
         modelBuilder.Entity<TrainingMetric>(entity =>
