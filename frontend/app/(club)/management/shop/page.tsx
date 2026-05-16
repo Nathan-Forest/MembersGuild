@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { api } from '@/lib/api'
-import { useAuth } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -51,7 +51,7 @@ const emptyCategory = { name: '', slug: '', displayOrder: 0 }
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ManageShopPage() {
-  const { user } = useAuth()
+  const user = getCurrentUser()
   const router   = useRouter()
 
   const [activeTab, setActiveTab]       = useState<'items' | 'categories' | 'settings'>('items')
