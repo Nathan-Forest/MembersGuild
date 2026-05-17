@@ -138,6 +138,7 @@ public class AttendanceController : ControllerBase
                 startTime = session.StartTime,
                 endTime = session.EndTime,
                 locationName = session.Location?.Name,
+                coachId = session.CoachId, 
                 coachName = session.Coach != null
                     ? $"{session.Coach.FirstName} {session.Coach.LastName}"
                     : null,
