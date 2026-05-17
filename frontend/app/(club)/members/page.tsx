@@ -70,6 +70,8 @@ export default function MembersPage() {
   const [addError, setAddError] = useState('')
   const [newMemberPassword, setNewMemberPassword] = useState<string | null>(null)
   const [joinedAtEdit, setJoinedAtEdit] = useState('')
+  const [assocLabel, setAssocLabel] = useState('Association Number')
+  const [assocNumberEdit, setAssocNumberEdit] = useState('')
 
   useEffect(() => {
     const user = getCurrentUser()
@@ -83,7 +85,10 @@ export default function MembersPage() {
     try {
       const [membersData, statsData] = await Promise.all([
         api.get<MemberListResponse[]>('/members'),
-        api.get<MemberStatsResponse>('/members/stats'),
+        api.get<MemberStatsResponse>('/members/stats'), '',
+        api.get<{ associationNumberLabel: string }>('/settings/labels')
+          .then(d => setAssocLabel(d.associationNumberLabel))
+          .catch(() => { })
       ])
       setMembers(membersData)
       setStats(statsData)
@@ -362,6 +367,9 @@ export default function MembersPage() {
                     <ModalRow label="Email" value={selected.email} />
                     <ModalRow label="Phone" value={selected.phone ?? '—'} />
                     <ModalRow label="Member No." value={selected.memberNumber ? `#${selected.memberNumber}` : '—'} />
+                    {selected.associationNumber && (
+                      <ModalRow label={assocLabel} value={selected.associationNumber} />
+                    )}
                     <ModalRow label="Status" value={selected.isActive ? 'Active' : 'Inactive'} />
                     <ModalRow label="Credits" value={String(selected.creditBalance)} />
                     <ModalRow label="Member Since" value={
@@ -405,42 +413,80 @@ export default function MembersPage() {
                     </div>
                   )}
                   {canManage && (
-                    <div className="pt-3 border-t border-gray-100">
-                      <label className="block text-xs font-medium text-gray-500 mb-1">
-                        Actual Join Date
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="date"
-                          className="input text-sm flex-1"
-                          defaultValue={selected.joinedAt
-                            ? new Date(selected.joinedAt).toISOString().split('T')[0]
-                            : ''}
-                          onChange={e => setJoinedAtEdit(e.target.value)}
-                        />
-                        <button
-                          onClick={async () => {
-                            if (!joinedAtEdit) return
-                            await api.put(`/members/${selected.id}`, {
-                              firstName: selected.firstName,
-                              lastName: selected.lastName,
-                              phone: selected.phone,
-                              memberNumber: selected.memberNumber,
-                              dateOfBirth: selected.dateOfBirth,
-                              emergencyContactName: selected.emergencyContactName,
-                              emergencyContactPhone: selected.emergencyContactPhone,
-                              joinedAt: joinedAtEdit ? new Date(joinedAtEdit).toISOString() : null,
-                            })
-                            const detail = await api.get<MemberDetailResponse>(`/members/${selected.id}`)
-                            setSelected(detail)
-                          }}
-                          className="btn-secondary text-xs px-3">
-                          Save
-                        </button>
+                    <div className="pt-3 border-t border-gray-100 space-y-3">
+                      {/* Association Number */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          {assocLabel}
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            className="input text-sm flex-1"
+                            placeholder="Optional"
+                            defaultValue={selected.associationNumber ?? ''}
+                            onChange={e => setAssocNumberEdit(e.target.value)}
+                          />
+                          <button
+                            onClick={async () => {
+                              await api.put(`/members/${selected.id}`, {
+                                firstName: selected.firstName,
+                                lastName: selected.lastName,
+                                phone: selected.phone,
+                                memberNumber: selected.memberNumber,
+                                dateOfBirth: selected.dateOfBirth,
+                                emergencyContactName: selected.emergencyContactName,
+                                emergencyContactPhone: selected.emergencyContactPhone,
+                                joinedAt: selected.joinedAt ?? null,
+                                associationNumber: assocNumberEdit ?? null,
+                              })
+                              const detail = await api.get<MemberDetailResponse>(`/members/${selected.id}`)
+                              setSelected(detail)
+                            }}
+                            className="btn-secondary text-xs px-3">
+                            Save
+                          </button>
+                        </div>
                       </div>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Set the actual club join date (leave blank to use system entry date)
-                      </p>
+
+                      {/* Actual Join Date */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Actual Join Date
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="date"
+                            className="input text-sm flex-1"
+                            defaultValue={selected.joinedAt
+                              ? new Date(selected.joinedAt).toISOString().split('T')[0]
+                              : ''}
+                            onChange={e => setJoinedAtEdit(e.target.value)}
+                          />
+                          <button
+                            onClick={async () => {
+                              await api.put(`/members/${selected.id}`, {
+                                firstName: selected.firstName,
+                                lastName: selected.lastName,
+                                phone: selected.phone,
+                                memberNumber: selected.memberNumber,
+                                dateOfBirth: selected.dateOfBirth,
+                                emergencyContactName: selected.emergencyContactName,
+                                emergencyContactPhone: selected.emergencyContactPhone,
+                                joinedAt: joinedAtEdit ? new Date(joinedAtEdit).toISOString() : null,
+                                associationNumber: selected.associationNumber ?? null,
+                              })
+                              const detail = await api.get<MemberDetailResponse>(`/members/${selected.id}`)
+                              setSelected(detail)
+                            }}
+                            className="btn-secondary text-xs px-3">
+                            Save
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Leave blank to use system entry date
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>

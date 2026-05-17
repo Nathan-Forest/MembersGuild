@@ -114,6 +114,7 @@ public class MemberService : IMemberService
             LastName = request.LastName.Trim(),
             Phone = request.Phone?.Trim(),
             MemberNumber = request.MemberNumber?.Trim(),
+            AssociationNumber = request.AssociationNumber?.Trim(),
             DateOfBirth = request.DateOfBirth,
             EmergencyContactName = request.EmergencyContactName?.Trim(),
             EmergencyContactPhone = request.EmergencyContactPhone?.Trim(),
@@ -137,6 +138,7 @@ public class MemberService : IMemberService
         user.LastName = request.LastName.Trim();
         user.Phone = request.Phone?.Trim();
         user.MemberNumber = request.MemberNumber?.Trim();
+        user.AssociationNumber = request.AssociationNumber?.Trim();
         user.DateOfBirth = request.DateOfBirth;
         user.EmergencyContactName = request.EmergencyContactName?.Trim();
         user.EmergencyContactPhone = request.EmergencyContactPhone?.Trim();
@@ -221,7 +223,7 @@ public class MemberService : IMemberService
 
     private static MemberDetailResponse MapDetail(User u) => new(
         u.Id, u.Email, u.FirstName, u.LastName, u.Role,
-        u.Role, u.CreditBalance, u.Phone, u.MemberNumber,
+        u.Role, u.CreditBalance, u.Phone, u.MemberNumber, u.AssociationNumber,
         u.ProfilePhotoUrl, u.DateOfBirth, u.EmergencyContactName,
         u.EmergencyContactPhone, u.IsActive, u.LastLoginAt, u.CreatedAt,
         u.JoinedAt,

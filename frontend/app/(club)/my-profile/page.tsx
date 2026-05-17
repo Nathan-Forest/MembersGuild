@@ -32,6 +32,7 @@ export default function MyProfilePage() {
   const [passwordError, setPasswordError] = useState('')
   const [passwordSuccess, setPasswordSuccess] = useState('')
   const [savingPassword, setSavingPassword] = useState(false)
+  const [assocLabel, setAssocLabel] = useState('Association Number')
 
   useEffect(() => {
     const user = getCurrentUser()
@@ -50,6 +51,9 @@ export default function MyProfilePage() {
       })
       .catch(() => setError('Failed to load profile'))
       .finally(() => setLoading(false))
+    api.get<{ associationNumberLabel: string }>('/settings/labels')
+      .then(d => setAssocLabel(d.associationNumberLabel))
+      .catch(() => { })
   }, [router])
 
   async function handleSave(e: React.FormEvent) {
@@ -238,8 +242,8 @@ export default function MyProfilePage() {
           </form>
         ) : (
           <div className="space-y-0 divide-y divide-gray-100">
-            <DetailRow label="Email"        value={profile.email} />
-            <DetailRow label="Phone"        value={profile.phone ?? '—'} />
+            <DetailRow label="Email" value={profile.email} />
+            <DetailRow label="Phone" value={profile.phone ?? '—'} />
             {profile.dateOfBirth && (
               <DetailRow label="Date of Birth" value={
                 new Date(profile.dateOfBirth as unknown as string).toLocaleDateString('en-AU', {
@@ -250,6 +254,9 @@ export default function MyProfilePage() {
             <DetailRow label="Member Since" value={memberSince} />
             {profile.memberNumber && (
               <DetailRow label="Member No." value={`#${profile.memberNumber}`} />
+            )}
+            {profile.associationNumber && (
+              <DetailRow label={assocLabel} value={profile.associationNumber} />
             )}
           </div>
         )}
@@ -262,7 +269,7 @@ export default function MyProfilePage() {
             Emergency Contact
           </h3>
           <div className="space-y-0 divide-y divide-gray-100">
-            <DetailRow label="Name"  value={profile.emergencyContactName ?? '—'} />
+            <DetailRow label="Name" value={profile.emergencyContactName ?? '—'} />
             <DetailRow label="Phone" value={profile.emergencyContactPhone ?? '—'} />
           </div>
         </div>

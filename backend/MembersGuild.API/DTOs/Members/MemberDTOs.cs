@@ -30,6 +30,7 @@ public record MemberDetailResponse(
     int CreditBalance,
     string? Phone,
     string? MemberNumber,
+    string? AssociationNumber,
     string? ProfilePhotoUrl,
     DateOnly? DateOfBirth,
     string? EmergencyContactName,
@@ -48,6 +49,7 @@ public record CreateMemberRequest(
     [Required] string Role,
     string? Phone,
     string? MemberNumber,
+    string? AssociationNumber,
     DateOnly? DateOfBirth,
     string? EmergencyContactName,
     string? EmergencyContactPhone,
@@ -62,6 +64,7 @@ public record UpdateMemberRequest(
     DateOnly? DateOfBirth,
     string? EmergencyContactName,
     string? EmergencyContactPhone,
+    string? AssociationNumber,
     DateTime? JoinedAt    
 );
 

@@ -28,10 +28,10 @@ public class SettingsController : ControllerBase
         if (result is null) return Ok(new { });
         return Ok(new
         {
-            bankName            = result.BankName,
-            accountName         = result.AccountName,
-            bsb                 = result.Bsb,
-            accountNumber       = result.AccountNumber,
+            bankName = result.BankName,
+            accountName = result.AccountName,
+            bsb = result.Bsb,
+            accountNumber = result.AccountNumber,
             paymentInstructions = result.PaymentInstructions,
         });
     }
@@ -43,5 +43,19 @@ public class SettingsController : ControllerBase
     {
         var result = await _settings.SavePaymentSettingsAsync(req, CurrentUserId);
         return Ok(new { success = true });
+    }
+
+    // GET /api/settings/labels — returns configurable field labels
+    [HttpGet("labels")]
+    [Authorize]
+    public async Task<IActionResult> GetLabels()
+    {
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var label = await db.ClubSettings
+            .Where(s => s.Key == "association_number_label")
+            .Select(s => s.Value)
+            .FirstOrDefaultAsync() ?? "Association Number";
+
+        return Ok(new { associationNumberLabel = label });
     }
 }

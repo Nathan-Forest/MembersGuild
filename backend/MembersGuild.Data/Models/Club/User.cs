@@ -18,6 +18,7 @@ public class User
 
     public int CreditBalance { get; set; } = 0;
     public string? MemberNumber { get; set; }
+    public string? AssociationNumber { get; set; }
     public string? EmergencyContactName { get; set; }
     public string? EmergencyContactPhone { get; set; }
     public bool IsActive { get; set; } = true;

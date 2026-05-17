@@ -267,6 +267,7 @@ export interface Member extends AuthUser {
   phone: string | null
   dateOfBirth: string | null
   memberNumber: string | null
+  associationNumber?: string
   emergencyContactName: string | null
   emergencyContactPhone: string | null
   lastLoginAt: string | null
@@ -369,6 +370,7 @@ export interface MemberDetailResponse {
   creditBalance: number
   phone: string | null
   memberNumber: string | null
+  associationNumber?: string
   profilePhotoUrl: string | null
   dateOfBirth: DateOnly | null
   emergencyContactName: string | null
