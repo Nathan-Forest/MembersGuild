@@ -210,15 +210,19 @@ ActiveCatsList: cats.OrderBy(u => u.EffectiveJoinDate)
         await using var db = _dbFactory.CreateForCurrentClub();
 
         var sessions = await db.Sessions
-            .Include(s => s.AttendanceRecords)
-            .Where(s => s.StartTime >= start && s.StartTime <= end && !s.IsCancelled)
-            .OrderBy(s => s.StartTime)
-            .ToListAsync();
+    .Include(s => s.AttendanceRecords)
+    .Where(s => s.StartTime >= start && s.StartTime <= end && !s.IsCancelled)
+    .OrderBy(s => s.StartTime)
+    .ToListAsync();
+
+        // Convert UTC → Brisbane local time for all day-of-week calculations
+        var tz = TimeZoneInfo.FindSystemTimeZoneById("Australia/Brisbane");
+        DateTime Local(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(utc, tz);
 
         var withLanes = sessions.Where(s => s.LanesCount.HasValue).ToList();
 
         var byDay = sessions
-            .GroupBy(s => s.StartTime.DayOfWeek)
+            .GroupBy(s => Local(s.StartTime).DayOfWeek)   // ← was s.StartTime.DayOfWeek
             .OrderBy(g => g.Key)
             .Select(g =>
             {
@@ -233,8 +237,8 @@ ActiveCatsList: cats.OrderBy(u => u.EffectiveJoinDate)
             }).ToList();
 
         var sessionItems = sessions.Select(s => new SessionLanesItem(
-            s.StartTime.Date,
-            s.StartTime.DayOfWeek.ToString(),
+            Local(s.StartTime).Date,                       // ← was s.StartTime.Date
+            Local(s.StartTime).DayOfWeek.ToString(),        // ← was s.StartTime.DayOfWeek.ToString()
             s.Title,
             s.LanesCount,
             s.AttendanceRecords.Count(r => r.Status == "attended")
