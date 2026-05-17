@@ -24,6 +24,7 @@ interface SessionInfo {
   coachName: string | null
   capacity: number
   lanesCount?: number
+  coachId: number | null
 }
 
 interface SheetData {
@@ -103,11 +104,16 @@ export default function AttendanceSheetPage() {
   const [savingLanes, setSavingLanes] = useState(false)
   const [lanesSaved, setLanesSaved] = useState(false)
 
+  const [coaches, setCoaches] = useState<{ id: number; name: string }[]>([])
+  const [updatingCoach, setUpdatingCoach] = useState(false)
+
   useEffect(() => {
     const user = getCurrentUser()
     if (!user) { router.replace('/login'); return }
     setCurrentRole(user.role as UserRole)
     loadSheet()
+    api.get<{ id: number; name: string }[]>('/attendance/coaches')
+    .then(setCoaches).catch(() => {})
   }, [router, sessionId])
 
   // Auto-refresh every 30 seconds so QR check-ins appear automatically
@@ -126,6 +132,7 @@ export default function AttendanceSheetPage() {
       if (d.session.lanesCount) setLanesCount(d.session.lanesCount)  // ← add this
     } catch { }
     finally { setLoading(false) }
+
   }
 
   async function markAttendance(userId: number, status: string) {
@@ -269,7 +276,39 @@ export default function AttendanceSheetPage() {
                 hour: '2-digit', minute: '2-digit', hour12: false
               })}</span>
               {session.locationName && <span>📍 {session.locationName}</span>}
-              {session.coachName && <span>👤 {session.coachName}</span>}
+              {/* was: {session.coachName && <span>👤 {session.coachName}</span>} */}
+              <div className="flex items-center gap-1 text-sm text-gray-500">
+                <span>👤</span>
+                <select
+                  value={data?.session.coachId ?? ''}
+                  onChange={async (e) => {
+                    const coachId = e.target.value === '' ? null : parseInt(e.target.value)
+                    setUpdatingCoach(true)
+                    try {
+                      const result = await api.patch<{ coachId: number | null; coachName: string | null }>(
+                        `/attendance/sessions/${sessionId}/coach`, coachId
+                      )
+                      setData(prev => prev ? {
+                        ...prev,
+                        session: {
+                          ...prev.session,
+                          coachId: result.coachId,
+                          coachName: result.coachName,
+                        }
+                      } : prev)
+                    } catch { }
+                    finally { setUpdatingCoach(false) }
+                  }}
+                  disabled={updatingCoach}
+                  className="text-sm text-gray-500 bg-transparent border-0 border-b border-dashed border-gray-300 focus:outline-none focus:border-gray-500 cursor-pointer disabled:opacity-50"
+                >
+                  <option value="">— Coach No Show —</option>
+                  {coaches.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                {updatingCoach && <span className="text-xs text-gray-400 ml-1">Saving...</span>}
+              </div>
             </div>
           </div>
 

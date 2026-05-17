@@ -133,20 +133,20 @@ public class AttendanceController : ControllerBase
         {
             session = new
             {
-                id           = session.Id,
-                title        = session.Title,
-                startTime    = session.StartTime,
-                endTime      = session.EndTime,
+                id = session.Id,
+                title = session.Title,
+                startTime = session.StartTime,
+                endTime = session.EndTime,
                 locationName = session.Location?.Name,
-                coachName    = session.Coach != null
+                coachName = session.Coach != null
                     ? $"{session.Coach.FirstName} {session.Coach.LastName}"
                     : null,
-                capacity     = session.Capacity,
-                lanesCount   = session.LanesCount,
+                capacity = session.Capacity,
+                lanesCount = session.LanesCount,
             },
-            members      = sheet,
+            members = sheet,
             lanesEnabled = lanesEnabled,
-            lanesLabel   = lanesLabel,
+            lanesLabel = lanesLabel,
         });
     }
 
@@ -179,10 +179,10 @@ public class AttendanceController : ControllerBase
             existing = new AttendanceRecord
             {
                 SessionId = id,
-                UserId    = request.UserId,
-                Status    = request.Status,
-                Notes     = request.Notes,
-                MarkedBy  = CurrentUserId,
+                UserId = request.UserId,
+                Status = request.Status,
+                Notes = request.Notes,
+                MarkedBy = CurrentUserId,
             };
             db.AttendanceRecords.Add(existing);
         }
@@ -198,21 +198,21 @@ public class AttendanceController : ControllerBase
                     user.CreditBalance -= session.CreditCost;
                     db.CreditTransactions.Add(new CreditTransaction
                     {
-                        UserId          = request.UserId,
-                        Amount          = -session.CreditCost,
-                        BalanceAfter    = user.CreditBalance,
+                        UserId = request.UserId,
+                        Amount = -session.CreditCost,
+                        BalanceAfter = user.CreditBalance,
                         TransactionType = "nsba_refund_reversed",
-                        ReferenceId     = id,
-                        ReferenceType   = "session",
-                        Notes           = $"NSBA refund reversed: {session.Title}",
+                        ReferenceId = id,
+                        ReferenceType = "session",
+                        Notes = $"NSBA refund reversed: {session.Title}",
                     });
                 }
                 existing.CreditRefunded = false;
             }
 
-            existing.Status    = request.Status;
-            existing.Notes     = request.Notes;
-            existing.MarkedBy  = CurrentUserId;
+            existing.Status = request.Status;
+            existing.Notes = request.Notes;
+            existing.MarkedBy = CurrentUserId;
             existing.UpdatedAt = DateTime.UtcNow;
         }
 
@@ -225,13 +225,13 @@ public class AttendanceController : ControllerBase
                 user.CreditBalance += session.CreditCost;
                 db.CreditTransactions.Add(new CreditTransaction
                 {
-                    UserId          = request.UserId,
-                    Amount          = session.CreditCost,
-                    BalanceAfter    = user.CreditBalance,
+                    UserId = request.UserId,
+                    Amount = session.CreditCost,
+                    BalanceAfter = user.CreditBalance,
                     TransactionType = "nsba_refund",
-                    ReferenceId     = id,
-                    ReferenceType   = "session",
-                    Notes           = $"NSBA credit refund: {session.Title}",
+                    ReferenceId = id,
+                    ReferenceType = "session",
+                    Notes = $"NSBA credit refund: {session.Title}",
                 });
                 existing.CreditRefunded = true;
             }
@@ -266,7 +266,7 @@ public class AttendanceController : ControllerBase
             db.SessionBookings.Add(new SessionBooking
             {
                 SessionId = id,
-                UserId    = userId,
+                UserId = userId,
             });
 
             var user = await db.Users.FindAsync(userId);
@@ -275,34 +275,34 @@ public class AttendanceController : ControllerBase
                 user.CreditBalance = Math.Max(0, user.CreditBalance - session.CreditCost);
                 db.CreditTransactions.Add(new CreditTransaction
                 {
-                    UserId          = userId,
-                    Amount          = -session.CreditCost,
-                    BalanceAfter    = user.CreditBalance,
+                    UserId = userId,
+                    Amount = -session.CreditCost,
+                    BalanceAfter = user.CreditBalance,
                     TransactionType = "session_booking",
-                    ReferenceId     = id,
-                    ReferenceType   = "session",
-                    Notes           = $"Walk-in: {session.Title}",
+                    ReferenceId = id,
+                    ReferenceType = "session",
+                    Notes = $"Walk-in: {session.Title}",
                 });
             }
         }
 
         var existing = await db.AttendanceRecords
             .FirstOrDefaultAsync(a => a.SessionId == id && a.UserId == userId);
-        
+
         if (existing is null)
         {
             db.AttendanceRecords.Add(new AttendanceRecord
             {
                 SessionId = id,
-                UserId    = userId,
-                Status    = "attended",
-                MarkedBy  = CurrentUserId,
-                Notes     = "Walk-in",
+                UserId = userId,
+                Status = "attended",
+                MarkedBy = CurrentUserId,
+                Notes = "Walk-in",
             });
         }
         else
         {
-            existing.Status    = "attended";
+            existing.Status = "attended";
             existing.UpdatedAt = DateTime.UtcNow;
         }
 
@@ -319,11 +319,11 @@ public class AttendanceController : ControllerBase
         await Task.CompletedTask; // satisfies async requirement
 
         var clubSlug = User.FindFirst("club_slug")?.Value ?? "";
-        var expires  = DateTimeOffset.UtcNow.AddHours(4).ToUnixTimeSeconds();
-        var payload  = $"{id}:{clubSlug}:{expires}";
-        var secret   = _config["JWT_SECRET"] ?? "fallback";
-        var sig      = ComputeHmac(payload, secret);
-        var token    = Convert.ToBase64String(
+        var expires = DateTimeOffset.UtcNow.AddHours(4).ToUnixTimeSeconds();
+        var payload = $"{id}:{clubSlug}:{expires}";
+        var secret = _config["JWT_SECRET"] ?? "fallback";
+        var sig = ComputeHmac(payload, secret);
+        var token = Convert.ToBase64String(
                            Encoding.UTF8.GetBytes(payload)) + "." + sig;
         var checkinUrl =
             $"https://{clubSlug}.membersguild.com.au/checkin" +
@@ -361,10 +361,10 @@ public class AttendanceController : ControllerBase
             if (parts.Length != 2)
                 return BadRequest(new { error = "Invalid token" });
 
-            var payload   = Encoding.UTF8.GetString(
+            var payload = Encoding.UTF8.GetString(
                                 Convert.FromBase64String(parts[0]));
             var signature = parts[1];
-            var secret    = _config["JWT_SECRET"] ?? "fallback";
+            var secret = _config["JWT_SECRET"] ?? "fallback";
 
             if (ComputeHmac(payload, secret) != signature)
                 return BadRequest(new { error = "Invalid token signature" });
@@ -396,7 +396,7 @@ public class AttendanceController : ControllerBase
                 db.SessionBookings.Add(new SessionBooking
                 {
                     SessionId = sessionId,
-                    UserId    = userId,
+                    UserId = userId,
                 });
 
                 var user = await db.Users.FindAsync(userId);
@@ -406,13 +406,13 @@ public class AttendanceController : ControllerBase
                         Math.Max(0, user.CreditBalance - session.CreditCost);
                     db.CreditTransactions.Add(new CreditTransaction
                     {
-                        UserId          = userId,
-                        Amount          = -session.CreditCost,
-                        BalanceAfter    = user.CreditBalance,
+                        UserId = userId,
+                        Amount = -session.CreditCost,
+                        BalanceAfter = user.CreditBalance,
                         TransactionType = "session_booking",
-                        ReferenceId     = sessionId,
-                        ReferenceType   = "session",
-                        Notes           = $"QR check-in: {session.Title}",
+                        ReferenceId = sessionId,
+                        ReferenceType = "session",
+                        Notes = $"QR check-in: {session.Title}",
                     });
                 }
             }
@@ -426,14 +426,14 @@ public class AttendanceController : ControllerBase
                 db.AttendanceRecords.Add(new AttendanceRecord
                 {
                     SessionId = sessionId,
-                    UserId    = userId,
-                    Status    = "attended",
-                    Notes     = "QR check-in",
+                    UserId = userId,
+                    Status = "attended",
+                    Notes = "QR check-in",
                 });
             }
             else
             {
-                existing.Status    = "attended";
+                existing.Status = "attended";
                 existing.UpdatedAt = DateTime.UtcNow;
             }
 
@@ -441,7 +441,7 @@ public class AttendanceController : ControllerBase
 
             return Ok(new
             {
-                message      = "Checked in successfully",
+                message = "Checked in successfully",
                 sessionTitle = session.Title,
             });
         }
@@ -451,11 +451,48 @@ public class AttendanceController : ControllerBase
         }
     }
 
+    // GET /api/attendance/coaches — list of valid coaches for dropdown
+    [HttpGet("coaches")]
+    public async Task<IActionResult> GetCoaches()
+    {
+        if (!CanManageAttendance()) return Forbid();
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var coaches = await db.Users
+            .Where(u => u.IsActive && (u.Role == "coach" || u.Role == "committee" || u.Role == "webmaster"))
+            .OrderBy(u => u.LastName).ThenBy(u => u.FirstName)
+            .Select(u => new { u.Id, name = u.FirstName + " " + u.LastName })
+            .ToListAsync();
+        return Ok(coaches);
+    }
+
+    // PATCH /api/attendance/sessions/{id}/coach — reassign or clear coach
+    [HttpPatch("sessions/{id:int}/coach")]
+    public async Task<IActionResult> UpdateCoach(int id, [FromBody] int? coachId)
+    {
+        if (!CanManageAttendance()) return Forbid();
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var session = await db.Sessions.FindAsync(id);
+        if (session is null) return NotFound();
+
+        session.CoachId = coachId;
+        session.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        string? coachName = null;
+        if (coachId.HasValue)
+        {
+            var coach = await db.Users.FindAsync(coachId.Value);
+            coachName = coach is null ? null : $"{coach.FirstName} {coach.LastName}";
+        }
+
+        return Ok(new { coachId = session.CoachId, coachName });
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static string ComputeHmac(string payload, string secret)
     {
-        var key  = Encoding.UTF8.GetBytes(secret);
+        var key = Encoding.UTF8.GetBytes(secret);
         var data = Encoding.UTF8.GetBytes(payload);
         using var hmac = new HMACSHA256(key);
         return Convert.ToHexString(hmac.ComputeHash(data)).ToLower();
