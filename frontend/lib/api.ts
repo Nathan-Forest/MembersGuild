@@ -90,6 +90,7 @@ export const publicApi = {
 
   catsSignup: (data: unknown) =>
     api.post('/public/signup', data, { auth: false }),
+  
 }
 
 export const creditsApi = {
