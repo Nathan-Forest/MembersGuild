@@ -82,3 +82,20 @@ public record MemberStatsResponse(
     int LowCreditMembers,
     int NoCreditsMembers
 );
+
+public record ImportMemberRequest(
+    string FirstName,
+    string LastName,
+    string Email,
+    string? Phone,
+    string? JoinDate,            // DD/MM/YYYY
+    string? AssociationNumber,
+    int StartingCredits,
+    string? Role                 // defaults to "member"
+);
+
+public record ImportResult(
+    int Imported,
+    int Skipped,
+    List<string> Errors
+);

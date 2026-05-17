@@ -16,6 +16,7 @@ public interface IMemberService
     Task<string> ResetPasswordAsync(int id);
     Task<bool> DeleteMemberAsync(int id, int requestingUserId);
     Task<MemberStatsResponse> GetStatsAsync();
+    Task<ImportResult> ImportMembersAsync(List<ImportMemberRequest> requests, int importedBy);
 }
 
 public class MemberService : IMemberService
@@ -227,6 +228,94 @@ public class MemberService : IMemberService
         u.ProfilePhotoUrl, u.DateOfBirth, u.EmergencyContactName,
         u.EmergencyContactPhone, u.IsActive, u.LastLoginAt, u.CreatedAt,
         u.JoinedAt,
-        u.EffectiveJoinDate            
+        u.EffectiveJoinDate
     );
+
+    public async Task<ImportResult> ImportMembersAsync(List<ImportMemberRequest> requests, int importedBy)
+    {
+        await using var db = _dbFactory.CreateForCurrentClub();
+
+        var errors = new List<string>();
+        var toCreate = new List<(User User, int Credits)>();
+
+        // Fetch existing emails in one query
+        var allEmails = await db.Users.Select(u => u.Email).ToListAsync();
+        var emailSet = new HashSet<string>(allEmails, StringComparer.OrdinalIgnoreCase);
+
+        for (int i = 0; i < requests.Count; i++)
+        {
+            var req = requests[i];
+            var row = $"Row {i + 2}"; // +2 because row 1 is header
+
+            if (string.IsNullOrWhiteSpace(req.FirstName)) { errors.Add($"{row}: First name is required"); continue; }
+            if (string.IsNullOrWhiteSpace(req.LastName)) { errors.Add($"{row}: Last name is required"); continue; }
+            if (string.IsNullOrWhiteSpace(req.Email)) { errors.Add($"{row}: Email is required"); continue; }
+
+            var email = req.Email.Trim().ToLower();
+            if (emailSet.Contains(email))
+            {
+                errors.Add($"{row} ({email}): Already exists — skipped");
+                continue;
+            }
+
+            var role = Roles.AllClubRoles.Contains(req.Role?.ToLower() ?? "")
+                ? req.Role!.ToLower() : "member";
+
+            DateTime? joinedAt = null;
+            if (!string.IsNullOrWhiteSpace(req.JoinDate))
+            {
+                if (DateTime.TryParseExact(req.JoinDate,
+                    new[] { "dd/MM/yyyy", "d/M/yyyy", "d/MM/yyyy", "dd/M/yyyy", "yyyy-MM-dd" },
+                    null, System.Globalization.DateTimeStyles.None, out var parsed))
+                {
+                    joinedAt = DateTime.SpecifyKind(parsed, DateTimeKind.Utc);
+                }
+                else
+                {
+                    errors.Add($"{row} ({email}): Invalid date format '{req.JoinDate}' — use DD/MM/YYYY");
+                    continue;
+                }
+            }
+
+            var user = new User
+            {
+                Email = email,
+                PasswordHash = _auth.HashPassword(_auth.GenerateTemporaryPassword()),
+                FirstName = req.FirstName.Trim(),
+                LastName = req.LastName.Trim(),
+                Phone = req.Phone?.Trim(),
+                AssociationNumber = req.AssociationNumber?.Trim(),
+                Role = role,
+                CreditBalance = Math.Max(0, req.StartingCredits),
+                JoinedAt = joinedAt,
+                IsActive = true,
+            };
+
+            emailSet.Add(email); // prevent duplicates within the same import
+            toCreate.Add((user, Math.Max(0, req.StartingCredits)));
+        }
+
+        // Batch insert users
+        db.Users.AddRange(toCreate.Select(x => x.User));
+        await db.SaveChangesAsync();
+
+        // Add credit transactions for those with starting credits
+        foreach (var (user, credits) in toCreate.Where(x => x.Credits > 0))
+        {
+            db.CreditTransactions.Add(new CreditTransaction
+            {
+                UserId = user.Id,
+                Amount = credits,
+                BalanceAfter = credits,
+                TransactionType = "import_credit",
+                Notes = "Starting credits on member import",
+                CreatedBy = importedBy,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+        await db.SaveChangesAsync();
+
+        var skipped = requests.Count - toCreate.Count - errors.Count(e => e.Contains("Already exists"));
+        return new ImportResult(toCreate.Count, requests.Count - toCreate.Count, errors);
+    }
 }

@@ -19,7 +19,7 @@ public class MembersController : ControllerBase
     }
 
     private int CurrentUserId => int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
-   private string CurrentRole => User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+    private string CurrentRole => User.FindFirst(ClaimTypes.Role)?.Value ?? "";
 
     /// <summary>GET /api/members — staff only</summary>
     [HttpGet]
@@ -118,6 +118,19 @@ public class MembersController : ControllerBase
             : NotFound();
 
         return NoContent();
+    }
+
+    [HttpPost("import")]
+    [Authorize(Roles = "membership,webmaster")]
+    public async Task<IActionResult> ImportMembers([FromBody] List<ImportMemberRequest> requests)
+    {
+        if (requests == null || requests.Count == 0)
+            return BadRequest(new { error = "No data provided" });
+        if (requests.Count > 500)
+            return BadRequest(new { error = "Maximum 500 members per import" });
+
+        var result = await _members.ImportMembersAsync(requests, CurrentUserId);
+        return Ok(result);
     }
 
     private bool IsStaff() => CurrentRole is "coach" or "committee" or "membership" or "finance" or "webmaster";
