@@ -107,7 +107,7 @@ public class SessionsController : ControllerBase
         var targetUserId = userId ?? CurrentUserId;
         var success = await _sessions.UnbookSessionAsync(
             id, targetUserId, CurrentRole, CurrentUserId);
-        return success ? NoContent() : NotFound();
+        return success ? Ok(new { success = true }) : NotFound();
     }
 
     /// <summary>GET /api/sessions/{id}/bookings — Staff only</summary>
