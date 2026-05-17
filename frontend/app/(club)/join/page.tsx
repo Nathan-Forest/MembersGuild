@@ -21,9 +21,19 @@ export default function JoinPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState<{ generatedPassword?: string } | null>(null)
+  const [clubConfig, setClubConfig] = useState<{
+    logoUrl: string | null
+    displayName: string
+    catsDescription?: string | null
+  } | null>(null)
 
   useEffect(() => {
-    publicApi.catsFormFields().then(setFields).catch(() => {})
+    publicApi.catsFormFields().then(setFields).catch(() => { })
+    publicApi.clubConfig().then(setClubConfig).catch(() => { })
+  }, [])
+
+  useEffect(() => {
+    publicApi.catsFormFields().then(setFields).catch(() => { })
   }, [])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
@@ -106,15 +116,23 @@ export default function JoinPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
-          <div
-            className="mx-auto h-16 w-16 rounded-2xl flex items-center justify-center text-white text-2xl font-bold mb-4"
-            style={{ backgroundColor: 'var(--color-primary)' }}
-          >
-            C
-          </div>
+          {clubConfig?.logoUrl ? (
+            <img
+              src={clubConfig.logoUrl}
+              alt={clubConfig.displayName}
+              className="mx-auto h-16 w-16 object-contain mb-4"
+            />
+          ) : (
+            <div
+              className="mx-auto h-16 w-16 rounded-2xl flex items-center justify-center text-white text-2xl font-bold mb-4"
+              style={{ backgroundColor: 'var(--color-primary)' }}
+            >
+              {clubConfig?.displayName?.charAt(0) ?? 'C'}
+            </div>
+          )}
           <h1 className="text-2xl font-bold text-gray-900">Come and Try</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Register for a free trial membership and get 3 complimentary sessions
+            {clubConfig?.catsDescription ?? 'Register for a free trial membership and get 3 complimentary sessions'}
           </p>
         </div>
 

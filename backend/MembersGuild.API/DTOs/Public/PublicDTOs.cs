@@ -12,7 +12,9 @@ public record ClubConfigResponse(
     string? LogoUrl,
     string PrimaryColor,
     string SecondaryColor,
-    ClubFeaturesDto Features
+    ClubFeaturesDto Features,
+    string CatsDescription
+
 );
 
 public record ClubFeaturesDto(

@@ -32,8 +32,18 @@ public class PublicController : ControllerBase
     /// No auth required. Used by Next.js layout.tsx server-side to inject branding.
     /// </summary>
     [HttpGet("club-config")]
-    public IActionResult GetClubConfig()
+    public async Task<IActionResult> GetClubConfig()
     {
+        string catsDesc;
+        await using (var db = _dbFactory.CreateForCurrentClub())
+        {
+            catsDesc = await db.ClubSettings
+                .Where(s => s.Key == "cats_description")
+                .Select(s => s.Value)
+                .FirstOrDefaultAsync()
+                ?? "Register for a free trial membership and get 3 complimentary sessions";
+        }
+
         return Ok(new ClubConfigResponse(
             _clubContext.Slug,
             _clubContext.DisplayName,
@@ -41,14 +51,16 @@ public class PublicController : ControllerBase
             _clubContext.PrimaryColor,
             _clubContext.SecondaryColor,
             new ClubFeaturesDto(
-                Calendar:   _clubContext.HasFeature(FeatureKeys.Calendar),
+                Calendar: _clubContext.HasFeature(FeatureKeys.Calendar),
                 MySessions: _clubContext.HasFeature(FeatureKeys.MySessions),
                 Attendance: _clubContext.HasFeature(FeatureKeys.Attendance),
-                Training:   _clubContext.HasFeature(FeatureKeys.Training),
-                Shop:       _clubContext.HasFeature(FeatureKeys.Shop),
-                MyAccount:  _clubContext.HasFeature(FeatureKeys.MyAccount)
-            )
+                Training: _clubContext.HasFeature(FeatureKeys.Training),
+                Shop: _clubContext.HasFeature(FeatureKeys.Shop),
+                MyAccount: _clubContext.HasFeature(FeatureKeys.MyAccount)
+            ),
+            catsDesc
         ));
+
     }
 
     /// <summary>
@@ -76,17 +88,17 @@ public class PublicController : ControllerBase
 
         var user = new User
         {
-            Email           = request.Email.ToLower(),
-            PasswordHash    = _authService.HashPassword(rawPassword),
-            FirstName       = request.FirstName.Trim(),
-            LastName        = request.LastName.Trim(),
-            Phone           = request.Phone?.Trim(),
-            DateOfBirth     = request.DateOfBirth,
-            EmergencyContactName  = request.EmergencyContactName?.Trim(),
+            Email = request.Email.ToLower(),
+            PasswordHash = _authService.HashPassword(rawPassword),
+            FirstName = request.FirstName.Trim(),
+            LastName = request.LastName.Trim(),
+            Phone = request.Phone?.Trim(),
+            DateOfBirth = request.DateOfBirth,
+            EmergencyContactName = request.EmergencyContactName?.Trim(),
             EmergencyContactPhone = request.EmergencyContactPhone?.Trim(),
-            Role            = Roles.Cats,
-            CreditBalance   = initialCredits,
-            IsActive        = true,
+            Role = Roles.Cats,
+            CreditBalance = initialCredits,
+            IsActive = true,
         };
 
         db.Users.Add(user);
@@ -97,7 +109,7 @@ public class PublicController : ControllerBase
         {
             db.CatsProfiles.Add(new CatsProfile
             {
-                UserId       = user.Id,
+                UserId = user.Id,
                 CustomFields = System.Text.Json.JsonSerializer.Serialize(request.CustomFields),
             });
             await db.SaveChangesAsync();
@@ -106,11 +118,11 @@ public class PublicController : ControllerBase
         // Log initial credit grant
         db.CreditTransactions.Add(new CreditTransaction
         {
-            UserId          = user.Id,
-            Amount          = initialCredits,
-            BalanceAfter    = initialCredits,
+            UserId = user.Id,
+            Amount = initialCredits,
+            BalanceAfter = initialCredits,
             TransactionType = TransactionTypes.CatsInitial,
-            Notes           = "CATS initial credit grant",
+            Notes = "CATS initial credit grant",
         });
         await db.SaveChangesAsync();
 
