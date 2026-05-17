@@ -50,12 +50,7 @@ public class SettingsController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetLabels()
     {
-        await using var db = _dbFactory.CreateForCurrentClub();
-        var label = await db.ClubSettings
-            .Where(s => s.Key == "association_number_label")
-            .Select(s => s.Value)
-            .FirstOrDefaultAsync() ?? "Association Number";
-
+        var label = await _settings.GetAssociationNumberLabelAsync();
         return Ok(new { associationNumberLabel = label });
     }
 }

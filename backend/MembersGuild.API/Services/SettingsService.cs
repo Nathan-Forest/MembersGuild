@@ -1,6 +1,7 @@
 using MembersGuild.API.Extensions;
 using MembersGuild.Data.Models.Club;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 
 namespace MembersGuild.API.Services;
 
@@ -41,6 +42,15 @@ public class SettingsService
         await db.SaveChangesAsync();
         return settings;
     }
+
+    public async Task<string> GetAssociationNumberLabelAsync()
+{
+    await using var db = _dbFactory.CreateForCurrentClub();
+    return await db.ClubSettings
+        .Where(s => s.Key == "association_number_label")
+        .Select(s => s.Value)
+        .FirstOrDefaultAsync() ?? "Association Number";
+}
 }
 
 public record PaymentSettingsRequest(
