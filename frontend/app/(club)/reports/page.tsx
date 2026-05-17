@@ -46,9 +46,18 @@ interface LanesReport {
   sessions: { date: string; dayOfWeek: string; title: string; lanes?: number; attended: number }[]
 }
 
+interface CoachReport {
+  coachId: number
+  coachName: string
+  sessionsAssigned: number
+  sessionsPresent: number
+  sessionsNoShow: number
+  sessionsCancelled: number
+}
+
 interface CoachesReport {
   totalSessions: number
-  coaches: { userId: number; name: string; sessionsAssigned: number; sessionsCompleted: number; sessionsCancelled: number }[]
+  coaches: CoachReport[]
 }
 
 function exportCsv(filename: string, headers: string[], rows: (string | number)[][]) {
@@ -529,43 +538,44 @@ export default function ReportsPage() {
           )}
 
           {/* ── Coaches ────────────────────────────────────────────────────── */}
-          {activeTab === 'coaches' && coaches && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <StatCard label="Total Sessions" value={coaches.totalSessions} color="blue" />
-                <StatCard label="Coaches Active" value={coaches.coaches.length} color="purple" />
-                <StatCard label="Cancelled"
-                  value={coaches.coaches.reduce((s, c) => s + c.sessionsCancelled, 0)}
-                  color="red" />
+          {activeTab === 'coaches' && coaches && (() => {
+            const coachList = coaches.coaches as CoachReport[]
+            return (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <StatCard label="Total Sessions" value={coaches.totalSessions} color="blue" />
+                  <StatCard label="Coaches Active" value={coachList.length} color="purple" />
+                  <StatCard label="No Shows" value={coachList.reduce((s, c) => s + c.sessionsNoShow, 0)} color="amber" />
+                  <StatCard label="Cancelled" value={coachList.reduce((s, c) => s + c.sessionsCancelled, 0)} color="red" />
+                </div>
+                <div className="card p-6">
+                  <h3 className="font-semibold text-gray-900 mb-4">Coach Sessions</h3>
+                  <Table
+                    headers={['Coach', 'Assigned', 'Present', 'No Show', 'Cancelled']}
+                    rows={coachList.map(c => [
+                      c.coachName,
+                      c.sessionsAssigned,
+                      <span className="text-green-700 font-medium">{c.sessionsPresent}</span>,
+                      c.sessionsNoShow > 0
+                        ? <span className="text-amber-600 font-medium">{c.sessionsNoShow}</span>
+                        : 0,
+                      c.sessionsCancelled > 0
+                        ? <span className="text-red-500">{c.sessionsCancelled}</span>
+                        : 0,
+                    ])}
+                    empty="No sessions with assigned coaches in this period"
+                  />
+                  <button onClick={() => exportCsv(
+                    `coaches-report-${start}-${end}`,
+                    ['Coach', 'Assigned', 'Present', 'No Show', 'Cancelled'],
+                    coachList.map(c => [c.coachName, c.sessionsAssigned, c.sessionsPresent, c.sessionsNoShow, c.sessionsCancelled])
+                  )} className="btn-secondary text-sm px-3 py-1.5 mt-4">
+                    ↓ Export Coaches CSV
+                  </button>
+                </div>
               </div>
-              <div className="card p-6">
-                <h3 className="font-semibold text-gray-900 mb-1">Coach Sessions</h3>
-                <p className="text-xs text-gray-400 mb-4">
-                  Note: Individual coach attendance tracking coming in Phase 8.
-                  Currently shows assigned vs cancelled sessions.
-                </p>
-                <Table
-                  headers={['Coach', 'Assigned', 'Completed', 'Cancelled']}
-                  rows={coaches.coaches.map(c => [
-                    c.name,
-                    c.sessionsAssigned,
-                    <span className="text-green-700 font-medium">{c.sessionsCompleted}</span>,
-                    c.sessionsCancelled > 0
-                      ? <span className="text-red-500">{c.sessionsCancelled}</span>
-                      : 0,
-                  ])}
-                  empty="No sessions with assigned coaches in this period"
-                />
-                <button onClick={() => exportCsv(
-                  `coaches-report-${start}-${end}`,
-                  ['Coach', 'Assigned', 'Completed', 'Cancelled'],
-                  coaches.coaches.map(c => [c.name, c.sessionsAssigned, c.sessionsCompleted, c.sessionsCancelled])
-                )} className="btn-secondary text-sm px-3 py-1.5 mt-4">
-                  ↓ Export Coaches CSV
-                </button>
-              </div>
-            </div>
-          )}
+            )
+          })()}
         </>
       )}
     </div>

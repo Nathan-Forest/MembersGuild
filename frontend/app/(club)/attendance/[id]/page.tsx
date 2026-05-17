@@ -22,6 +22,7 @@ interface SessionInfo {
   endTime: string
   locationName: string | null
   coachName: string | null
+  coachNoShow: boolean
   capacity: number
   lanesCount?: number
   coachId: number | null
@@ -113,7 +114,7 @@ export default function AttendanceSheetPage() {
     setCurrentRole(user.role as UserRole)
     loadSheet()
     api.get<{ id: number; name: string }[]>('/attendance/coaches')
-    .then(setCoaches).catch(() => {})
+      .then(setCoaches).catch(() => { })
   }, [router, sessionId])
 
   // Auto-refresh every 30 seconds so QR check-ins appear automatically
@@ -280,13 +281,19 @@ export default function AttendanceSheetPage() {
               <div className="flex items-center gap-1 text-sm text-gray-500">
                 <span>👤</span>
                 <select
-                  value={data?.session.coachId ?? ''}
+                  value={data?.session.coachNoShow ? 'noshow' : (data?.session.coachId?.toString() ?? '')}
                   onChange={async (e) => {
-                    const coachId = e.target.value === '' ? null : parseInt(e.target.value)
+                    const val = e.target.value
                     setUpdatingCoach(true)
                     try {
-                      const result = await api.patch<{ coachId: number | null; coachName: string | null }>(
-                        `/attendance/sessions/${sessionId}/coach`, coachId
+                      const result = await api.patch<{
+                        coachId: number | null
+                        coachName: string | null
+                        coachNoShow: boolean
+                      }>(`/attendance/sessions/${sessionId}/coach`,
+                        val === 'noshow'
+                          ? { coachId: null, noShow: true }
+                          : { coachId: val ? parseInt(val) : null, noShow: false }
                       )
                       setData(prev => prev ? {
                         ...prev,
@@ -294,18 +301,25 @@ export default function AttendanceSheetPage() {
                           ...prev.session,
                           coachId: result.coachId,
                           coachName: result.coachName,
+                          coachNoShow: result.coachNoShow,
                         }
                       } : prev)
                     } catch { }
                     finally { setUpdatingCoach(false) }
                   }}
                   disabled={updatingCoach}
-                  className="text-sm text-gray-500 bg-transparent border-0 border-b border-dashed border-gray-300 focus:outline-none focus:border-gray-500 cursor-pointer disabled:opacity-50"
+                  className="text-sm bg-transparent border-0 border-b border-dashed focus:outline-none cursor-pointer disabled:opacity-50"
+                  style={{
+                    color: data?.session.coachNoShow ? '#d97706' : 'inherit',
+                    borderColor: data?.session.coachNoShow ? '#d97706' : '#d1d5db'
+                  }}
                 >
-                  <option value="">— Coach No Show —</option>
+                  <option value="">— Unassigned —</option>
                   {coaches.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
+                  <option disabled>──────────</option>
+                  <option value="noshow">⚠ Coach No Show</option>
                 </select>
                 {updatingCoach && <span className="text-xs text-gray-400 ml-1">Saving...</span>}
               </div>

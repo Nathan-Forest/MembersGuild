@@ -264,20 +264,26 @@ ActiveCatsList: cats.OrderBy(u => u.EffectiveJoinDate)
             .Where(s => s.StartTime >= start && s.StartTime <= end && s.CoachId.HasValue)
             .ToListAsync();
 
-        var coachStats = sessions
-            .GroupBy(s => s.Coach)
-            .Where(g => g.Key != null)
-            .Select(g => new CoachStatsItem(
-                g.Key!.Id,
-                $"{g.Key.FirstName} {g.Key.LastName}",
-                g.Count(),
-                g.Count(s => !s.IsCancelled),
-                g.Count(s => s.IsCancelled)))
-            .OrderByDescending(c => c.SessionsAssigned)
-            .ToList();
+        var coaches = sessions
+    .Where(s => s.CoachId.HasValue)
+    .GroupBy(s => s.CoachId!.Value)
+    .Select(g =>
+    {
+        var coach = g.First().Coach;
+        return new CoachReport(
+            g.Key,
+            coach != null ? $"{coach.FirstName} {coach.LastName}" : "Unknown",
+            SessionsAssigned: g.Count(s => !s.IsCancelled),
+            SessionsPresent: g.Count(s => !s.IsCancelled && !s.CoachNoShow),
+            SessionsNoShow: g.Count(s => !s.IsCancelled && s.CoachNoShow),
+            SessionsCancelled: g.Count(s => s.IsCancelled)
+        );
+    })
+    .OrderBy(c => c.CoachName)
+    .ToList();
 
         return new CoachesReport(
             TotalSessions: sessions.Count,
-            Coaches: coachStats);
+            Coaches: coaches);
     }
 }

@@ -88,9 +88,19 @@ public record SessionLanesItem(
 
 // ── Coaches ───────────────────────────────────────────────────────────────────
 
+public record CoachReport(
+    int CoachId,
+    string CoachName,
+    int SessionsAssigned,
+    int SessionsPresent,    // ← was SessionsCompleted
+    int SessionsNoShow,     // ← new
+    int SessionsCancelled
+);
+
 public record CoachesReport(
     int TotalSessions,
-    List<CoachStatsItem> Coaches);
+    List<CoachReport> Coaches
+);
 
 public record CoachStatsItem(
     int UserId, string Name,

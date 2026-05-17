@@ -138,10 +138,11 @@ public class AttendanceController : ControllerBase
                 startTime = session.StartTime,
                 endTime = session.EndTime,
                 locationName = session.Location?.Name,
-                coachId = session.CoachId, 
+                coachId = session.CoachId,
                 coachName = session.Coach != null
                     ? $"{session.Coach.FirstName} {session.Coach.LastName}"
                     : null,
+                coachNoShow  = session.CoachNoShow, 
                 capacity = session.Capacity,
                 lanesCount = session.LanesCount,
             },
@@ -466,27 +467,43 @@ public class AttendanceController : ControllerBase
         return Ok(coaches);
     }
 
-    // PATCH /api/attendance/sessions/{id}/coach — reassign or clear coach
+    // PATCH /api/attendance/sessions/{id}/coach
     [HttpPatch("sessions/{id:int}/coach")]
-    public async Task<IActionResult> UpdateCoach(int id, [FromBody] int? coachId)
+    public async Task<IActionResult> UpdateCoach(int id, [FromBody] UpdateCoachRequest req)
     {
         if (!CanManageAttendance()) return Forbid();
         await using var db = _dbFactory.CreateForCurrentClub();
         var session = await db.Sessions.FindAsync(id);
         if (session is null) return NotFound();
 
-        session.CoachId = coachId;
+        if (req.NoShow)
+        {
+            // Mark no-show — keep CoachId intact (preserve the assignment record)
+            session.CoachNoShow = true;
+        }
+        else
+        {
+            // Assign/reassign coach and clear no-show flag
+            session.CoachId = req.CoachId;
+            session.CoachNoShow = false;
+        }
+
         session.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
 
         string? coachName = null;
-        if (coachId.HasValue)
+        if (session.CoachId.HasValue)
         {
-            var coach = await db.Users.FindAsync(coachId.Value);
+            var coach = await db.Users.FindAsync(session.CoachId.Value);
             coachName = coach is null ? null : $"{coach.FirstName} {coach.LastName}";
         }
 
-        return Ok(new { coachId = session.CoachId, coachName });
+        return Ok(new
+        {
+            coachId = session.CoachId,
+            coachName,
+            coachNoShow = session.CoachNoShow,
+        });
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

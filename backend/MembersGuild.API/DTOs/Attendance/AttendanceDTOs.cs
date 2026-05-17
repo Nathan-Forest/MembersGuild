@@ -33,3 +33,5 @@ public record QrTokenResponse(
     string CheckinUrl,
     DateTime ExpiresAt
 );
+
+public record UpdateCoachRequest(int? CoachId, bool NoShow);
