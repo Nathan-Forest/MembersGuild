@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser,  hasPermission } from '@/lib/auth'
 import type { MemberListResponse, MemberDetailResponse, MemberStatsResponse } from '@/types'
 import { ROLE_LABELS } from '@/types'
 import type { UserRole } from '@/types'
@@ -32,7 +32,7 @@ type ModalTab = 'details' | 'emergency' | 'credits' | 'role'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const [availableRoles, setAvailableRoles] = useState<{ value: string, label: string }[]>([])
+
 
 const CREDIT_FILTERS = [
   { value: '', label: 'All Members' },
@@ -121,6 +121,7 @@ export default function MembersPage() {
 
   // Core
   const [currentRole, setCurrentRole] = useState<UserRole | null>(null)
+  const [availableRoles, setAvailableRoles] = useState<{ value: string, label: string }[]>([])
   const [members, setMembers] = useState<MemberListResponse[]>([])
   const [stats, setStats] = useState<MemberStatsResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -376,9 +377,10 @@ export default function MembersPage() {
 
   // ── Derived ────────────────────────────────────────────────────────────────
 
-  const canManage = currentRole === 'membership' || currentRole === 'webmaster'
-  const canManageCredits = currentRole === 'finance' || currentRole === 'webmaster'
-  const isWebmaster = currentRole === 'webmaster'
+  const user = getCurrentUser()
+  const canManage = user ? hasPermission(user, 'membership', 'webmaster') : false
+  const canManageCredits = user ? hasPermission(user, 'finance', 'webmaster') : false
+  const isWebmaster = user ? hasPermission(user, 'webmaster') : false
   const validImportRows = importRows.filter(r => r.errors.length === 0).length
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -521,8 +523,8 @@ export default function MembersPage() {
               {getVisibleTabs(currentRole).map(tab => (
                 <button key={tab.key} onClick={() => setModalTab(tab.key)}
                   className={`flex-1 py-3 text-xs font-medium transition-colors ${modalTab === tab.key
-                      ? 'border-b-2 text-[var(--color-primary)]'
-                      : 'text-gray-500 hover:text-gray-700'
+                    ? 'border-b-2 text-[var(--color-primary)]'
+                    : 'text-gray-500 hover:text-gray-700'
                     }`}
                   style={modalTab === tab.key ? { borderColor: 'var(--color-primary)' } : {}}>
                   {tab.label}

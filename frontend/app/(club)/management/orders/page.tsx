@@ -41,28 +41,28 @@ interface OrderDetail extends OrderSummary {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const STATUS_TABS = [
-  { key: 'all',              label: 'All' },
-  { key: 'pending',          label: 'Pending' },
-  { key: 'payment_confirmed',label: 'Confirmed' },
+  { key: 'all', label: 'All' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'payment_confirmed', label: 'Confirmed' },
   { key: 'pending_delivery', label: 'Pending Delivery' },
-  { key: 'delivered',        label: 'Delivered' },
-  { key: 'cancelled',        label: 'Cancelled' },
+  { key: 'delivered', label: 'Delivered' },
+  { key: 'cancelled', label: 'Cancelled' },
 ]
 
 function statusBadge(status: string) {
   const map: Record<string, string> = {
-    pending:           'bg-amber-100 text-amber-700',
+    pending: 'bg-amber-100 text-amber-700',
     payment_confirmed: 'bg-blue-100 text-blue-700',
-    pending_delivery:  'bg-purple-100 text-purple-700',
-    delivered:         'bg-green-100 text-green-700',
-    cancelled:         'bg-gray-100 text-gray-500',
+    pending_delivery: 'bg-purple-100 text-purple-700',
+    delivered: 'bg-green-100 text-green-700',
+    cancelled: 'bg-gray-100 text-gray-500',
   }
   const labels: Record<string, string> = {
-    pending:           'Pending Payment',
+    pending: 'Pending Payment',
     payment_confirmed: 'Payment Confirmed',
-    pending_delivery:  'Pending Delivery',
-    delivered:         'Delivered',
-    cancelled:         'Cancelled',
+    pending_delivery: 'Pending Delivery',
+    delivered: 'Delivered',
+    cancelled: 'Cancelled',
   }
   return { cls: map[status] ?? 'bg-gray-100 text-gray-500', label: labels[status] ?? status }
 }
@@ -75,37 +75,34 @@ function fmt(date?: string) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ShopOrdersPage() {
-  const user   = getCurrentUser()
   const router = useRouter()
 
-  const [currentUser, setCurrentUser] = useState<ParsedUser | null>(null)
-  const canManage   = user ? hasPermission(user, 'finance', 'webmaster') : false
+  const user = getCurrentUser()                                           // line 78 — keep
+  const canManage = user ? hasPermission(user, 'finance', 'webmaster') : false
   const isWebmaster = user ? hasPermission(user, 'webmaster') : false
-  // New — using permissions:
-  const isFinance   = currentUser ? hasPermission(currentUser, 'finance', 'webmaster') : false
-  const isCommittee = currentUser ? hasPermission(currentUser, 'committee', 'webmaster') : false
-  
-  const [orders, setOrders]           = useState<OrderSummary[]>([])
-  const [loading, setLoading]         = useState(true)
+  const isFinance = user ? hasPermission(user, 'finance', 'webmaster') : false   // ← was currentUser
+  const isCommittee = user ? hasPermission(user, 'committee', 'webmaster') : false  // ← was currentUser
+  const [orders, setOrders] = useState<OrderSummary[]>([])
+  const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('all')
-  const [expandedId, setExpandedId]   = useState<number | null>(null)
-  const [detail, setDetail]           = useState<Record<number, OrderDetail>>({})
+  const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [detail, setDetail] = useState<Record<number, OrderDetail>>({})
   const [loadingDetail, setLoadingDetail] = useState<number | null>(null)
 
   // Confirm payment modal
-  const [confirmingId, setConfirmingId]   = useState<number | null>(null)
+  const [confirmingId, setConfirmingId] = useState<number | null>(null)
   const [receiptNumber, setReceiptNumber] = useState('')
-  const [confirmNotes, setConfirmNotes]   = useState('')
-  const [confirming, setConfirming]       = useState(false)
-  const [confirmError, setConfirmError]   = useState('')
+  const [confirmNotes, setConfirmNotes] = useState('')
+  const [confirming, setConfirming] = useState(false)
+  const [confirmError, setConfirmError] = useState('')
 
   // Deliver modal
-  const [deliveringId, setDeliveringId]   = useState<number | null>(null)
-  const [deliverNotes, setDeliverNotes]   = useState('')
-  const [delivering, setDelivering]       = useState(false)
+  const [deliveringId, setDeliveringId] = useState<number | null>(null)
+  const [deliverNotes, setDeliverNotes] = useState('')
+  const [delivering, setDelivering] = useState(false)
 
   // Cancel
-  const [cancellingId, setCancellingId]   = useState<number | null>(null)
+  const [cancellingId, setCancellingId] = useState<number | null>(null)
 
   // ── Load ────────────────────────────────────────────────────────────────────
 
@@ -196,8 +193,8 @@ export default function ShopOrdersPage() {
 
   // ── Stats ─────────────────────────────────────────────────────────────────
 
-  const pendingCount  = orders.filter(o => o.status === 'pending').length
-  const pendingValue  = orders.filter(o => o.status === 'pending')
+  const pendingCount = orders.filter(o => o.status === 'pending').length
+  const pendingValue = orders.filter(o => o.status === 'pending')
     .reduce((sum, o) => sum + o.totalAmount, 0)
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -224,11 +221,10 @@ export default function ShopOrdersPage() {
             return (
               <button key={tab.key}
                 onClick={() => setStatusFilter(tab.key)}
-                className={`pb-3 px-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                  statusFilter === tab.key
+                className={`pb-3 px-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${statusFilter === tab.key
                     ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}>
+                  }`}>
                 {tab.label}
                 {count > 0 && statusFilter !== tab.key && (
                   <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs">
@@ -244,7 +240,7 @@ export default function ShopOrdersPage() {
       {/* Orders list */}
       {loading ? (
         <div className="space-y-3">
-          {[1,2,3].map(i => <div key={i} className="card p-4 h-20 animate-pulse bg-gray-100" />)}
+          {[1, 2, 3].map(i => <div key={i} className="card p-4 h-20 animate-pulse bg-gray-100" />)}
         </div>
       ) : orders.length === 0 ? (
         <div className="card p-12 text-center">
@@ -254,9 +250,9 @@ export default function ShopOrdersPage() {
       ) : (
         <div className="space-y-3">
           {orders.map(order => {
-            const badge   = statusBadge(order.status)
-            const isOpen  = expandedId === order.id
-            const d       = detail[order.id]
+            const badge = statusBadge(order.status)
+            const isOpen = expandedId === order.id
+            const d = detail[order.id]
             const loading = loadingDetail === order.id
 
             return (
