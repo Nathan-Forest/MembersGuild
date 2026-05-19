@@ -6,18 +6,21 @@ public record ClubSettingsResponse(
     string SecondaryColor,
     // Membership
     string AssociationNumberLabel,
-    int    CatsInitialCredits,
+    int CatsInitialCredits,
     string CatsDescription,
     // Attendance
     string AttendanceLanesLabel,
-    bool   AttendanceLanesEnabled,
+    bool AttendanceLanesEnabled,
     // Regional
     string ClubTimezone,
     // Credits
     string CreditPriceAud,
     // Welcome Email (Phase 10)
     string WelcomeEmailSubject,
-    string WelcomeEmailBody
+    string WelcomeEmailBody,
+    bool TrainingMetricsEnabled,
+    bool TrainingSetsEnabled,
+    bool TrainingVideosEnabled
 );
 
 public record UpdateClubSettingsRequest(
@@ -25,12 +28,15 @@ public record UpdateClubSettingsRequest(
     string PrimaryColor,
     string SecondaryColor,
     string AssociationNumberLabel,
-    int    CatsInitialCredits,
+    int CatsInitialCredits,
     string CatsDescription,
     string AttendanceLanesLabel,
-    bool   AttendanceLanesEnabled,
+    bool AttendanceLanesEnabled,
     string ClubTimezone,
     string CreditPriceAud,
     string WelcomeEmailSubject,
-    string WelcomeEmailBody
+    string WelcomeEmailBody,
+    bool TrainingMetricsEnabled,
+    bool TrainingSetsEnabled,
+    bool TrainingVideosEnabled
 );

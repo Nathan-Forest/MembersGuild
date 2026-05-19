@@ -19,6 +19,9 @@ interface ClubSettings {
   creditPriceAud: string
   welcomeEmailSubject: string
   welcomeEmailBody: string
+  trainingMetricsEnabled: boolean
+  trainingSetsEnabled: boolean
+  trainingVideosEnabled: boolean
 }
 
 interface FeatureFlag {
@@ -92,6 +95,7 @@ export default function SettingsPage() {
     try {
       await api.put(`/settings/features/${key}`, enabled)
       setFeatures(prev => prev.map(f => f.key === key ? { ...f, isEnabled: enabled } : f))
+      router.refresh()  // ← forces layout to re-fetch club config, nav updates
     } catch {
       setError('Failed to update feature')
     }
@@ -280,40 +284,57 @@ export default function SettingsPage() {
       </SettingsCard>
 
       {/* ── Features ────────────────────────────────────────────────── */}
-      <SettingsCard title="Features" icon="⚙️">
-        <div className="space-y-4">
-          <p className="text-xs text-gray-400">
-            Toggle features on or off for your club. Features marked as unavailable
-            are controlled by your subscription plan.
-          </p>
-          {features.map(f => (
-            <div key={f.key} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-              <div className="flex-1">
-                <p className={`text-sm font-medium ${!f.platformGranted ? 'text-gray-400' : 'text-gray-700'}`}>
-                  {f.label}
-                  {!f.platformGranted && (
-                    <span className="ml-2 text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">
-                      Not available on your plan
-                    </span>
-                  )}
-                </p>
-              </div>
-              <button
-                onClick={() => f.platformGranted && handleFeatureToggle(f.key, !f.isEnabled)}
-                disabled={!f.platformGranted}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${!f.platformGranted
-                    ? 'bg-gray-100 cursor-not-allowed'
-                    : f.isEnabled
-                      ? 'bg-[var(--color-primary)]'
-                      : 'bg-gray-200'
-                  }`}>
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${f.isEnabled ? 'translate-x-6' : 'translate-x-1'
-                  }`} />
-              </button>
+      {features.map(f => (
+        <div key={f.key}>
+          <div className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+            <div className="flex-1">
+              <p className={`text-sm font-medium ${!f.platformGranted ? 'text-gray-400' : 'text-gray-700'}`}>
+                {f.label}
+                {!f.platformGranted && (
+                  <span className="ml-2 text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">
+                    Not available on your plan
+                  </span>
+                )}
+              </p>
             </div>
-          ))}
+            <button
+              onClick={() => f.platformGranted && handleFeatureToggle(f.key, !f.isEnabled)}
+              disabled={!f.platformGranted}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${!f.platformGranted ? 'bg-gray-100 cursor-not-allowed'
+                  : f.isEnabled ? 'bg-[var(--color-primary)]' : 'bg-gray-200'
+                }`}>
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${f.isEnabled ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+            </button>
+          </div>
+
+          {/* Training sub-features — shown when training is enabled */}
+          {f.key === 'training' && f.isEnabled && f.platformGranted && form && (
+            <div className="ml-4 mt-2 mb-3 pl-4 border-l-2 border-gray-100 space-y-2">
+              {[
+                { key: 'trainingMetricsEnabled' as keyof ClubSettings, label: 'Personal Bests', desc: 'Member performance tracking' },
+                { key: 'trainingSetsEnabled' as keyof ClubSettings, label: 'Training Sets', desc: 'Swim sets library and set of the week' },
+                { key: 'trainingVideosEnabled' as keyof ClubSettings, label: 'Training Videos', desc: 'YouTube video library' },
+              ].map(sub => (
+                <div key={sub.key} className="flex items-center justify-between py-1.5">
+                  <div>
+                    <p className="text-sm text-gray-600">{sub.label}</p>
+                    <p className="text-xs text-gray-400">{sub.desc}</p>
+                  </div>
+                  <button
+                    onClick={() => update(sub.key, !form[sub.key] as ClubSettings[typeof sub.key])}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${form[sub.key] ? 'bg-[var(--color-primary)]' : 'bg-gray-200'
+                      }`}>
+                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${form[sub.key] ? 'translate-x-5' : 'translate-x-1'
+                      }`} />
+                  </button>
+                </div>
+              ))}
+              <p className="text-xs text-gray-400 pt-1">Sub-feature changes save with "Save Changes"</p>
+            </div>
+          )}
         </div>
-      </SettingsCard>
+      ))}
 
       {/* ── Welcome Email ────────────────────────────────────────────────── */}
       <SettingsCard title="Welcome Email" icon="✉️">
