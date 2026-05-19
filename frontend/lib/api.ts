@@ -12,8 +12,10 @@ interface FetchOptions extends RequestInit {
 async function request<T>(path: string, options: FetchOptions = {}): Promise<T> {
   const { auth = true, ...init } = options
 
+  const isFormData = init.body instanceof FormData
+
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(!isFormData && { 'Content-Type': 'application/json' }),  // ← conditional
     ...(init.headers as Record<string, string> ?? {}),
   }
 
@@ -54,8 +56,14 @@ export const api = {
   get: <T>(path: string, opts?: FetchOptions) =>
     request<T>(path, { method: 'GET', ...opts }),
 
-  post: <T>(path: string, body: unknown, opts?: FetchOptions) =>
-    request<T>(path, { method: 'POST', body: JSON.stringify(body), ...opts }),
+  post: <T>(path: string, body: unknown, opts?: FetchOptions) => {
+    const isFormData = body instanceof FormData
+    return request<T>(path, {
+      method: 'POST',
+      body: isFormData ? (body as FormData) : JSON.stringify(body),
+      ...opts,
+    })
+  },
 
   put: <T>(path: string, body: unknown, opts?: FetchOptions) =>
     request<T>(path, { method: 'PUT', body: JSON.stringify(body), ...opts }),
@@ -90,7 +98,7 @@ export const publicApi = {
 
   catsSignup: (data: unknown) =>
     api.post('/public/signup', data, { auth: false }),
-  
+
 }
 
 export const creditsApi = {
