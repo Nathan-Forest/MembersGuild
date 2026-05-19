@@ -6,6 +6,7 @@ using MembersGuild.API.Extensions;
 using MembersGuild.API.Middleware;
 using MembersGuild.Data.Contexts;
 using Microsoft.EntityFrameworkCore;
+using MembersGuild.Data.Models.Platform;
 
 namespace MembersGuild.API.Controllers;
 
@@ -25,13 +26,13 @@ public class SettingsController : ControllerBase
         ClubDbContextFactory dbFactory,
         PlatformDbContext platformDb,
         ClubContext clubContext,
-        IWebHostEnvironment  env)
+        IWebHostEnvironment env)
     {
         _settings = settings;
         _dbFactory = dbFactory;
         _platformDb = platformDb;
         _clubContext = clubContext;
-        _env        = env;
+        _env = env;
     }
 
     private int CurrentUserId =>
@@ -200,7 +201,7 @@ public class SettingsController : ControllerBase
         var path = Path.Combine(uploadDir, $"logo{ext}");
         await System.IO.File.WriteAllBytesAsync(path, bytes);
 
-        var logoUrl = $"/api/files/{slug}/logo/logo{ext}"; 
+        var logoUrl = $"/api/files/{slug}/logo/logo{ext}";
 
         var club = await _platformDb.Clubs.FirstOrDefaultAsync(c => c.Slug == slug);
         if (club is not null)
@@ -211,5 +212,82 @@ public class SettingsController : ControllerBase
         }
 
         return Ok(new { logoUrl });
+    }
+
+    private static readonly Dictionary<string, string> FeatureLabels = new()
+    {
+        ["calendar"] = "Session Calendar & Booking",
+        ["my_sessions"] = "My Sessions",
+        ["attendance"] = "Attendance Tracking",
+        ["training"] = "Training & Personal Bests",
+        ["shop"] = "Swim Shop",
+        ["my_account"] = "Credits & My Account",
+    };
+
+    // GET /api/settings/features
+    [HttpGet("features")]
+    [Authorize(Roles = "webmaster")]
+    public async Task<IActionResult> GetFeatures()
+    {
+        var club = await _platformDb.Clubs
+            .Include(c => c.Features)
+            .FirstOrDefaultAsync(c => c.Slug == _clubContext.Slug);
+
+        if (club is null) return NotFound();
+
+        var result = FeatureLabels.Keys.Select(key =>
+        {
+            var feature = club.Features.FirstOrDefault(f => f.FeatureKey == key);
+            return new
+            {
+                key,
+                label = FeatureLabels[key],
+                platformGranted = feature?.PlatformGranted ?? false,
+                isEnabled = feature?.IsEnabled ?? false,
+            };
+        });
+
+        return Ok(result);
+    }
+
+    // PUT /api/settings/features/{key}
+    [HttpPut("features/{key}")]
+    [Authorize(Roles = "webmaster")]
+    public async Task<IActionResult> UpdateFeature(string key, [FromBody] bool enabled)
+    {
+        if (!FeatureLabels.ContainsKey(key))
+            return BadRequest(new { error = "Unknown feature key" });
+
+        var club = await _platformDb.Clubs
+            .Include(c => c.Features)
+            .FirstOrDefaultAsync(c => c.Slug == _clubContext.Slug);
+
+        if (club is null) return NotFound();
+
+        var feature = club.Features.FirstOrDefault(f => f.FeatureKey == key);
+
+        // Webmaster cannot enable features the platform hasn't granted
+        if (enabled && (feature is null || !feature.PlatformGranted))
+            return Forbid();
+
+        if (feature is null)
+        {
+            _platformDb.ClubFeatures.Add(new ClubFeature
+            {
+                ClubId = club.Id,
+                FeatureKey = key,
+                IsEnabled = enabled,
+                EnabledBy = "club",
+                PlatformGranted = false,
+            });
+        }
+        else
+        {
+            feature.IsEnabled = enabled;
+            feature.EnabledBy = "club";
+        }
+
+        await _platformDb.SaveChangesAsync();
+        return Ok(new { success = true });
     }
 }

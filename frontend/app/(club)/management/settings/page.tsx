@@ -21,6 +21,15 @@ interface ClubSettings {
   welcomeEmailBody: string
 }
 
+interface FeatureFlag {
+  key: string
+  label: string
+  platformGranted: boolean
+  isEnabled: boolean
+}
+
+const [features, setFeatures] = useState<FeatureFlag[]>([])
+
 const TIMEZONES = [
   { label: 'Brisbane (UTC+10, no DST)', value: 'Australia/Brisbane' },
   { label: 'Sydney / Melbourne (AEDT)', value: 'Australia/Sydney' },
@@ -59,6 +68,7 @@ export default function SettingsPage() {
       .then(data => { setForm(data); setLogoPreview(data.logoUrl) })
       .catch(() => setError('Failed to load settings'))
       .finally(() => setLoading(false))
+    api.get<FeatureFlag[]>('/settings/features').then(setFeatures).catch(() => { })
   }, [router])
 
   function update<K extends keyof ClubSettings>(key: K, value: ClubSettings[K]) {
@@ -76,6 +86,15 @@ export default function SettingsPage() {
       setError(err instanceof Error ? err.message : 'Failed to save settings')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleFeatureToggle(key: string, enabled: boolean) {
+    try {
+      await api.put(`/settings/features/${key}`, enabled)
+      setFeatures(prev => prev.map(f => f.key === key ? { ...f, isEnabled: enabled } : f))
+    } catch {
+      setError('Failed to update feature')
     }
   }
 
@@ -259,6 +278,42 @@ export default function SettingsPage() {
             ))}
           </select>
         </Field>
+      </SettingsCard>
+
+      {/* ── Features ────────────────────────────────────────────────── */}
+      <SettingsCard title="Features" icon="⚙️">
+        <div className="space-y-4">
+          <p className="text-xs text-gray-400">
+            Toggle features on or off for your club. Features marked as unavailable
+            are controlled by your subscription plan.
+          </p>
+          {features.map(f => (
+            <div key={f.key} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+              <div className="flex-1">
+                <p className={`text-sm font-medium ${!f.platformGranted ? 'text-gray-400' : 'text-gray-700'}`}>
+                  {f.label}
+                  {!f.platformGranted && (
+                    <span className="ml-2 text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">
+                      Not available on your plan
+                    </span>
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={() => f.platformGranted && handleFeatureToggle(f.key, !f.isEnabled)}
+                disabled={!f.platformGranted}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${!f.platformGranted
+                    ? 'bg-gray-100 cursor-not-allowed'
+                    : f.isEnabled
+                      ? 'bg-[var(--color-primary)]'
+                      : 'bg-gray-200'
+                  }`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${f.isEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+              </button>
+            </div>
+          ))}
+        </div>
       </SettingsCard>
 
       {/* ── Welcome Email ────────────────────────────────────────────────── */}

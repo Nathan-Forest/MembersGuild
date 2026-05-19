@@ -9,6 +9,7 @@ public class ClubFeature
     public string EnabledBy { get; set; } = "platform";    // "platform" or "club"
 
     public Club? Club { get; set; }
+    public bool PlatformGranted { get; set; }
 }
 
 /// <summary>
