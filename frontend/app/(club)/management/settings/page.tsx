@@ -284,6 +284,7 @@ export default function SettingsPage() {
       </SettingsCard>
 
       {/* ── Features ────────────────────────────────────────────────── */}
+      <SettingsCard title="Features" icon="🌏">
       {features.map(f => (
         <div key={f.key}>
           <div className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
@@ -335,6 +336,7 @@ export default function SettingsPage() {
           )}
         </div>
       ))}
+      </SettingsCard>
 
       {/* ── Welcome Email ────────────────────────────────────────────────── */}
       <SettingsCard title="Welcome Email" icon="✉️">
