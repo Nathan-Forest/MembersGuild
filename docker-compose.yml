@@ -32,7 +32,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       AllowedOrigins__0: ${FRONTEND_URL}
     volumes:
-    - ./uploads:/uploads 
+    - ./uploads:/app/uploads
     depends_on:
       - membersguild-db
 

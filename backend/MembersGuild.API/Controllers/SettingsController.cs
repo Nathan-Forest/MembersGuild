@@ -18,17 +18,20 @@ public class SettingsController : ControllerBase
     private readonly ClubDbContextFactory _dbFactory;
     private readonly PlatformDbContext _platformDb;
     private readonly ClubContext _clubContext;
+    private readonly IWebHostEnvironment _env;
 
     public SettingsController(
         SettingsService settings,
         ClubDbContextFactory dbFactory,
         PlatformDbContext platformDb,
-        ClubContext clubContext)
+        ClubContext clubContext,
+        IWebHostEnvironment  env)
     {
         _settings = settings;
         _dbFactory = dbFactory;
         _platformDb = platformDb;
         _clubContext = clubContext;
+        _env        = env;
     }
 
     private int CurrentUserId =>
@@ -190,7 +193,7 @@ public class SettingsController : ControllerBase
         };
 
         var slug = _clubContext.Slug;
-        var uploadDir = Path.Combine("/uploads", slug, "logo");
+        var uploadDir = Path.Combine(_env.ContentRootPath, "uploads", slug, "logo");
         Directory.CreateDirectory(uploadDir);
 
         var bytes = Convert.FromBase64String(req.Data);
