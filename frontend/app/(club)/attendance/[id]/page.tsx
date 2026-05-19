@@ -13,6 +13,7 @@ interface SheetMember {
   role: string
   status: string | null
   creditRefunded: boolean
+  creditBalance: number
 }
 
 interface SessionInfo {
@@ -462,6 +463,11 @@ export default function AttendanceSheetPage() {
                   </span>
                   {m.status === 'nsba' && m.creditRefunded && (
                     <span className="text-xs text-blue-500">Credit refunded</span>
+                  )}
+                  {m.creditBalance <= 0 && (
+                    <span className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                      ⚠ {m.creditBalance < 0 ? `${m.creditBalance} credits` : 'No credits'} — top up needed
+                    </span>
                   )}
                 </div>
               </div>

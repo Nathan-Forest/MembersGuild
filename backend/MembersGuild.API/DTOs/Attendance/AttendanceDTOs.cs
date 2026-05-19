@@ -19,7 +19,8 @@ public record AttendanceSheetMember(
     string Email,
     string Role,
     string? Status,  // null = not yet marked
-    bool CreditRefunded
+    bool CreditRefunded,
+    int CreditBalance 
 );
 
 public record MarkAttendanceRequest(

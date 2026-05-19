@@ -117,7 +117,8 @@ public class AttendanceController : ControllerBase
                 b.User.Email,
                 b.User.Role,
                 record?.Status,
-                record?.CreditRefunded ?? false
+                record?.CreditRefunded ?? false,
+                b.User.CreditBalance 
             );
         }).ToList();
 
@@ -243,7 +244,8 @@ public class AttendanceController : ControllerBase
 
         return Ok(new AttendanceSheetMember(
             existing.UserId, "", "", "",
-            existing.Status, existing.CreditRefunded
+            existing.Status, existing.CreditRefunded,
+            0
         ));
     }
 
@@ -274,7 +276,7 @@ public class AttendanceController : ControllerBase
             var user = await db.Users.FindAsync(userId);
             if (user is not null && session.CreditCost > 0)
             {
-                user.CreditBalance = Math.Max(0, user.CreditBalance - session.CreditCost);
+                user.CreditBalance = user.CreditBalance - session.CreditCost;
                 db.CreditTransactions.Add(new CreditTransaction
                 {
                     UserId = userId,
