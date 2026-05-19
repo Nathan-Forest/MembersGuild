@@ -26,7 +26,7 @@ export async function getClubConfig(host: string): Promise<ClubConfig | null> {
   try {
     const response = await fetch(`${BACKEND_URL}/api/public/club-config`, {
       headers: { 'X-Club-Slug': slug },
-      next: { revalidate: 60 },
+      cache: 'no-store',
     })
     if (!response.ok) return null
     return response.json() as Promise<ClubConfig>
