@@ -197,7 +197,7 @@ public class SettingsController : ControllerBase
         var path = Path.Combine(uploadDir, $"logo{ext}");
         await System.IO.File.WriteAllBytesAsync(path, bytes);
 
-        var logoUrl = $"/uploads/{slug}/logo{ext}";
+        var logoUrl = $"/api/files/{slug}/logo{ext}";
 
         var club = await _platformDb.Clubs.FirstOrDefaultAsync(c => c.Slug == slug);
         if (club is not null)

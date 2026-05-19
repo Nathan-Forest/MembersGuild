@@ -31,6 +31,8 @@ services:
         Password=${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       AllowedOrigins__0: ${FRONTEND_URL}
+    volumes:
+    - ./uploads:/uploads 
     depends_on:
       - membersguild-db
 
