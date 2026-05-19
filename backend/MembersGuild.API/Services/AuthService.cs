@@ -13,7 +13,7 @@ namespace MembersGuild.API.Services;
 public interface IAuthService
 {
     Task<LoginResponse?> LoginAsync(string email, string password);
-    string GenerateToken(User user, ClubContext club);
+    string GenerateToken(User user, ClubContext club, string[] inheritedRoles);
     string HashPassword(string password);
     bool VerifyPassword(string password, string hash);
     string GenerateTemporaryPassword();
@@ -46,7 +46,7 @@ public class AuthService : IAuthService
         user.LastLoginAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
 
-        var token = GenerateToken(user, _clubContext);
+        var token = GenerateToken(user, _clubContext, []);
 
         return new LoginResponse(token, new UserDto(
             user.Id,
@@ -60,7 +60,7 @@ public class AuthService : IAuthService
         ));
     }
 
-    public string GenerateToken(User user, ClubContext club)
+    public string GenerateToken(User user, ClubContext club, string[] inheritedRoles)
     {
         var secret = _config["JWT_SECRET"]
             ?? throw new InvalidOperationException("JWT_SECRET not configured");
@@ -68,16 +68,28 @@ public class AuthService : IAuthService
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        var claims = new List<Claim>
+    {
+        new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+        new(JwtRegisteredClaimNames.Email, user.Email),
+        new("club_id",   club.ClubId.ToString()),
+        new("club_slug", club.Slug),
+        new("role",      user.Role),    // display role — always the stored name
+        new("firstName", user.FirstName),
+        new("lastName",  user.LastName),
+    };
+
+        if (inheritedRoles.Length > 0)
         {
-    new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-    new Claim(JwtRegisteredClaimNames.Email, user.Email),
-    new Claim("club_id", club.ClubId.ToString()),
-    new Claim("club_slug", club.Slug),
-    new Claim(ClaimTypes.Role, user.Role),
-    new Claim("firstName", user.FirstName),
-    new Claim("lastName",  user.LastName),
-};
+            // Custom role — add each base role as ClaimTypes.Role for permission checks
+            foreach (var baseRole in inheritedRoles)
+                claims.Add(new Claim(ClaimTypes.Role, baseRole));
+        }
+        else
+        {
+            // Standard role — single permission claim
+            claims.Add(new Claim(ClaimTypes.Role, user.Role));
+        }
 
         var token = new JwtSecurityToken(
             claims: claims,

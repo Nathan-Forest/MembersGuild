@@ -22,15 +22,12 @@ public class TrainingController : ControllerBase
 
     private int CurrentUserId => int.Parse(
         User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-    private string CurrentRole =>
-        User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+    private bool HasRole(params string[] roles) =>
+       roles.Any(r => User.IsInRole(r));
 
-    private bool CanManage() =>
-        CurrentRole is "coach" or "committee" or "webmaster";
-    private bool CanEditTimes() =>
-        CurrentRole is "coach" or "membership" or "webmaster";
-    private bool IsWebmaster() =>
-        CurrentRole == "webmaster";
+    private bool CanManage() => HasRole("coach", "committee", "webmaster");
+    private bool CanEditTimes() =>  HasRole("coach", "membership", "webmaster");
+    private bool IsWebmaster() =>  HasRole("webmaster");
 
     // ── GET /api/training/settings ───────────────────────────────────────────
     [HttpGet("settings")]
@@ -116,16 +113,16 @@ public class TrainingController : ControllerBase
                 {
                     db.MemberTimes.Add(new MemberTime
                     {
-                        UserId    = userId,
-                        MetricId  = entry.MetricId,
-                        Value     = entry.Value.Trim(),
+                        UserId = userId,
+                        MetricId = entry.MetricId,
+                        Value = entry.Value.Trim(),
                         UpdatedBy = CurrentUserId,
                         UpdatedAt = DateTime.UtcNow,
                     });
                 }
                 else
                 {
-                    existing.Value     = entry.Value.Trim();
+                    existing.Value = entry.Value.Trim();
                     existing.UpdatedBy = CurrentUserId;
                     existing.UpdatedAt = DateTime.UtcNow;
                 }
@@ -195,14 +192,14 @@ public class TrainingController : ControllerBase
 
         var set = new SwimSet
         {
-            Title         = request.Title.Trim(),
-            Description   = request.Description?.Trim(),
-            Difficulty    = request.Difficulty,
-            Category      = request.Category,
-            Content       = request.Content.Trim(),
+            Title = request.Title.Trim(),
+            Description = request.Description?.Trim(),
+            Difficulty = request.Difficulty,
+            Category = request.Category,
+            Content = request.Content.Trim(),
             TotalDistance = request.TotalDistance,
-            CreatedBy     = CurrentUserId,
-            IsActive      = true,
+            CreatedBy = CurrentUserId,
+            IsActive = true,
         };
 
         db.SwimSets.Add(set);
@@ -225,14 +222,14 @@ public class TrainingController : ControllerBase
         var set = await db.SwimSets.FindAsync(id);
         if (set is null) return NotFound();
 
-        set.Title         = request.Title.Trim();
-        set.Description   = request.Description?.Trim();
-        set.Difficulty    = request.Difficulty;
-        set.Category      = request.Category;
-        set.Content       = request.Content.Trim();
+        set.Title = request.Title.Trim();
+        set.Description = request.Description?.Trim();
+        set.Difficulty = request.Difficulty;
+        set.Category = request.Category;
+        set.Content = request.Content.Trim();
         set.TotalDistance = request.TotalDistance;
-        set.IsActive      = request.IsActive;
-        set.UpdatedAt     = DateTime.UtcNow;
+        set.IsActive = request.IsActive;
+        set.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
 
@@ -251,7 +248,7 @@ public class TrainingController : ControllerBase
         var set = await db.SwimSets.FindAsync(id);
         if (set is null) return NotFound();
 
-        set.IsActive  = false;
+        set.IsActive = false;
         set.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
 
@@ -317,13 +314,13 @@ public class TrainingController : ControllerBase
 
         var video = new TrainingVideo
         {
-            Title        = request.Title.Trim(),
-            Description  = request.Description?.Trim(),
-            Category     = request.Category,
-            YoutubeUrl   = request.YoutubeUrl.Trim(),
+            Title = request.Title.Trim(),
+            Description = request.Description?.Trim(),
+            Category = request.Category,
+            YoutubeUrl = request.YoutubeUrl.Trim(),
             ThumbnailUrl = ExtractYoutubeThumbnail(request.YoutubeUrl),
-            CreatedBy    = CurrentUserId,
-            IsActive     = true,
+            CreatedBy = CurrentUserId,
+            IsActive = true,
         };
 
         db.TrainingVideos.Add(video);
@@ -346,12 +343,12 @@ public class TrainingController : ControllerBase
         var video = await db.TrainingVideos.FindAsync(id);
         if (video is null) return NotFound();
 
-        video.Title        = request.Title.Trim();
-        video.Description  = request.Description?.Trim();
-        video.Category     = request.Category;
-        video.YoutubeUrl   = request.YoutubeUrl.Trim();
+        video.Title = request.Title.Trim();
+        video.Description = request.Description?.Trim();
+        video.Category = request.Category;
+        video.YoutubeUrl = request.YoutubeUrl.Trim();
         video.ThumbnailUrl = ExtractYoutubeThumbnail(request.YoutubeUrl);
-        video.IsActive     = request.IsActive;
+        video.IsActive = request.IsActive;
 
         await db.SaveChangesAsync();
 

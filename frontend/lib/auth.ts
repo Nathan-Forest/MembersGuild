@@ -27,7 +27,7 @@ interface JwtPayload {
   club_id: string
   club_slug: string
   role?: string
-  [ROLE_URI]?: string
+  [ROLE_URI]?: string | string[]
   exp: number
   firstName?: string
   lastName?: string
@@ -39,9 +39,10 @@ export interface ParsedUser {
   club_id: string
   club_slug: string
   role: UserRole
+  permissions: string[]
   exp: number
-  firstName: string 
-  lastName: string 
+  firstName: string
+  lastName: string
   isAuthenticated: true
 }
 
@@ -50,19 +51,27 @@ export function parseToken(token: string): ParsedUser | null {
     const payload = token.split('.')[1]
     const decoded: JwtPayload = JSON.parse(atob(payload))
 
-    // ASP.NET Core maps ClaimTypes.Role to a long URI key in the JWT.
-    // Normalise it to 'role' for frontend use.
-    const role = (decoded.role ?? decoded[ROLE_URI] ?? '') as UserRole
+    // Display role — always the stored role name
+    const role = (decoded.role ?? '') as UserRole
+
+    // Permissions — base roles for checking access
+    // ClaimTypes.Role can be string (standard) or string[] (custom/inherited)
+    const rawRoleUri = decoded[ROLE_URI]
+    const permissions: string[] = Array.isArray(rawRoleUri)
+      ? rawRoleUri
+      : rawRoleUri ? [rawRoleUri]
+        : role ? [role] : []
 
     return {
-      sub:            decoded.sub,
-      email:          decoded.email,
-      club_id:        decoded.club_id,
-      club_slug:      decoded.club_slug,
+      sub: decoded.sub,
+      email: decoded.email,
+      club_id: decoded.club_id,
+      club_slug: decoded.club_slug,
       role,
-      exp:            decoded.exp,
-      firstName:       decoded.firstName ?? '',
-      lastName:        decoded.lastName  ?? '',
+      permissions,
+      firstName: decoded.firstName ?? '',
+      lastName: decoded.lastName ?? '',
+      exp: decoded.exp,
       isAuthenticated: true,
     }
   } catch {
@@ -104,4 +113,8 @@ export function logout(): void {
   clearToken()
   document.cookie = 'mg_session=; path=/; max-age=0'
   window.location.href = '/login'
+}
+
+export function hasPermission(user: ParsedUser, ...roles: string[]): boolean {
+  return roles.some(r => user.permissions.includes(r))
 }

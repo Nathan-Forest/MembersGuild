@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { api } from '@/lib/api'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser, hasPermission  } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 
 interface ClubUpdate {
@@ -27,8 +27,8 @@ export default function ManageUpdatesPage() {
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState('')
 
-  const canPost    = ['committee', 'membership', 'finance', 'webmaster'].includes(user?.role ?? '')
-  const isWebmaster = user?.role === 'webmaster'
+  const canPost    = user ? hasPermission(user, 'committee', 'membership', 'finance', 'webmaster') : false
+  const isWebmaster = user ? hasPermission(user, 'webmaster') : false
 
   useEffect(() => {
     if (!canPost) { router.replace('/dashboard'); return }

@@ -38,10 +38,19 @@ public class ClubDbContext : DbContext
     public DbSet<CatsFormField> CatsFormFields => Set<CatsFormField>();
     public DbSet<PaymentSettings> PaymentSettings => Set<PaymentSettings>();
     public DbSet<ClubUpdate> ClubUpdates => Set<ClubUpdate>();
-
+    public DbSet<ClubCustomRole> ClubCustomRoles => Set<ClubCustomRole>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // OnModelCreating:
+        modelBuilder.Entity<ClubCustomRole>(entity =>
+        {
+            entity.ToTable("club_custom_roles");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.RoleName).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.DisplayLabel).HasMaxLength(100).IsRequired();
+            entity.HasIndex(e => e.RoleName).IsUnique();
+        });
         // All club tables live in this club's schema (e.g. "club_bsm")
         modelBuilder.HasDefaultSchema(_schemaName);
 

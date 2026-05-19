@@ -24,10 +24,15 @@ public class SessionsController : ControllerBase
 
     private int CurrentUserId => int.Parse(
         User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-    private string CurrentRole => User.FindFirst(ClaimTypes.Role)?.Value ?? "";
-    private bool CanManage() =>
-        CurrentRole is "coach" or "committee" or "webmaster";
+    private bool HasRole(params string[] roles) =>
+    roles.Any(r => User.IsInRole(r));
 
+    private bool CanManage() => HasRole("coach", "committee", "webmaster");
+
+    // Fix the CurrentRole property itself:
+    private string CurrentRole =>
+        User.FindFirst("role")?.Value ??
+        User.FindFirst(ClaimTypes.Role)?.Value ?? "";
     /// <summary>GET /api/sessions — all roles, optional date range</summary>
     [HttpGet]
     public async Task<IActionResult> GetSessions(

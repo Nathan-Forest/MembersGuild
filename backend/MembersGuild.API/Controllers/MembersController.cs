@@ -133,6 +133,9 @@ public class MembersController : ControllerBase
         return Ok(result);
     }
 
-    private bool IsStaff() => CurrentRole is "coach" or "committee" or "membership" or "finance" or "webmaster";
-    private bool CanManageMembers() => CurrentRole is "membership" or "webmaster";
+    private bool HasRole(params string[] roles) =>
+        roles.Any(r => User.IsInRole(r));
+    private bool IsStaff() =>
+    HasRole("coach", "committee", "membership", "finance", "webmaster");
+    private bool CanManageMembers() => HasRole("membership", "webmaster");
 }

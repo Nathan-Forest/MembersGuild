@@ -29,8 +29,10 @@ public class AttendanceController : ControllerBase
     private string CurrentRole =>
         User.FindFirst(ClaimTypes.Role)?.Value ?? "";
 
+    private bool HasRole(params string[] roles) =>
+        roles.Any(r => User.IsInRole(r));
     private bool CanManageAttendance() =>
-        CurrentRole is "coach" or "committee" or "membership" or "finance" or "webmaster";
+    HasRole("coach", "committee", "membership", "finance", "webmaster");
 
     // ── GET /api/attendance/sessions ────────────────────────────────────────
     [HttpGet("sessions")]
@@ -118,7 +120,7 @@ public class AttendanceController : ControllerBase
                 b.User.Role,
                 record?.Status,
                 record?.CreditRefunded ?? false,
-                b.User.CreditBalance 
+                b.User.CreditBalance
             );
         }).ToList();
 
@@ -143,7 +145,7 @@ public class AttendanceController : ControllerBase
                 coachName = session.Coach != null
                     ? $"{session.Coach.FirstName} {session.Coach.LastName}"
                     : null,
-                coachNoShow  = session.CoachNoShow, 
+                coachNoShow = session.CoachNoShow,
                 capacity = session.Capacity,
                 lanesCount = session.LanesCount,
             },

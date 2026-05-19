@@ -20,10 +20,10 @@ public class LocationsController : ControllerBase
         _dbFactory = dbFactory;
     }
 
-    private string CurrentRole => User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+    private bool HasRole(params string[] roles) =>
+     roles.Any(r => User.IsInRole(r));
 
-    private bool CanManage() =>
-        CurrentRole is "coach" or "committee" or "webmaster";
+    private bool CanManage() => HasRole("coach", "committee", "webmaster");
 
     /// <summary>GET /api/locations — all roles</summary>
     [HttpGet]
@@ -59,9 +59,9 @@ public class LocationsController : ControllerBase
         await using var db = _dbFactory.CreateForCurrentClub();
         var location = new Location
         {
-            Name     = request.Name.Trim(),
-            Address  = request.Address?.Trim(),
-            Phone    = request.Phone?.Trim(),
+            Name = request.Name.Trim(),
+            Address = request.Address?.Trim(),
+            Phone = request.Phone?.Trim(),
             Capacity = request.Capacity,
             IsActive = true,
         };
@@ -84,9 +84,9 @@ public class LocationsController : ControllerBase
         var location = await db.Locations.FindAsync(id);
         if (location is null) return NotFound();
 
-        location.Name     = request.Name.Trim();
-        location.Address  = request.Address?.Trim();
-        location.Phone    = request.Phone?.Trim();
+        location.Name = request.Name.Trim();
+        location.Address = request.Address?.Trim();
+        location.Phone = request.Phone?.Trim();
         location.Capacity = request.Capacity;
         location.IsActive = request.IsActive;
 
@@ -101,7 +101,7 @@ public class LocationsController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
-        if (CurrentRole != "webmaster") return Forbid();
+        if (!User.IsInRole("webmaster")) return Forbid();
 
         await using var db = _dbFactory.CreateForCurrentClub();
         var location = await db.Locations.FindAsync(id);

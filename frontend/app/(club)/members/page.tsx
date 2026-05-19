@@ -32,7 +32,7 @@ type ModalTab = 'details' | 'emergency' | 'credits' | 'role'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const ROLES: UserRole[] = ['cats', 'member', 'coach', 'committee', 'membership', 'finance', 'webmaster']
+const [availableRoles, setAvailableRoles] = useState<{ value: string, label: string }[]>([])
 
 const CREDIT_FILTERS = [
   { value: '', label: 'All Members' },
@@ -58,13 +58,13 @@ function getVisibleTabs(role: UserRole | null): { key: ModalTab; label: string }
 
 function roleBadgeClass(role: string) {
   switch (role) {
-    case 'webmaster':  return 'bg-purple-100 text-purple-800'
-    case 'coach':      return 'bg-blue-100 text-blue-800'
-    case 'finance':    return 'bg-green-100 text-green-800'
+    case 'webmaster': return 'bg-purple-100 text-purple-800'
+    case 'coach': return 'bg-blue-100 text-blue-800'
+    case 'finance': return 'bg-green-100 text-green-800'
     case 'membership': return 'bg-indigo-100 text-indigo-800'
-    case 'committee':  return 'bg-cyan-100 text-cyan-800'
-    case 'cats':       return 'bg-amber-100 text-amber-800'
-    default:           return 'bg-gray-100 text-gray-700'
+    case 'committee': return 'bg-cyan-100 text-cyan-800'
+    case 'cats': return 'bg-amber-100 text-amber-800'
+    default: return 'bg-gray-100 text-gray-700'
   }
 }
 
@@ -104,8 +104,8 @@ function parseCsvLine(line: string): string[] {
 function validateRow(row: ImportRow): string[] {
   const errs: string[] = []
   if (!row.firstName) errs.push('First name required')
-  if (!row.lastName)  errs.push('Last name required')
-  if (!row.email)     errs.push('Email required')
+  if (!row.lastName) errs.push('Last name required')
+  if (!row.email) errs.push('Email required')
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) errs.push('Invalid email')
   if (row.joinDate && !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(row.joinDate))
     errs.push('Date must be DD/MM/YYYY')
@@ -121,38 +121,38 @@ export default function MembersPage() {
 
   // Core
   const [currentRole, setCurrentRole] = useState<UserRole | null>(null)
-  const [members, setMembers]         = useState<MemberListResponse[]>([])
-  const [stats, setStats]             = useState<MemberStatsResponse | null>(null)
-  const [loading, setLoading]         = useState(true)
-  const [assocLabel, setAssocLabel]   = useState('Association Number')
+  const [members, setMembers] = useState<MemberListResponse[]>([])
+  const [stats, setStats] = useState<MemberStatsResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [assocLabel, setAssocLabel] = useState('Association Number')
 
   // Search / filter
-  const [search, setSearch]           = useState('')
+  const [search, setSearch] = useState('')
   const [creditFilter, setCreditFilter] = useState('')
 
   // Member detail modal
-  const [selected, setSelected]       = useState<MemberDetailResponse | null>(null)
-  const [modalOpen, setModalOpen]     = useState(false)
-  const [modalTab, setModalTab]       = useState<ModalTab>('details')
-  const [joinedAtEdit, setJoinedAtEdit]     = useState('')
+  const [selected, setSelected] = useState<MemberDetailResponse | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalTab, setModalTab] = useState<ModalTab>('details')
+  const [joinedAtEdit, setJoinedAtEdit] = useState('')
   const [assocNumberEdit, setAssocNumberEdit] = useState('')
 
   // Add member modal
-  const [addModalOpen, setAddModalOpen]         = useState(false)
-  const [addForm, setAddForm]                   = useState({
+  const [addModalOpen, setAddModalOpen] = useState(false)
+  const [addForm, setAddForm] = useState({
     firstName: '', lastName: '', email: '', phone: '', role: 'member', memberNumber: '',
   })
-  const [addLoading, setAddLoading]             = useState(false)
-  const [addError, setAddError]                 = useState('')
+  const [addLoading, setAddLoading] = useState(false)
+  const [addError, setAddError] = useState('')
   const [newMemberPassword, setNewMemberPassword] = useState<string | null>(null)
 
   // Import CSV modal
-  const [importOpen, setImportOpen]     = useState(false)
-  const [importStep, setImportStep]     = useState<'upload' | 'preview' | 'done'>('upload')
-  const [importRows, setImportRows]     = useState<ImportRow[]>([])
+  const [importOpen, setImportOpen] = useState(false)
+  const [importStep, setImportStep] = useState<'upload' | 'preview' | 'done'>('upload')
+  const [importRows, setImportRows] = useState<ImportRow[]>([])
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
-  const [importing, setImporting]       = useState(false)
-  const [importError, setImportError]   = useState('')
+  const [importing, setImporting] = useState(false)
+  const [importError, setImportError] = useState('')
 
   // ── Init ───────────────────────────────────────────────────────────────────
 
@@ -181,7 +181,23 @@ export default function MembersPage() {
       setStats(statsData)
       api.get<{ associationNumberLabel: string }>('/settings/labels')
         .then(d => setAssocLabel(d.associationNumberLabel))
-        .catch(() => {})
+        .catch(() => { })
+      api.get<{ baseRoles: string[], customRoles: { roleName: string, displayLabel: string }[] }>('/roles')
+        .then(d => {
+          const locked = [
+            { value: 'cats', label: 'CATS' },
+            { value: 'member', label: 'Member' },
+            { value: 'coach', label: 'Coach' },
+          ]
+          const base = d.baseRoles.map(r => ({
+            value: r,
+            label: r.charAt(0).toUpperCase() + r.slice(1)
+          }))
+          const custom = d.customRoles.map(r => ({ value: r.roleName, label: r.displayLabel }))
+          const webmaster = [{ value: 'webmaster', label: 'Webmaster' }]
+          setAvailableRoles([...locked, ...base, ...custom, ...webmaster])
+        })
+        .catch(() => { })
     } catch {
     } finally {
       setLoading(false)
@@ -250,15 +266,15 @@ export default function MembersPage() {
     if (!selected) return
     try {
       const detail = await api.put<MemberDetailResponse>(`/members/${selected.id}`, {
-        firstName:             selected.firstName,
-        lastName:              selected.lastName,
-        phone:                 selected.phone,
-        memberNumber:          selected.memberNumber,
-        dateOfBirth:           selected.dateOfBirth,
-        emergencyContactName:  selected.emergencyContactName,
+        firstName: selected.firstName,
+        lastName: selected.lastName,
+        phone: selected.phone,
+        memberNumber: selected.memberNumber,
+        dateOfBirth: selected.dateOfBirth,
+        emergencyContactName: selected.emergencyContactName,
         emergencyContactPhone: selected.emergencyContactPhone,
-        joinedAt:              joinedAtEdit ? new Date(joinedAtEdit).toISOString() : null,
-        associationNumber:     assocNumberEdit || null,
+        joinedAt: joinedAtEdit ? new Date(joinedAtEdit).toISOString() : null,
+        associationNumber: assocNumberEdit || null,
       })
       setSelected(detail)
     } catch { }
@@ -272,11 +288,11 @@ export default function MembersPage() {
     setAddLoading(true)
     try {
       const result = await api.post<{ generatedPassword?: string } & MemberDetailResponse>('/members', {
-        firstName:    addForm.firstName,
-        lastName:     addForm.lastName,
-        email:        addForm.email,
-        phone:        addForm.phone || null,
-        role:         addForm.role,
+        firstName: addForm.firstName,
+        lastName: addForm.lastName,
+        email: addForm.email,
+        phone: addForm.phone || null,
+        role: addForm.role,
         memberNumber: addForm.memberNumber || null,
       })
       setNewMemberPassword(result.generatedPassword ?? null)
@@ -312,15 +328,15 @@ export default function MembersPage() {
         const cols = parseCsvLine(line)
         const credits = parseInt(cols[6] ?? '0')
         const row: ImportRow = {
-          firstName:         cols[0] ?? '',
-          lastName:          cols[1] ?? '',
-          email:             cols[2] ?? '',
-          phone:             cols[3] ?? '',
-          joinDate:          cols[4] ?? '',
+          firstName: cols[0] ?? '',
+          lastName: cols[1] ?? '',
+          email: cols[2] ?? '',
+          phone: cols[3] ?? '',
+          joinDate: cols[4] ?? '',
           associationNumber: cols[5] ?? '',
-          startingCredits:   isNaN(credits) ? 0 : credits,
-          role:              (cols[7] ?? 'member').toLowerCase().trim() || 'member',
-          errors:            [],
+          startingCredits: isNaN(credits) ? 0 : credits,
+          role: (cols[7] ?? 'member').toLowerCase().trim() || 'member',
+          errors: [],
         }
         row.errors = validateRow(row)
         return row
@@ -339,14 +355,14 @@ export default function MembersPage() {
     setImporting(true)
     try {
       const result = await api.post<ImportResult>('/members/import', validRows.map(r => ({
-        firstName:         r.firstName,
-        lastName:          r.lastName,
-        email:             r.email,
-        phone:             r.phone || null,
-        joinDate:          r.joinDate || null,
+        firstName: r.firstName,
+        lastName: r.lastName,
+        email: r.email,
+        phone: r.phone || null,
+        joinDate: r.joinDate || null,
         associationNumber: r.associationNumber || null,
-        startingCredits:   r.startingCredits,
-        role:              r.role,
+        startingCredits: r.startingCredits,
+        role: r.role,
       })))
       setImportResult(result)
       setImportStep('done')
@@ -360,9 +376,9 @@ export default function MembersPage() {
 
   // ── Derived ────────────────────────────────────────────────────────────────
 
-  const canManage       = currentRole === 'membership' || currentRole === 'webmaster'
+  const canManage = currentRole === 'membership' || currentRole === 'webmaster'
   const canManageCredits = currentRole === 'finance' || currentRole === 'webmaster'
-  const isWebmaster     = currentRole === 'webmaster'
+  const isWebmaster = currentRole === 'webmaster'
   const validImportRows = importRows.filter(r => r.errors.length === 0).length
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -391,10 +407,10 @@ export default function MembersPage() {
       {/* Stats */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard label="Total Members" value={stats.totalMembers}    color="blue"  />
-          <StatCard label="Active"        value={stats.activeMembers}   color="green" />
-          <StatCard label="Low Credits"   value={stats.lowCreditMembers} color="amber" />
-          <StatCard label="No Credits"    value={stats.noCreditsMembers} color="red"   />
+          <StatCard label="Total Members" value={stats.totalMembers} color="blue" />
+          <StatCard label="Active" value={stats.activeMembers} color="green" />
+          <StatCard label="Low Credits" value={stats.lowCreditMembers} color="amber" />
+          <StatCard label="No Credits" value={stats.noCreditsMembers} color="red" />
         </div>
       )}
 
@@ -504,11 +520,10 @@ export default function MembersPage() {
             <div className="flex border-b border-gray-100">
               {getVisibleTabs(currentRole).map(tab => (
                 <button key={tab.key} onClick={() => setModalTab(tab.key)}
-                  className={`flex-1 py-3 text-xs font-medium transition-colors ${
-                    modalTab === tab.key
+                  className={`flex-1 py-3 text-xs font-medium transition-colors ${modalTab === tab.key
                       ? 'border-b-2 text-[var(--color-primary)]'
                       : 'text-gray-500 hover:text-gray-700'
-                  }`}
+                    }`}
                   style={modalTab === tab.key ? { borderColor: 'var(--color-primary)' } : {}}>
                   {tab.label}
                 </button>
@@ -521,13 +536,13 @@ export default function MembersPage() {
               {modalTab === 'details' && (
                 <div className="space-y-4">
                   <dl className="space-y-0 divide-y divide-gray-100">
-                    <ModalRow label="Email"      value={selected.email} />
-                    <ModalRow label="Phone"      value={selected.phone ?? '—'} />
+                    <ModalRow label="Email" value={selected.email} />
+                    <ModalRow label="Phone" value={selected.phone ?? '—'} />
                     <ModalRow label="Member No." value={selected.memberNumber ? `#${selected.memberNumber}` : '—'} />
                     {selected.associationNumber && (
                       <ModalRow label={assocLabel} value={selected.associationNumber} />
                     )}
-                    <ModalRow label="Status"  value={selected.isActive ? 'Active' : 'Inactive'} />
+                    <ModalRow label="Status" value={selected.isActive ? 'Active' : 'Inactive'} />
                     <ModalRow label="Credits" value={String(selected.creditBalance)} />
                     <ModalRow label="Member Since" value={
                       new Date(selected.effectiveJoinDate ?? selected.createdAt).toLocaleDateString('en-AU', {
@@ -617,7 +632,7 @@ export default function MembersPage() {
                         </div>
                       </div>
                       <dl className="space-y-0 divide-y divide-gray-100">
-                        <ModalRow label="Name"  value={selected.emergencyContactName ?? '—'} />
+                        <ModalRow label="Name" value={selected.emergencyContactName ?? '—'} />
                         <ModalRow label="Phone" value={selected.emergencyContactPhone ?? '—'} />
                       </dl>
                       {selected.emergencyContactPhone && (
@@ -669,7 +684,7 @@ export default function MembersPage() {
                       <label className="label">Change role</label>
                       <select className="input" value={selected.role}
                         onChange={e => handleRoleChange(selected.id, e.target.value)}>
-                        {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+                        {availableRoles.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                       </select>
                       <p className="text-xs text-gray-400">Role changes take effect immediately.</p>
                     </div>
@@ -773,7 +788,7 @@ export default function MembersPage() {
                     <label className="label">Role <span className="text-red-500">*</span></label>
                     <select className="input" value={addForm.role}
                       onChange={e => setAddForm(f => ({ ...f, role: e.target.value }))}>
-                      {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+                      {availableRoles.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                     </select>
                   </div>
                   <p className="text-xs text-gray-400">
@@ -799,9 +814,9 @@ export default function MembersPage() {
               <div>
                 <h2 className="font-bold text-gray-900">Import Members from CSV</h2>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {importStep === 'upload'  && 'Upload a CSV file to bulk-add members'}
+                  {importStep === 'upload' && 'Upload a CSV file to bulk-add members'}
                   {importStep === 'preview' && `${importRows.length} rows found — review before importing`}
-                  {importStep === 'done'    && 'Import complete'}
+                  {importStep === 'done' && 'Import complete'}
                 </p>
               </div>
               <button onClick={() => setImportOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
@@ -985,10 +1000,10 @@ function StatCard({ label, value, color }: {
   label: string; value: number; color: 'blue' | 'green' | 'amber' | 'red'
 }) {
   const colors = {
-    blue:  'bg-blue-50 text-blue-700 border-blue-100',
+    blue: 'bg-blue-50 text-blue-700 border-blue-100',
     green: 'bg-green-50 text-green-700 border-green-100',
     amber: 'bg-amber-50 text-amber-700 border-amber-100',
-    red:   'bg-red-50 text-red-700 border-red-100',
+    red: 'bg-red-50 text-red-700 border-red-100',
   }
   return (
     <div className={`rounded-xl border p-4 ${colors[color]}`}>
@@ -1011,9 +1026,9 @@ function CreditAdjustForm({ memberId, onAdjusted }: {
   memberId: number; onAdjusted: () => void
 }) {
   const [amount, setAmount] = useState('')
-  const [notes, setNotes]   = useState('')
+  const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
-  const [error, setError]   = useState('')
+  const [error, setError] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

@@ -53,6 +53,7 @@ const MANAGEMENT_ITEMS: NavItem[] = [
   { label: 'Shop Orders', href: '/management/orders', roles: ['finance', 'webmaster'] },
   { label: 'News', href: '/management/updates', roles: ['committee', 'membership', 'webmaster'] },
   { label: 'Site Settings', href: '/management/settings', roles: ['webmaster'] },
+  { label: 'Custom Roles', href: '/management/roles', roles: ['webmaster'] },
 ]
 
 export default function ClubNav({ config }: Props) {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { api } from '@/lib/api'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser, hasPermission, type ParsedUser } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -78,9 +78,13 @@ export default function ShopOrdersPage() {
   const user   = getCurrentUser()
   const router = useRouter()
 
-  const isFinance   = user?.role === 'finance' || user?.role === 'webmaster'
-  const isCommittee = user?.role === 'committee' || isFinance
-
+  const [currentUser, setCurrentUser] = useState<ParsedUser | null>(null)
+  const canManage   = user ? hasPermission(user, 'finance', 'webmaster') : false
+  const isWebmaster = user ? hasPermission(user, 'webmaster') : false
+  // New — using permissions:
+  const isFinance   = currentUser ? hasPermission(currentUser, 'finance', 'webmaster') : false
+  const isCommittee = currentUser ? hasPermission(currentUser, 'committee', 'webmaster') : false
+  
   const [orders, setOrders]           = useState<OrderSummary[]>([])
   const [loading, setLoading]         = useState(true)
   const [statusFilter, setStatusFilter] = useState('all')
@@ -106,7 +110,7 @@ export default function ShopOrdersPage() {
   // ── Load ────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!isCommittee) { router.replace('/dashboard'); return }
+    if (!user) { router.replace('/dashboard'); return }
     loadOrders()
   }, [statusFilter])
 

@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import { getCurrentUser } from '@/lib/auth'
 import type { UserRole } from '@/types'
+import { getCurrentUser, hasPermission } from '@/lib/auth'
 
 interface AttendanceSession {
   id: number
@@ -63,8 +63,8 @@ export default function AttendancePage() {
     const user = getCurrentUser()
     if (!user) { router.replace('/login'); return }
     const role = user.role as UserRole
-    if (!['coach', 'committee', 'membership', 'finance', 'webmaster'].includes(role)) {
-      router.replace('/dashboard'); return
+    if (!hasPermission(user, 'coach', 'committee', 'membership', 'finance', 'webmaster')) {
+    router.replace('/dashboard'); return
     }
     loadSessions()
   }, [router])

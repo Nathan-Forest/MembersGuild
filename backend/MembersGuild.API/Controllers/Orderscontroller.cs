@@ -27,13 +27,15 @@ public class OrdersController : ControllerBase
     [HttpGet("mine")]
     public async Task<IActionResult> GetMyOrders()
         => Ok(await _shop.GetMyOrdersAsync(CurrentUserId));
+    private bool HasRole(params string[] roles) =>
+    roles.Any(r => User.IsInRole(r));
  
     [HttpGet("mine/{id}")]
     public async Task<IActionResult> GetMyOrder(int id)
     {
         var order = await _shop.GetOrderAsync(id);
         if (order is null) return NotFound();
-        var isStaff = CurrentRole is "committee" or "finance" or "webmaster";
+        var isStaff = HasRole("committee", "finance", "webmaster");
         if (!isStaff && order.MemberId != CurrentUserId) return Forbid();
         return Ok(order);
     }

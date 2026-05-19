@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser, hasPermission } from '@/lib/auth'
 import type { UserRole } from '@/types'
 
 interface Location {
@@ -33,7 +33,7 @@ export default function LocationsPage() {
     if (!user) { router.replace('/login'); return }
     const role = user.role as UserRole
     setCurrentRole(role)
-    if (!['coach', 'committee', 'webmaster'].includes(role)) {
+    if (!hasPermission(user, 'coach', 'committee', 'webmaster')) {
       router.replace('/dashboard')
       return
     }
