@@ -190,14 +190,14 @@ public class SettingsController : ControllerBase
         };
 
         var slug = _clubContext.Slug;
-        var uploadDir = Path.Combine("/uploads", slug);
+        var uploadDir = Path.Combine("/uploads", slug, "logo");
         Directory.CreateDirectory(uploadDir);
 
         var bytes = Convert.FromBase64String(req.Data);
         var path = Path.Combine(uploadDir, $"logo{ext}");
         await System.IO.File.WriteAllBytesAsync(path, bytes);
 
-        var logoUrl = $"/api/files/{slug}/logo{ext}";
+        var logoUrl = $"/api/files/{slug}/logo/logo{ext}"; 
 
         var club = await _platformDb.Clubs.FirstOrDefaultAsync(c => c.Slug == slug);
         if (club is not null)
