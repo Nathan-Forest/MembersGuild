@@ -15,18 +15,34 @@ interface NavItem {
   label: string
   href: string
   roles?: UserRole[]  // undefined = all roles
+  feature?: keyof ClubConfig['features']
 }
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard' },
-  { label: 'Calendar', href: '/calendar', roles: undefined },
-  { label: 'My Sessions', href: '/my-sessions' },
-  { label: 'Training', href: '/training' },
-  { label: 'Shop', href: '/shop', roles: ['member', 'committee', 'membership', 'finance', 'webmaster'] },
-  { label: 'My Account', href: '/my-account', roles: ['member', 'committee', 'membership', 'finance', 'webmaster'] },
-  { label: 'Attendance', href: '/attendance', roles: ['coach', 'committee', 'membership', 'finance', 'webmaster'] },
-  { label: 'Members', href: '/members', roles: ['coach', 'committee', 'membership', 'finance', 'webmaster'] },
-  { label: 'Reports', href: '/reports', roles: ['committee', 'membership', 'finance', 'webmaster'] },
+  { label: 'Calendar', href: '/calendar', feature: 'calendar' },
+  { label: 'My Sessions', href: '/my-sessions', feature: 'mySessions' },
+  { label: 'Training', href: '/training', feature: 'training' },
+  {
+    label: 'Shop', href: '/shop', feature: 'shop',
+    roles: ['member', 'committee', 'membership', 'finance', 'webmaster']
+  },
+  {
+    label: 'My Account', href: '/my-account', feature: 'myAccount',
+    roles: ['member', 'committee', 'membership', 'finance', 'webmaster']
+  },
+  {
+    label: 'Attendance', href: '/attendance',
+    roles: ['coach', 'committee', 'membership', 'finance', 'webmaster']
+  },
+  {
+    label: 'Members', href: '/members',
+    roles: ['coach', 'committee', 'membership', 'finance', 'webmaster']
+  },
+  {
+    label: 'Reports', href: '/reports',
+    roles: ['committee', 'membership', 'finance', 'webmaster']
+  },
 ]
 
 const MANAGEMENT_ITEMS: NavItem[] = [
@@ -54,6 +70,7 @@ export default function ClubNav({ config }: Props) {
     }
   }, [])
   const canSee = (item: NavItem) => {
+    if (item.feature && !config.features[item.feature]) return false  // ← add this line
     if (!item.roles) return true
     if (!role) return false
     return item.roles.includes(role)
