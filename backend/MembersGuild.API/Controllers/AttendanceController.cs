@@ -464,7 +464,7 @@ public class AttendanceController : ControllerBase
         if (!CanManageAttendance()) return Forbid();
         await using var db = _dbFactory.CreateForCurrentClub();
         var coaches = await db.Users
-            .Where(u => u.IsActive && (u.Role == "coach" || u.Role == "committee" || u.Role == "webmaster"))
+            .Where(u => u.IsActive && u.Role == "coach")
             .OrderBy(u => u.LastName).ThenBy(u => u.FirstName)
             .Select(u => new { u.Id, name = u.FirstName + " " + u.LastName })
             .ToListAsync();
