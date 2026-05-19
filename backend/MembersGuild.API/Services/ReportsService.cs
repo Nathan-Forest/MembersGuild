@@ -216,7 +216,11 @@ ActiveCatsList: cats.OrderBy(u => u.EffectiveJoinDate)
     .ToListAsync();
 
         // Convert UTC → Brisbane local time for all day-of-week calculations
-        var tz = TimeZoneInfo.FindSystemTimeZoneById("Australia/Brisbane");
+        var tzSetting = await db.ClubSettings
+    .Where(s => s.Key == "club_timezone")
+    .Select(s => s.Value)
+    .FirstOrDefaultAsync() ?? "Australia/Brisbane";
+        var tz = TimeZoneInfo.FindSystemTimeZoneById(tzSetting);
         DateTime Local(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(utc, tz);
 
         var withLanes = sessions.Where(s => s.LanesCount.HasValue).ToList();
