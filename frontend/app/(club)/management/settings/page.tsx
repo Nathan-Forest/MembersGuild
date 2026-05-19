@@ -253,19 +253,6 @@ export default function SettingsPage() {
         </Field>
       </SettingsCard>
 
-      {/* ── Credits & Shop ──────────────────────────────────────────────── */}
-      <SettingsCard title="Credits & Shop" icon="💳">
-        <Field label="Credit Price (AUD)"
-          hint="How much members pay per credit. Used to calculate standard credit pack prices in the shop.">
-          <div className="flex items-center gap-2 w-40">
-            <span className="text-gray-500 text-sm">$</span>
-            <input type="number" min="0" step="0.50" className="input"
-              value={form.creditPriceAud}
-              onChange={e => update('creditPriceAud', e.target.value)} />
-          </div>
-        </Field>
-      </SettingsCard>
-
       {/* ── Welcome Email ────────────────────────────────────────────────── */}
       <SettingsCard title="Welcome Email" icon="✉️">
         <div className="space-y-5">

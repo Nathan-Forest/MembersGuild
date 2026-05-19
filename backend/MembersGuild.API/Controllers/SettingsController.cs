@@ -119,7 +119,7 @@ public class SettingsController : ControllerBase
 
         foreach (var (key, value) in updates)
         {
-            var row = await db.ClubSettings.FindAsync(key);
+            var row = await db.ClubSettings.FirstOrDefaultAsync(s => s.Key == key);
             if (row is null)
             {
                 db.ClubSettings.Add(new MembersGuild.Data.Models.Club.ClubSetting
