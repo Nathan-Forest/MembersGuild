@@ -356,26 +356,28 @@ export default function AttendanceSheetPage() {
           <p className="text-xs text-gray-400 uppercase tracking-wide">Registered</p>
         </div>
 
-        {/* Lanes Used */}
-        <div className="text-center">
-          <input
-            type="number"
-            min="1"
-            max="20"
-            value={lanesCount}
-            onChange={e => setLanesCount(e.target.value === '' ? '' : parseInt(e.target.value))}
-            onBlur={() => {
-              if (lanesCount !== '' && !isNaN(lanesCount as number)) {
-                handleLanesChange(String(lanesCount))
-              }
-            }}
-            className="w-14 text-2xl font-bold text-center text-purple-600 bg-transparent border-0 border-b-2 border-purple-200 focus:border-purple-500 focus:outline-none"
-            placeholder="—"
-          />
-          <p className={`text-xs uppercase tracking-wide mt-0.5 ${lanesSaved ? 'text-green-600' : 'text-gray-400'}`}>
-            {savingLanes ? 'Saving...' : lanesSaved ? '✓ Saved' : (data?.lanesLabel ?? 'Lanes')}
-          </p>
-        </div>
+        {/* Lanes Used — only show if enabled in settings */}
+        {data?.lanesEnabled && (
+          <div className="text-center">
+            <input
+              type="number"
+              min="1"
+              max="20"
+              value={lanesCount}
+              onChange={e => setLanesCount(e.target.value === '' ? '' : parseInt(e.target.value))}
+              onBlur={() => {
+                if (lanesCount !== '' && !isNaN(lanesCount as number)) {
+                  handleLanesChange(String(lanesCount))
+                }
+              }}
+              className="w-14 text-2xl font-bold text-center text-purple-600 bg-transparent border-0 border-b-2 border-purple-200 focus:border-purple-500 focus:outline-none"
+              placeholder="—"
+            />
+            <p className={`text-xs uppercase tracking-wide mt-0.5 ${lanesSaved ? 'text-green-600' : 'text-gray-400'}`}>
+              {savingLanes ? 'Saving...' : lanesSaved ? '✓ Saved' : (data?.lanesLabel ?? 'Lanes')}
+            </p>
+          </div>
+        )}
 
         <div className="flex-1" />
 
