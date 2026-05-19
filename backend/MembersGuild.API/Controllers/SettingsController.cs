@@ -170,32 +170,36 @@ public class SettingsController : ControllerBase
     }
 
     // ── POST /api/settings/logo ──────────────────────────────────────────────
+    public record LogoUploadRequest(string FileName, string ContentType, string Data);
+
     [HttpPost("logo")]
     [Authorize(Roles = "webmaster")]
-    public async Task<IActionResult> UploadLogo(IFormFile file)
+    public async Task<IActionResult> UploadLogo([FromBody] LogoUploadRequest req)
     {
-        if (file is null || file.Length == 0)
-            return BadRequest(new { error = "No file provided" });
-
-        var ext = Path.GetExtension(file.FileName).ToLower();
-        if (ext is not (".png" or ".jpg" or ".jpeg" or ".svg" or ".webp"))
+        var allowedTypes = new[] { "image/png", "image/jpeg", "image/svg+xml", "image/webp" };
+        if (!allowedTypes.Contains(req.ContentType))
             return BadRequest(new { error = "Unsupported file type" });
+
+        var ext = req.ContentType switch
+        {
+            "image/png" => ".png",
+            "image/jpeg" => ".jpg",
+            "image/svg+xml" => ".svg",
+            "image/webp" => ".webp",
+            _ => ".png"
+        };
 
         var slug = _clubContext.Slug;
         var uploadDir = Path.Combine("/uploads", slug);
         Directory.CreateDirectory(uploadDir);
 
-        var filename = $"logo{ext}";
-        var path = Path.Combine(uploadDir, filename);
+        var bytes = Convert.FromBase64String(req.Data);
+        var path = Path.Combine(uploadDir, $"logo{ext}");
+        await System.IO.File.WriteAllBytesAsync(path, bytes);
 
-        await using (var stream = System.IO.File.Create(path))
-            await file.CopyToAsync(stream);
+        var logoUrl = $"/uploads/{slug}/logo{ext}";
 
-        var logoUrl = $"/uploads/{slug}/{filename}";
-
-        // Update platform.clubs
-        var club = await _platformDb.Clubs
-            .FirstOrDefaultAsync(c => c.Slug == slug);
+        var club = await _platformDb.Clubs.FirstOrDefaultAsync(c => c.Slug == slug);
         if (club is not null)
         {
             club.LogoUrl = logoUrl;

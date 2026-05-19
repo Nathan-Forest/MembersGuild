@@ -32,6 +32,8 @@ interface SessionInfo {
 interface SheetData {
   session: SessionInfo
   members: SheetMember[]
+  lanesEnabled: boolean
+  lanesLabel: string
 }
 
 interface QrData {
@@ -371,7 +373,7 @@ export default function AttendanceSheetPage() {
             placeholder="—"
           />
           <p className={`text-xs uppercase tracking-wide mt-0.5 ${lanesSaved ? 'text-green-600' : 'text-gray-400'}`}>
-            {savingLanes ? 'Saving...' : lanesSaved ? '✓ Saved' : 'Lanes Used'}
+            {savingLanes ? 'Saving...' : lanesSaved ? '✓ Saved' : (data?.lanesLabel ?? 'Lanes')}
           </p>
         </div>
 

@@ -22,33 +22,33 @@ interface ClubSettings {
 }
 
 const TIMEZONES = [
-  { label: 'Brisbane (UTC+10, no DST)',      value: 'Australia/Brisbane' },
-  { label: 'Sydney / Melbourne (AEDT)',       value: 'Australia/Sydney' },
-  { label: 'Adelaide (ACST/ACDT)',            value: 'Australia/Adelaide' },
-  { label: 'Perth (AWST)',                    value: 'Australia/Perth' },
-  { label: 'Darwin (ACST)',                   value: 'Australia/Darwin' },
-  { label: 'Hobart (AEST/AEDT)',             value: 'Australia/Hobart' },
-  { label: 'Auckland (NZST/NZDT)',           value: 'Pacific/Auckland' },
-  { label: 'Singapore (SGT)',                 value: 'Asia/Singapore' },
-  { label: 'London (GMT/BST)',               value: 'Europe/London' },
-  { label: 'New York (EST/EDT)',              value: 'America/New_York' },
+  { label: 'Brisbane (UTC+10, no DST)', value: 'Australia/Brisbane' },
+  { label: 'Sydney / Melbourne (AEDT)', value: 'Australia/Sydney' },
+  { label: 'Adelaide (ACST/ACDT)', value: 'Australia/Adelaide' },
+  { label: 'Perth (AWST)', value: 'Australia/Perth' },
+  { label: 'Darwin (ACST)', value: 'Australia/Darwin' },
+  { label: 'Hobart (AEST/AEDT)', value: 'Australia/Hobart' },
+  { label: 'Auckland (NZST/NZDT)', value: 'Pacific/Auckland' },
+  { label: 'Singapore (SGT)', value: 'Asia/Singapore' },
+  { label: 'London (GMT/BST)', value: 'Europe/London' },
+  { label: 'New York (EST/EDT)', value: 'America/New_York' },
 ]
 
 const EMAIL_PLACEHOLDERS = [
-  { tag: '{{firstName}}',  desc: "Member's first name" },
-  { tag: '{{clubName}}',   desc: 'Club display name' },
-  { tag: '{{email}}',      desc: "Member's email address" },
-  { tag: '{{password}}',   desc: 'Generated password' },
-  { tag: '{{portalUrl}}',  desc: 'URL to the member portal' },
+  { tag: '{{firstName}}', desc: "Member's first name" },
+  { tag: '{{clubName}}', desc: 'Club display name' },
+  { tag: '{{email}}', desc: "Member's email address" },
+  { tag: '{{password}}', desc: 'Generated password' },
+  { tag: '{{portalUrl}}', desc: 'URL to the member portal' },
 ]
 
 export default function SettingsPage() {
-  const router  = useRouter()
-  const [form, setForm]       = useState<ClubSettings | null>(null)
+  const router = useRouter()
+  const [form, setForm] = useState<ClubSettings | null>(null)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving]   = useState(false)
-  const [saved, setSaved]     = useState(false)
-  const [error, setError]     = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
 
@@ -84,9 +84,19 @@ export default function SettingsPage() {
     if (!file) return
     setUploadingLogo(true)
     try {
-      const data = new FormData()
-      data.append('file', file)
-      const result = await api.post<{ logoUrl: string }>('/settings/logo', data)
+      // Convert to base64 — avoids multipart proxy issues
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve((reader.result as string).split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+
+      const result = await api.post<{ logoUrl: string }>('/settings/logo', {
+        fileName: file.name,
+        contentType: file.type,
+        data: base64,
+      })
       setLogoPreview(result.logoUrl)
       update('logoUrl', result.logoUrl)
     } catch {
@@ -98,7 +108,7 @@ export default function SettingsPage() {
 
   if (loading) return (
     <div className="max-w-3xl mx-auto space-y-6">
-      {[1,2,3,4].map(i => <div key={i} className="card h-40 animate-pulse bg-gray-100" />)}
+      {[1, 2, 3, 4].map(i => <div key={i} className="card h-40 animate-pulse bg-gray-100" />)}
     </div>
   )
 
@@ -220,12 +230,10 @@ export default function SettingsPage() {
             </div>
             <button
               onClick={() => update('attendanceLanesEnabled', !form.attendanceLanesEnabled)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                form.attendanceLanesEnabled ? 'bg-[var(--color-primary)]' : 'bg-gray-200'
-              }`}>
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                form.attendanceLanesEnabled ? 'translate-x-6' : 'translate-x-1'
-              }`} />
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.attendanceLanesEnabled ? 'bg-[var(--color-primary)]' : 'bg-gray-200'
+                }`}>
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.attendanceLanesEnabled ? 'translate-x-6' : 'translate-x-1'
+                }`} />
             </button>
           </div>
 
