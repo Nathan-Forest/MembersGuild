@@ -28,8 +28,6 @@ interface FeatureFlag {
   isEnabled: boolean
 }
 
-const [features, setFeatures] = useState<FeatureFlag[]>([])
-
 const TIMEZONES = [
   { label: 'Brisbane (UTC+10, no DST)', value: 'Australia/Brisbane' },
   { label: 'Sydney / Melbourne (AEDT)', value: 'Australia/Sydney' },
@@ -60,6 +58,7 @@ export default function SettingsPage() {
   const [error, setError] = useState('')
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [features, setFeatures] = useState<FeatureFlag[]>([])
 
   useEffect(() => {
     const user = getCurrentUser()
