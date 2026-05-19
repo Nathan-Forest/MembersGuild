@@ -2,6 +2,7 @@ using MembersGuild.API.DTOs.Members;
 using MembersGuild.API.Extensions;
 using MembersGuild.Data.Models.Club;
 using Microsoft.EntityFrameworkCore;
+using MembersGuild.Data.Contexts;
 
 namespace MembersGuild.API.Services;
 
@@ -34,6 +35,10 @@ public class MemberService : IMemberService
         ["finance"] = "Finance",
         ["webmaster"] = "Webmaster",
     };
+
+    private async Task<bool> IsValidRole(ClubDbContext db, string role) =>
+    Roles.AllClubRoles.Contains(role) ||
+    await db.ClubCustomRoles.AnyAsync(r => r.RoleName == role && r.IsActive);
 
     public MemberService(ClubDbContextFactory dbFactory, IAuthService auth)
     {
@@ -100,7 +105,7 @@ public class MemberService : IMemberService
         var exists = await db.Users.AnyAsync(u => u.Email == request.Email.ToLower());
         if (exists) throw new InvalidOperationException("Email already in use");
 
-        if (!Roles.AllClubRoles.Contains(request.Role))
+        if (!await IsValidRole(db, request.Role))
             throw new InvalidOperationException($"Invalid role: {request.Role}");
 
         var password = string.IsNullOrWhiteSpace(request.Password)
@@ -152,10 +157,10 @@ public class MemberService : IMemberService
 
     public async Task<bool> UpdateRoleAsync(int id, string role, int requestingUserId)
     {
-        if (!Roles.AllClubRoles.Contains(role)) return false;
-
         await using var db = _dbFactory.CreateForCurrentClub();
+
         var user = await db.Users.FindAsync(id);
+        
         if (user is null) return false;
 
         // Auto-track CATS → Member conversion
@@ -238,6 +243,12 @@ public class MemberService : IMemberService
         var errors = new List<string>();
         var toCreate = new List<(User User, int Credits)>();
 
+        var customRoleNames = await db.ClubCustomRoles
+    .Where(r => r.IsActive)
+    .Select(r => r.RoleName)
+    .ToListAsync();
+        var allValidRoles = Roles.AllClubRoles.Concat(customRoleNames).ToHashSet();
+
         // Fetch existing emails in one query
         var allEmails = await db.Users.Select(u => u.Email).ToListAsync();
         var emailSet = new HashSet<string>(allEmails, StringComparer.OrdinalIgnoreCase);
@@ -258,8 +269,8 @@ public class MemberService : IMemberService
                 continue;
             }
 
-            var role = Roles.AllClubRoles.Contains(req.Role?.ToLower() ?? "")
-                ? req.Role!.ToLower() : "member";
+            var role = allValidRoles.Contains(req.Role?.ToLower() ?? "")
+    ? req.Role!.ToLower() : "member";
 
             DateTime? joinedAt = null;
             if (!string.IsNullOrWhiteSpace(req.JoinDate))
