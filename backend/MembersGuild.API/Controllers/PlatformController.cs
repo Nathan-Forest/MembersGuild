@@ -242,4 +242,96 @@ public class PlatformController : ControllerBase
 
         return Ok(new { slug, deleted = true });
     }
+
+    // GET /platform/health
+    [HttpGet("health")]
+    public async Task<IActionResult> GetHealth()
+    {
+        var checkedAt = DateTime.UtcNow;
+
+        try
+        {
+            var canConnect = await _platformDb.Database.CanConnectAsync();
+            var totalClubs = await _platformDb.Clubs.CountAsync();
+            var activeClubs = await _platformDb.Clubs.CountAsync(c => c.IsActive);
+
+            var conn = _platformDb.Database.GetDbConnection();
+            if (conn.State != System.Data.ConnectionState.Open)
+                await conn.OpenAsync();
+
+            // Active DB connections
+            int connectionCount;
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText =
+                    "SELECT count(*)::int FROM pg_stat_activity WHERE datname = current_database()";
+                connectionCount = (int)(await cmd.ExecuteScalarAsync() ?? 0);
+            }
+
+            // Total database size
+            long dbSizeBytes;
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = "SELECT pg_database_size(current_database())";
+                dbSizeBytes = (long)(await cmd.ExecuteScalarAsync() ?? 0L);
+            }
+
+            // Per-club schema sizes
+            var clubs = await _platformDb.Clubs.Where(c => c.IsActive).ToListAsync();
+            var schemaStats = new List<object>();
+
+            foreach (var club in clubs)
+            {
+                long schemaSizeBytes;
+                using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = $@"
+                    SELECT COALESCE(
+                        SUM(pg_total_relation_size(
+                            quote_ident(schemaname) || '.' || quote_ident(tablename)
+                        )), 0)
+                    FROM pg_tables
+                    WHERE schemaname = '{club.SchemaName}'";
+                    schemaSizeBytes = (long)(await cmd.ExecuteScalarAsync() ?? 0L);
+                }
+
+                schemaStats.Add(new
+                {
+                    slug = club.Slug,
+                    schemaName = club.SchemaName,
+                    status = club.SubscriptionStatus,
+                    sizeBytes = schemaSizeBytes,
+                    sizeMb = Math.Round(schemaSizeBytes / 1024.0 / 1024.0, 2)
+                });
+            }
+
+            return Ok(new
+            {
+                status = "healthy",
+                checkedAt,
+                database = new
+                {
+                    connected = canConnect,
+                    connectionCount,
+                    databaseSizeBytes = dbSizeBytes,
+                    databaseSizeMb = Math.Round(dbSizeBytes / 1024.0 / 1024.0, 2)
+                },
+                clubs = new
+                {
+                    total = totalClubs,
+                    active = activeClubs,
+                    schemas = schemaStats
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(503, new
+            {
+                status = "unhealthy",
+                checkedAt,
+                error = ex.Message
+            });
+        }
+    }
 }
