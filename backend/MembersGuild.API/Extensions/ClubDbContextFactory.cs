@@ -36,4 +36,17 @@ public class ClubDbContextFactory
             _clubContext.SchemaName
         );
     }
+
+    public ClubDbContext CreateForSchema(string schemaName)
+    {
+        var connectionString = _config.GetConnectionString("Default")
+            ?? throw new InvalidOperationException("Connection string 'Default' not configured");
+
+        return new ClubDbContext(
+            new DbContextOptionsBuilder<ClubDbContext>()
+                .UseNpgsql(connectionString)
+                .Options,
+            schemaName
+        );
+    }
 }
