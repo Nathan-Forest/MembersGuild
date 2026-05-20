@@ -6,6 +6,27 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
   const { path } = await params
   const backendPath = path.join('/')
 
+  // Platform admin routes — bypass club auth, use X-Platform-Key
+  if (backendPath.startsWith('platform/')) {
+    const platformUrl = `${BACKEND_URL}/${backendPath}${request.nextUrl.search}`
+    const res = await fetch(platformUrl, {
+      method: request.method,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Platform-Key': process.env.PLATFORM_API_KEY ?? '',
+      },
+      body: ['GET', 'HEAD'].includes(request.method) ? undefined : await request.text(),
+      cache: 'no-store',
+    })
+    const body = await res.text()
+    return new NextResponse(body, {
+      status: res.status,
+      headers: { 'Content-Type': res.headers.get('Content-Type') ?? 'application/json' }
+    })
+  }
+
+  // ... existing handler logic continues unchanged below
+
   const host = request.headers.get('host') ?? ''
   const slug = host.split('.')[0]
 
@@ -58,8 +79,8 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
   })
 }
 
-export const GET    = handler
-export const POST   = handler
-export const PUT    = handler
-export const PATCH  = handler
+export const GET = handler
+export const POST = handler
+export const PUT = handler
+export const PATCH = handler
 export const DELETE = handler
