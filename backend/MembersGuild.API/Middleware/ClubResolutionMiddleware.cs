@@ -26,7 +26,7 @@ public class ClubResolutionMiddleware
     {
         // Health check and platform-level endpoints don't need club resolution
         var path = context.Request.Path.Value ?? string.Empty;
-        if (path.StartsWith("/api/health") || path.StartsWith("/api/platform"))
+        if (path.StartsWith("/api/health") || path.StartsWith("/api/platform") || path.StartsWith("/platform"))
         {
             await _next(context);
             return;

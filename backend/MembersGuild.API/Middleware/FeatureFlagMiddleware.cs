@@ -37,7 +37,7 @@ public class FeatureFlagMiddleware
         if (path.StartsWith("/api/public") || path.StartsWith("/api/members")
             || path.StartsWith("/api/auth") || path.StartsWith("/api/locations")
             || path.StartsWith("/api/settings") || path.StartsWith("/api/health")
-            || path.StartsWith("/api/platform"))
+            || path.StartsWith("/api/platform") || path.StartsWith("/platform"))
         {
             await _next(context);
             return;
