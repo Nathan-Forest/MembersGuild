@@ -173,6 +173,33 @@ public class PlatformController : ControllerBase
         ));
     }
 
+    // GET /platform/clubs/{slug}
+    [HttpGet("clubs/{slug}")]
+    public async Task<IActionResult> GetClub(string slug)
+    {
+        var club = await _platformDb.Clubs
+            .FirstOrDefaultAsync(c => c.Slug == slug && c.IsActive);
+
+        if (club is null) return NotFound(new { error = $"Club '{slug}' not found" });
+
+        var memberCount = await _platform.GetMemberCountAsync(club.SchemaName);
+        var sessionCount = await _platform.GetSessionCountAsync(club.SchemaName);
+
+        return Ok(new ClubSummaryResponse(
+            Id: club.Id,
+            Slug: club.Slug,
+            Name: club.Name,
+            DisplayName: club.DisplayName,
+            Tier: club.SubscriptionTier,
+            Status: club.SubscriptionStatus,
+            MemberCount: memberCount,
+            TierCap: _platform.GetTierCap(club.SubscriptionTier),
+            SessionCount: sessionCount,
+            CreatedAt: club.CreatedAt,
+            LastActivityAt: club.UpdatedAt
+        ));
+    }
+
     // PUT /platform/clubs/{slug}/status
     [HttpPut("clubs/{slug}/status")]
     public async Task<IActionResult> UpdateClubStatus(string slug, [FromBody] UpdateClubStatusRequest req)

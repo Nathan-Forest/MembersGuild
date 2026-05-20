@@ -13,15 +13,15 @@ export default function ClubDetailPage() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
 
+  const params = useParams()
+
   useEffect(() => {
-    fetch('/api/platform/clubs', { cache: 'no-store' })
-      .then(r => {
-        if (r.status === 401) { window.location.href = '/admin/login'; return null }
-        return r.json()
-      })
-      .then(d => d && setClub(d))
+    if (!slug) return
+    fetch(`/api/platform/clubs/${slug}`, { cache: 'no-store' })
+      .then(r => r.json())
+      .then(setClub)
       .catch(() => { })
-  }, [])
+  }, [slug])
 
   async function updateStatus(status: string) {
     setSaving(true)
