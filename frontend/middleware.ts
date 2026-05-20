@@ -28,7 +28,15 @@ export function middleware(request: NextRequest) {
     pathname.endsWith('.svg') ||
     pathname.endsWith('.ico') ||
     pathname.endsWith('.webp')
-  ) {
+  )
+    // Platform admin protection — add for root domain paths
+    if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
+      const platformSession = request.cookies.get('platform_session')?.value
+      if (!platformSession) {
+        return NextResponse.redirect(new URL('/admin/login', request.url))
+      }
+    }
+  {
     return NextResponse.next()
   }
 

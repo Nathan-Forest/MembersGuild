@@ -50,6 +50,8 @@ services:
     ports:
       - "5016:3000"
     environment:
+      PLATFORM_API_KEY: ${PLATFORM_API_KEY}
+      PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD}
       NODE_ENV: production
       BACKEND_URL: http://membersguild-backend:5015
     depends_on:
