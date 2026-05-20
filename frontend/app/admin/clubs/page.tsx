@@ -9,16 +9,16 @@ interface Club {
 const TIER_PRICES: Record<string, number> = { small: 49, medium: 99, large: 199 }
 
 const statusBadge = (s: string) => ({
-  active:    'bg-green-100 text-green-700',
+  active: 'bg-green-100 text-green-700',
   suspended: 'bg-red-100 text-red-700',
   cancelled: 'bg-gray-100 text-gray-600',
 }[s] ?? 'bg-gray-100 text-gray-600')
 
 export default function AdminClubsPage() {
-  const [clubs,      setClubs]      = useState<Club[]>([])
-  const [showModal,  setShowModal]  = useState(false)
-  const [jobId,      setJobId]      = useState<string | null>(null)
-  const [jobStatus,  setJobStatus]  = useState<string | null>(null)
+  const [clubs, setClubs] = useState<Club[]>([])
+  const [showModal, setShowModal] = useState(false)
+  const [jobId, setJobId] = useState<string | null>(null)
+  const [jobStatus, setJobStatus] = useState<string | null>(null)
   const [form, setForm] = useState({
     slug: '', name: '', displayName: '', tier: 'small',
     sport: 'swimming', primaryColor: '#1a56db', secondaryColor: '#1e429f', logoUrl: ''
@@ -26,7 +26,12 @@ export default function AdminClubsPage() {
 
   useEffect(() => {
     fetch('/api/platform/clubs', { cache: 'no-store' })
-      .then(r => r.json()).then(setClubs).catch(() => {})
+      .then(r => {
+        if (r.status === 401) { window.location.href = '/admin/login'; return null }
+        return r.json()
+      })
+      .then(d => d && setClubs(d))
+      .catch(() => { })
   }, [])
 
   // Poll job status after provisioning
@@ -75,14 +80,13 @@ export default function AdminClubsPage() {
 
       {/* Job status banner */}
       {jobId && (
-        <div className={`rounded-xl px-5 py-3 text-sm font-medium ${
-          jobStatus === 'completed' ? 'bg-green-50 text-green-700 border border-green-200' :
-          jobStatus === 'failed'    ? 'bg-red-50 text-red-700 border border-red-200' :
-          'bg-blue-50 text-blue-700 border border-blue-200'
-        }`}>
+        <div className={`rounded-xl px-5 py-3 text-sm font-medium ${jobStatus === 'completed' ? 'bg-green-50 text-green-700 border border-green-200' :
+            jobStatus === 'failed' ? 'bg-red-50 text-red-700 border border-red-200' :
+              'bg-blue-50 text-blue-700 border border-blue-200'
+          }`}>
           {jobStatus === 'completed' ? '✓ Club provisioned successfully' :
-           jobStatus === 'failed'    ? '✗ Provisioning failed — check logs' :
-           '⏳ Provisioning in progress…'}
+            jobStatus === 'failed' ? '✗ Provisioning failed — check logs' :
+              '⏳ Provisioning in progress…'}
         </div>
       )}
 
@@ -138,9 +142,9 @@ export default function AdminClubsPage() {
             </div>
             <div className="p-6 space-y-4">
               {[
-                { label: 'Slug',         key: 'slug',         placeholder: 'bsm' },
-                { label: 'Full Name',    key: 'name',         placeholder: 'Brisbane Southside Masters Swimming' },
-                { label: 'Display Name', key: 'displayName',  placeholder: 'BSM Swimming' },
+                { label: 'Slug', key: 'slug', placeholder: 'bsm' },
+                { label: 'Full Name', key: 'name', placeholder: 'Brisbane Southside Masters Swimming' },
+                { label: 'Display Name', key: 'displayName', placeholder: 'BSM Swimming' },
               ].map(f => (
                 <div key={f.key}>
                   <label className="block text-xs font-medium text-gray-500 mb-1">{f.label}</label>

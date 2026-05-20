@@ -8,14 +8,20 @@ export function middleware(request: NextRequest) {
   const hostWithoutPort = host.split(':')[0]
   const parts = hostWithoutPort.split('.')
 
-  // Detect root domain (no club subdomain) — membersguild.com.au = 3 parts
-  // forestden.membersguild.com.au = 4 parts
   const isComAu = parts.slice(-2).join('.') === 'com.au'
   const expectedParts = isComAu ? 4 : 3
   const hasClubSubdomain = parts.length >= expectedParts
 
-  // Root domain = platform landing page — no auth needed, no redirect
-  if (!hasClubSubdomain) return NextResponse.next()
+  // Root domain — platform landing page + admin routes
+  if (!hasClubSubdomain) {
+    if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
+      const platformSession = request.cookies.get('platform_session')?.value
+      if (!platformSession) {
+        return NextResponse.redirect(new URL('/admin/login', request.url))
+      }
+    }
+    return NextResponse.next()
+  }
 
   // Static files — pass through
   if (
@@ -28,15 +34,7 @@ export function middleware(request: NextRequest) {
     pathname.endsWith('.svg') ||
     pathname.endsWith('.ico') ||
     pathname.endsWith('.webp')
-  )
-    // Platform admin protection — add for root domain paths
-    if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
-      const platformSession = request.cookies.get('platform_session')?.value
-      if (!platformSession) {
-        return NextResponse.redirect(new URL('/admin/login', request.url))
-      }
-    }
-  {
+  ) {
     return NextResponse.next()
   }
 

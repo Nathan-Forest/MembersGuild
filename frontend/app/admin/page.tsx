@@ -15,20 +15,31 @@ interface Club {
 }
 
 const statusBadge = (s: string) => ({
-  active:    'bg-green-100 text-green-700',
+  active: 'bg-green-100 text-green-700',
   suspended: 'bg-red-100 text-red-700',
   cancelled: 'bg-gray-100 text-gray-600',
 }[s] ?? 'bg-gray-100 text-gray-600')
 
 export default function AdminDashboard() {
   const [health, setHealth] = useState<HealthData | null>(null)
-  const [clubs,  setClubs]  = useState<Club[]>([])
+  const [clubs, setClubs] = useState<Club[]>([])
 
   useEffect(() => {
     fetch('/api/platform/health', { cache: 'no-store' })
-      .then(r => r.json()).then(setHealth).catch(() => {})
+      .then(r => {
+        if (r.status === 401) { window.location.href = '/admin/login'; return null }
+        return r.json()
+      })
+      .then(d => d && setHealth(d))
+      .catch(() => { })
+
     fetch('/api/platform/clubs', { cache: 'no-store' })
-      .then(r => r.json()).then(setClubs).catch(() => {})
+      .then(r => {
+        if (r.status === 401) { window.location.href = '/admin/login'; return null }
+        return r.json()
+      })
+      .then(d => d && setClubs(d))
+      .catch(() => { })
   }, [])
 
   return (
@@ -43,11 +54,13 @@ export default function AdminDashboard() {
       {/* Health cards */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: 'Platform Status',  value: health?.status ?? '—',
-            colour: health?.status === 'healthy' ? 'text-green-600' : 'text-red-600' },
-          { label: 'DB Connections',   value: health?.database.connectionCount ?? '—', colour: 'text-gray-900' },
-          { label: 'Database Size',    value: health ? `${health.database.databaseSizeMb} MB` : '—', colour: 'text-gray-900' },
-          { label: 'Active Clubs',     value: health?.clubs.active ?? '—', colour: 'text-gray-900' },
+          {
+            label: 'Platform Status', value: health?.status ?? '—',
+            colour: health?.status === 'healthy' ? 'text-green-600' : 'text-red-600'
+          },
+          { label: 'DB Connections', value: health?.database.connectionCount ?? '—', colour: 'text-gray-900' },
+          { label: 'Database Size', value: health ? `${health.database.databaseSizeMb} MB` : '—', colour: 'text-gray-900' },
+          { label: 'Active Clubs', value: health?.clubs.active ?? '—', colour: 'text-gray-900' },
         ].map(c => (
           <div key={c.label} className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">{c.label}</p>

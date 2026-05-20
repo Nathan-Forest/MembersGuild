@@ -8,16 +8,20 @@ interface Club {
 }
 
 export default function ClubDetailPage() {
-  const { slug }  = useParams<{ slug: string }>()
-  const [club,    setClub]    = useState<Club | null>(null)
-  const [saving,  setSaving]  = useState(false)
+  const { slug } = useParams<{ slug: string }>()
+  const [club, setClub] = useState<Club | null>(null)
+  const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
 
   useEffect(() => {
     fetch('/api/platform/clubs', { cache: 'no-store' })
-      .then(r => r.json())
-      .then((clubs: Club[]) => setClub(clubs.find(c => c.slug === slug) ?? null))
-  }, [slug])
+      .then(r => {
+        if (r.status === 401) { window.location.href = '/admin/login'; return null }
+        return r.json()
+      })
+      .then(d => d && setClub(d))
+      .catch(() => { })
+  }, [])
 
   async function updateStatus(status: string) {
     setSaving(true)
@@ -71,9 +75,9 @@ export default function ClubDetailPage() {
 
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: 'Members',  value: `${club.memberCount} / ${club.tierCap}` },
+          { label: 'Members', value: `${club.memberCount} / ${club.tierCap}` },
           { label: 'Sessions', value: club.sessionCount },
-          { label: 'Status',   value: club.status },
+          { label: 'Status', value: club.status },
         ].map(c => (
           <div key={c.label} className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">{c.label}</p>
@@ -107,9 +111,9 @@ export default function ClubDetailPage() {
           <h3 className="font-semibold text-gray-900 mb-4">Subscription Tier</h3>
           <div className="space-y-2">
             {[
-              { key: 'small',  label: 'Small — $49/mo (50 members)' },
+              { key: 'small', label: 'Small — $49/mo (50 members)' },
               { key: 'medium', label: 'Medium — $99/mo (150 members)' },
-              { key: 'large',  label: 'Large — $199/mo (unlimited)' },
+              { key: 'large', label: 'Large — $199/mo (unlimited)' },
             ].map(t => (
               <button key={t.key}
                 onClick={() => updateTier(t.key)}
