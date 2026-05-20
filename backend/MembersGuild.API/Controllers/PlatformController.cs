@@ -167,4 +167,79 @@ public class PlatformController : ControllerBase
             Error: job.Error
         ));
     }
+
+    // PUT /platform/clubs/{slug}/status
+    [HttpPut("clubs/{slug}/status")]
+    public async Task<IActionResult> UpdateClubStatus(string slug, [FromBody] UpdateClubStatusRequest req)
+    {
+        var validStatuses = new[] { "active", "suspended", "cancelled" };
+        if (!validStatuses.Contains(req.Status))
+            return BadRequest(new { error = "Status must be active, suspended or cancelled" });
+
+        var club = await _platformDb.Clubs.FirstOrDefaultAsync(c => c.Slug == slug);
+        if (club is null) return NotFound(new { error = $"Club '{slug}' not found" });
+
+        var previous = club.SubscriptionStatus;
+        club.SubscriptionStatus = req.Status;
+        club.UpdatedAt = DateTime.UtcNow;
+        await _platformDb.SaveChangesAsync();
+
+        await _platform.AuditAsync(
+            action: $"club.status_changed",
+            actor: "platform_admin",
+            clubSlug: slug,
+            clubId: club.Id,
+            metadata: new { from = previous, to = req.Status });
+
+        return Ok(new { slug, status = req.Status });
+    }
+
+    // PUT /platform/clubs/{slug}/tier
+    [HttpPut("clubs/{slug}/tier")]
+    public async Task<IActionResult> UpdateClubTier(string slug, [FromBody] UpdateClubTierRequest req)
+    {
+        var validTiers = new[] { "small", "medium", "large" };
+        if (!validTiers.Contains(req.Tier))
+            return BadRequest(new { error = "Tier must be small, medium or large" });
+
+        var club = await _platformDb.Clubs.FirstOrDefaultAsync(c => c.Slug == slug);
+        if (club is null) return NotFound(new { error = $"Club '{slug}' not found" });
+
+        var previous = club.SubscriptionTier;
+        club.SubscriptionTier = req.Tier;
+        club.MonthlyAmount = req.MonthlyAmount;
+        club.UpdatedAt = DateTime.UtcNow;
+        await _platformDb.SaveChangesAsync();
+
+        await _platform.AuditAsync(
+            action: "club.tier_changed",
+            actor: "platform_admin",
+            clubSlug: slug,
+            clubId: club.Id,
+            metadata: new { from = previous, to = req.Tier, monthlyAmount = req.MonthlyAmount });
+
+        return Ok(new { slug, tier = req.Tier, monthlyAmount = req.MonthlyAmount });
+    }
+
+    // DELETE /platform/clubs/{slug}
+    [HttpDelete("clubs/{slug}")]
+    public async Task<IActionResult> DeleteClub(string slug)
+    {
+        var club = await _platformDb.Clubs.FirstOrDefaultAsync(c => c.Slug == slug);
+        if (club is null) return NotFound(new { error = $"Club '{slug}' not found" });
+
+        // Soft delete — mark inactive rather than destroy data
+        club.IsActive = false;
+        club.UpdatedAt = DateTime.UtcNow;
+        await _platformDb.SaveChangesAsync();
+
+        await _platform.AuditAsync(
+            action: "club.deleted",
+            actor: "platform_admin",
+            clubSlug: slug,
+            clubId: club.Id,
+            metadata: new { name = club.Name });
+
+        return Ok(new { slug, deleted = true });
+    }
 }
