@@ -14,6 +14,7 @@ public class PlatformDbContext : DbContext
     public DbSet<Club> Clubs => Set<Club>();
     public DbSet<ClubFeature> ClubFeatures => Set<ClubFeature>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<ProvisioningJob> ProvisioningJobs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

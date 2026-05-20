@@ -130,6 +130,8 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+app.UseMiddleware<PlatformKeyMiddleware>();
+
 // Health check — no club context required
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 

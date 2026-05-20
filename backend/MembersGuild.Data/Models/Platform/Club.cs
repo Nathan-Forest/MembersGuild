@@ -13,6 +13,11 @@ public class Club
     public string SubscriptionStatus { get; set; } = "active"; // active, suspended, cancelled
     public string? StripeCustomerId { get; set; }
     public string? StripeSubscriptionId { get; set; }
+    public string? StripeSubId { get; set; }
+    public DateTime? CurrentPeriodEnd { get; set; }
+    public int FailedPaymentCount { get; set; }
+    public bool SetupFeePaid { get; set; }
+    public decimal? MonthlyAmount { get; set; }
     public int MemberCap { get; set; } = 50;
     public string SchemaName { get; set; } = string.Empty;    // "club_bsm"
     public bool IsDemo { get; set; } = false;
@@ -21,4 +26,5 @@ public class Club
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<ClubFeature> Features { get; set; } = new List<ClubFeature>();
+
 }

@@ -22,6 +22,7 @@ services:
     ports:
       - "5015:5015"
     environment:
+      Platform__ApiKey: ${Platform__ApiKey}
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Default: >-
         Host=membersguild-db;
