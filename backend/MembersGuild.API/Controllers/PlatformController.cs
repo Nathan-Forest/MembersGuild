@@ -4,6 +4,8 @@ using MembersGuild.API.DTOs.Platform;
 using MembersGuild.API.Services;
 using MembersGuild.Data.Contexts;
 using MembersGuild.Data.Models.Platform;
+using Stripe;
+using System.IO;
 
 namespace MembersGuild.API.Controllers;
 
@@ -14,15 +16,18 @@ public class PlatformController : ControllerBase
     private readonly PlatformDbContext _platformDb;
     private readonly PlatformService _platform;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IConfiguration _config;
 
     public PlatformController(
         PlatformDbContext platformDb,
         PlatformService platform,
-        IServiceScopeFactory scopeFactory)
+        IServiceScopeFactory scopeFactory,
+        IConfiguration config)
     {
         _platformDb = platformDb;
         _platform = platform;
         _scopeFactory = scopeFactory;
+        _config = config;
     }
 
     // GET /platform/clubs
@@ -333,5 +338,130 @@ public class PlatformController : ControllerBase
                 error = ex.Message
             });
         }
+    }
+
+    // POST /platform/stripe/webhook
+    [HttpPost("stripe/webhook")]
+    public async Task<IActionResult> StripeWebhook()
+    {
+        string json;
+        using (var reader = new StreamReader(Request.Body))
+            json = await reader.ReadToEndAsync();
+
+        try
+        {
+            var stripeEvent = EventUtility.ConstructEvent(
+                json,
+                Request.Headers["Stripe-Signature"],
+                _config["Stripe:WebhookSecret"]
+            );
+
+            switch (stripeEvent.Type)
+            {
+                case "customer.subscription.updated":
+                    await HandleSubscriptionUpdated(stripeEvent);
+                    break;
+                case "invoice.payment_succeeded":
+                    await HandlePaymentSucceeded(stripeEvent);
+                    break;
+                case "invoice.payment_failed":
+                    await HandlePaymentFailed(stripeEvent);
+                    break;
+            }
+            return Ok();
+        }
+        catch (StripeException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    private async Task HandleSubscriptionUpdated(Event stripeEvent)
+    {
+        var sub = stripeEvent.Data.Object as Subscription;
+        if (sub is null) return;
+
+        var club = await _platformDb.Clubs
+            .FirstOrDefaultAsync(c => c.StripeSubId == sub.Id);
+        if (club is null) return;
+
+        var previousStatus = club.SubscriptionStatus;
+        club.StripeSubId = sub.Id;
+        club.SubscriptionStatus = sub.Status switch
+        {
+            "active" => "active",
+            "past_due" => "active",
+            "canceled" => "cancelled",
+            "unpaid" => "suspended",
+            _ => club.SubscriptionStatus
+        };
+        club.UpdatedAt = DateTime.UtcNow;
+        await _platformDb.SaveChangesAsync();
+
+        await _platform.AuditAsync(
+            action: "stripe.subscription_updated",
+            actor: "system",
+            clubSlug: club.Slug,
+            clubId: club.Id,
+            metadata: new { stripeStatus = sub.Status, from = previousStatus, to = club.SubscriptionStatus });
+    }
+
+    private async Task HandlePaymentSucceeded(Event stripeEvent)
+    {
+        var invoice = stripeEvent.Data.Object as Invoice;
+        if (invoice is null) return;
+
+        var club = await _platformDb.Clubs
+            .FirstOrDefaultAsync(c => c.StripeCustomerId == invoice.CustomerId);
+        if (club is null) return;
+
+        club.FailedPaymentCount = 0;
+        club.SubscriptionStatus = "active";
+        club.UpdatedAt = DateTime.UtcNow;
+        await _platformDb.SaveChangesAsync();
+
+        await _platform.AuditAsync(
+            action: "stripe.payment_succeeded",
+            actor: "system",
+            clubSlug: club.Slug,
+            clubId: club.Id,
+            metadata: new
+            {
+                invoiceId = invoice.Id,
+                amount = invoice.AmountPaid / 100.0,
+                currency = invoice.Currency
+            });
+    }
+
+    private async Task HandlePaymentFailed(Event stripeEvent)
+    {
+        var invoice = stripeEvent.Data.Object as Invoice;
+        if (invoice is null) return;
+
+        var club = await _platformDb.Clubs
+            .FirstOrDefaultAsync(c => c.StripeCustomerId == invoice.CustomerId);
+        if (club is null) return;
+
+        club.FailedPaymentCount++;
+        club.UpdatedAt = DateTime.UtcNow;
+
+        // Suspend after 3 consecutive failures
+        if (club.FailedPaymentCount >= 3)
+            club.SubscriptionStatus = "suspended";
+
+        await _platformDb.SaveChangesAsync();
+
+        await _platform.AuditAsync(
+            action: "stripe.payment_failed",
+            actor: "system",
+            clubSlug: club.Slug,
+            clubId: club.Id,
+            metadata: new
+            {
+                invoiceId = invoice.Id,
+                failedCount = club.FailedPaymentCount,
+                suspended = club.FailedPaymentCount >= 3,
+                nextRetry = invoice.NextPaymentAttempt
+            });
     }
 }

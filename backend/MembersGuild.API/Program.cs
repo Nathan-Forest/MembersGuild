@@ -6,6 +6,7 @@ using MembersGuild.Data.Contexts;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Stripe;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -95,6 +96,8 @@ builder.Services.AddCors(options =>
 // ─────────────────────────────────────────────────────────────────────────────
 
 var app = builder.Build();
+
+StripeConfiguration.ApiKey = app.Configuration["Stripe:SecretKey"];
 
 // ── Startup: seed platform schema and demo club ───────────────────────────────
 
