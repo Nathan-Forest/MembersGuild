@@ -270,7 +270,7 @@ public class PlatformController : ControllerBase
             {
                 cmd.CommandText =
                     "SELECT count(*)::int FROM pg_stat_activity WHERE datname = current_database()";
-                connectionCount = (int)(await cmd.ExecuteScalarAsync() ?? 0);
+                connectionCount = Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0);
             }
 
             // Total database size
@@ -278,7 +278,7 @@ public class PlatformController : ControllerBase
             using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = "SELECT pg_database_size(current_database())";
-                dbSizeBytes = (long)(await cmd.ExecuteScalarAsync() ?? 0L);
+                dbSizeBytes = Convert.ToInt64(await cmd.ExecuteScalarAsync() ?? 0L);
             }
 
             // Per-club schema sizes
@@ -297,7 +297,7 @@ public class PlatformController : ControllerBase
                         )), 0)
                     FROM pg_tables
                     WHERE schemaname = '{club.SchemaName}'";
-                    schemaSizeBytes = (long)(await cmd.ExecuteScalarAsync() ?? 0L);
+                    schemaSizeBytes = Convert.ToInt64(await cmd.ExecuteScalarAsync() ?? 0L);
                 }
 
                 schemaStats.Add(new
