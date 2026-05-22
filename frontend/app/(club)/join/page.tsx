@@ -228,7 +228,7 @@ export default function JoinPage() {
           {/* Phone */}
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">
-              Phone <span className="text-gray-400">(optional)</span>
+              Phone <span className="text-gray-400"></span>
             </label>
             <input type="tel"
               placeholder="04xx xxx xxx"
