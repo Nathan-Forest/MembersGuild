@@ -97,6 +97,7 @@ public class SettingsController : ControllerBase
             CreditPriceAud: Get("credit_price_aud", "5.00"),
             WelcomeEmailSubject: Get("welcome_email_subject", "Welcome to {{clubName}}!"),
             WelcomeEmailBody: Get("welcome_email_body", "Hi {{firstName}}, welcome!"),
+            CatsNotificationEmail:  Get("cats_notification_email", ""),
             TrainingMetricsEnabled: Get("training_metrics_enabled", "true") == "true",
             TrainingSetsEnabled: Get("training_sets_enabled", "true") == "true",
             TrainingVideosEnabled: Get("training_videos_enabled", "true") == "true"
@@ -122,6 +123,7 @@ public class SettingsController : ControllerBase
             ["credit_price_aud"] = req.CreditPriceAud,
             ["welcome_email_subject"] = req.WelcomeEmailSubject,
             ["welcome_email_body"] = req.WelcomeEmailBody,
+            ["cats_notification_email"] = req.CatsNotificationEmail,
             ["training_metrics_enabled"] = req.TrainingMetricsEnabled.ToString().ToLower(),
             ["training_sets_enabled"]    = req.TrainingSetsEnabled.ToString().ToLower(),
             ["training_videos_enabled"]  = req.TrainingVideosEnabled.ToString().ToLower(),
