@@ -43,3 +43,10 @@ public record UpdateClubSettingsRequest(
     bool TrainingVideosEnabled
     
 );
+
+public record CatsFieldRequest(
+    string  FieldLabel,
+    string  FieldType,
+    string? FieldOptions,
+    bool    IsRequired
+);

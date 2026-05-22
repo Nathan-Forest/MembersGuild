@@ -7,6 +7,7 @@ using MembersGuild.API.Middleware;
 using MembersGuild.Data.Contexts;
 using Microsoft.EntityFrameworkCore;
 using MembersGuild.Data.Models.Platform;
+using MembersGuild.Data.Models.Club;
 
 namespace MembersGuild.API.Controllers;
 
@@ -97,7 +98,7 @@ public class SettingsController : ControllerBase
             CreditPriceAud: Get("credit_price_aud", "5.00"),
             WelcomeEmailSubject: Get("welcome_email_subject", "Welcome to {{clubName}}!"),
             WelcomeEmailBody: Get("welcome_email_body", "Hi {{firstName}}, welcome!"),
-            CatsNotificationEmail:  Get("cats_notification_email", ""),
+            CatsNotificationEmail: Get("cats_notification_email", ""),
             TrainingMetricsEnabled: Get("training_metrics_enabled", "true") == "true",
             TrainingSetsEnabled: Get("training_sets_enabled", "true") == "true",
             TrainingVideosEnabled: Get("training_videos_enabled", "true") == "true"
@@ -125,8 +126,8 @@ public class SettingsController : ControllerBase
             ["welcome_email_body"] = req.WelcomeEmailBody,
             ["cats_notification_email"] = req.CatsNotificationEmail,
             ["training_metrics_enabled"] = req.TrainingMetricsEnabled.ToString().ToLower(),
-            ["training_sets_enabled"]    = req.TrainingSetsEnabled.ToString().ToLower(),
-            ["training_videos_enabled"]  = req.TrainingVideosEnabled.ToString().ToLower(),
+            ["training_sets_enabled"] = req.TrainingSetsEnabled.ToString().ToLower(),
+            ["training_videos_enabled"] = req.TrainingVideosEnabled.ToString().ToLower(),
         };
 
         foreach (var (key, value) in updates)
@@ -296,6 +297,60 @@ public class SettingsController : ControllerBase
         }
 
         await _platformDb.SaveChangesAsync();
+        return Ok(new { success = true });
+    }
+
+    // GET /api/settings/cats-fields
+    [HttpGet("cats-fields")]
+    [Authorize(Roles = "webmaster")]
+    public async Task<IActionResult> GetCatsFields()
+    {
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var fields = await db.CatsFormFields
+            .Where(f => f.IsActive)
+            .OrderBy(f => f.DisplayOrder)
+            .Select(f => new { f.Id, f.FieldKey, f.FieldLabel, f.FieldType, f.FieldOptions, f.IsRequired, f.DisplayOrder })
+            .ToListAsync();
+        return Ok(fields);
+    }
+
+    // POST /api/settings/cats-fields
+    [HttpPost("cats-fields")]
+    [Authorize(Roles = "webmaster")]
+    public async Task<IActionResult> AddCatsField([FromBody] CatsFieldRequest req)
+    {
+        await using var db = _dbFactory.CreateForCurrentClub();
+
+        var maxOrder = await db.CatsFormFields
+            .Where(f => f.IsActive)
+            .MaxAsync(f => (int?)f.DisplayOrder) ?? 0;
+
+        var field = new CatsFormField
+        {
+            FieldKey = Guid.NewGuid().ToString("N")[..8], // short unique key
+            FieldLabel = req.FieldLabel.Trim(),
+            FieldType = req.FieldType,
+            FieldOptions = req.FieldOptions?.Trim(),
+            IsRequired = req.IsRequired,
+            DisplayOrder = maxOrder + 1,
+            IsActive = true,
+        };
+
+        db.CatsFormFields.Add(field);
+        await db.SaveChangesAsync();
+        return Ok(new { field.Id, field.FieldKey, field.FieldLabel, field.FieldType, field.FieldOptions, field.IsRequired });
+    }
+
+    // DELETE /api/settings/cats-fields/{id}
+    [HttpDelete("cats-fields/{id}")]
+    [Authorize(Roles = "webmaster")]
+    public async Task<IActionResult> DeleteCatsField(int id)
+    {
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var field = await db.CatsFormFields.FindAsync(id);
+        if (field is null) return NotFound();
+        field.IsActive = false;
+        await db.SaveChangesAsync();
         return Ok(new { success = true });
     }
 }

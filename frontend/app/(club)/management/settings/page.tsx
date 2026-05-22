@@ -13,7 +13,7 @@ interface ClubSettings {
   associationNumberLabel: string
   catsInitialCredits: number
   catsDescription: string
-  catsNotificationEmail: string 
+  catsNotificationEmail: string
   attendanceLanesLabel: string
   attendanceLanesEnabled: boolean
   clubTimezone: string
@@ -30,6 +30,15 @@ interface FeatureFlag {
   label: string
   platformGranted: boolean
   isEnabled: boolean
+}
+
+interface CatsField {
+  id: number
+  fieldKey: string
+  fieldLabel: string
+  fieldType: string
+  fieldOptions: string | null
+  isRequired: boolean
 }
 
 const TIMEZONES = [
@@ -63,6 +72,10 @@ export default function SettingsPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [features, setFeatures] = useState<FeatureFlag[]>([])
+  const [catsFields, setCatsFields] = useState<CatsField[]>([])
+  const [newField, setNewField] = useState({ label: '', type: 'text', options: '', required: false })
+  const [addingField, setAddingField] = useState(false)
+  const [fieldError, setFieldError] = useState('')
 
   useEffect(() => {
     const user = getCurrentUser()
@@ -72,6 +85,7 @@ export default function SettingsPage() {
       .catch(() => setError('Failed to load settings'))
       .finally(() => setLoading(false))
     api.get<FeatureFlag[]>('/settings/features').then(setFeatures).catch(() => { })
+    api.get<CatsField[]>('/settings/cats-fields').then(setCatsFields).catch(() => { })
   }, [router])
 
   function update<K extends keyof ClubSettings>(key: K, value: ClubSettings[K]) {
@@ -127,6 +141,30 @@ export default function SettingsPage() {
     } finally {
       setUploadingLogo(false)
     }
+  }
+
+  async function handleAddField() {
+    if (!newField.label.trim()) { setFieldError('Question text is required'); return }
+    if (newField.type === 'select' && !newField.options.trim()) {
+      setFieldError('Options are required for dropdown fields'); return
+    }
+    setAddingField(true); setFieldError('')
+    try {
+      const created = await api.post<CatsField>('/settings/cats-fields', {
+        fieldLabel: newField.label,
+        fieldType: newField.type,
+        fieldOptions: newField.type === 'select' ? newField.options : null,
+        isRequired: newField.required,
+      })
+      setCatsFields(p => [...p, created])
+      setNewField({ label: '', type: 'text', options: '', required: false })
+    } catch { setFieldError('Failed to add question') }
+    finally { setAddingField(false) }
+  }
+
+  async function handleDeleteField(id: number) {
+    await api.delete(`/settings/cats-fields/${id}`)
+    setCatsFields(p => p.filter(f => f.id !== id))
   }
 
   if (loading) return (
@@ -243,7 +281,7 @@ export default function SettingsPage() {
             <label className="block text-xs font-medium text-gray-500 mb-1">
               CATS Notification Email
             </label>
-            <p className="text-xs text-gray-400 mb-1">
+            <p className="text-xs text-gray-600 mb-1">
               Who gets notified when a new CATS member signs up. Separate multiple addresses with a comma.
             </p>
             <input
@@ -256,7 +294,112 @@ export default function SettingsPage() {
         </div>
       </SettingsCard>
 
+      {/* ── CATS Custom Questions ───────────────────────────────────────── */}
+      <SettingsCard title="CATS Sign-Up Questions" icon="❓">
+        <div className="space-y-5">
+          <p className="text-sm text-gray-500">
+            Add extra questions to the public sign-up form. Answers are emailed to your
+            notification address — not stored in the database.
+          </p>
 
+          {/* Existing fields */}
+          {catsFields.length > 0 && (
+            <div className="space-y-2">
+              {catsFields.map(f => (
+                <div key={f.id}
+                  className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">{f.fieldLabel}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {f.fieldType === 'select' ? `Dropdown: ${f.fieldOptions}` : f.fieldType}
+                      {f.isRequired && <span className="ml-2 text-red-400">Required</span>}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteField(f.id)}
+                    className="text-gray-400 hover:text-red-500 transition-colors text-lg leading-none"
+                    title="Remove question">
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {catsFields.length === 0 && (
+            <p className="text-sm text-gray-400 italic">No custom questions yet.</p>
+          )}
+
+          {/* Add new field */}
+          <div className="border border-gray-200 rounded-xl p-4 space-y-3">
+            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+              Add a Question
+            </p>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Question Text</label>
+              <input
+                type="text"
+                value={newField.label}
+                onChange={e => setNewField(p => ({ ...p, label: e.target.value }))}
+                placeholder="Have you swum competitively before?"
+                className="input w-full"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Answer Type</label>
+                <select
+                  value={newField.type}
+                  onChange={e => setNewField(p => ({ ...p, type: e.target.value }))}
+                  className="input w-full">
+                  <option value="text">Free text</option>
+                  <option value="select">Dropdown</option>
+                  <option value="checkbox">Yes / No</option>
+                </select>
+              </div>
+              <div className="flex items-end pb-0.5">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newField.required}
+                    onChange={e => setNewField(p => ({ ...p, required: e.target.checked }))}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm text-gray-600">Required</span>
+                </label>
+              </div>
+            </div>
+
+            {newField.type === 'select' && (
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  Options <span className="text-gray-400">(comma-separated)</span>
+                </label>
+                <input
+                  type="text"
+                  value={newField.options}
+                  onChange={e => setNewField(p => ({ ...p, options: e.target.value }))}
+                  placeholder="Yes, No, Sometimes"
+                  className="input w-full"
+                />
+              </div>
+            )}
+
+            {fieldError && (
+              <p className="text-xs text-red-500">{fieldError}</p>
+            )}
+
+            <button
+              onClick={handleAddField}
+              disabled={addingField}
+              className="btn-primary text-sm px-4 py-2">
+              {addingField ? 'Adding…' : '+ Add Question'}
+            </button>
+          </div>
+        </div>
+      </SettingsCard>
 
       {/* ── Attendance ──────────────────────────────────────────────────── */}
       <SettingsCard title="Attendance" icon="✓">
@@ -359,11 +502,6 @@ export default function SettingsPage() {
       {/* ── Welcome Email ────────────────────────────────────────────────── */}
       <SettingsCard title="Welcome Email" icon="✉️">
         <div className="space-y-5">
-          <div className="rounded-lg bg-blue-50 border border-blue-100 p-3 text-xs text-blue-700">
-            📬 Email sending is enabled in Phase 10. Configure the template now and it will be
-            ready to send when email is activated.
-          </div>
-
           <Field label="Subject Line">
             <input type="text" className="input" value={form.welcomeEmailSubject}
               onChange={e => update('welcomeEmailSubject', e.target.value)} />
