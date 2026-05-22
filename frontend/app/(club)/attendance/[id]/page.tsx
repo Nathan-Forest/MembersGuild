@@ -421,70 +421,60 @@ export default function AttendanceSheetPage() {
             Refresh
           </button>
         </div>
-    </div>
-
-      {/* Legend */ }
-  <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
-    <span className="font-medium text-gray-600">Tap a status to mark:</span>
-    {STATUS_OPTIONS.map(o => (
-      <span key={o.value} className={`px-2 py-0.5 rounded-full text-xs font-medium ${o.color}`}>
-        {o.label}
-      </span>
-    ))}
-    <span className="ml-2 text-blue-600 font-medium">↩ NSBA = credit refunded</span>
-  </div>
-
-  {/* Member list */ }
-  {
-    members.length === 0 ? (
-      <div className="card p-12 text-center">
-        <p className="text-3xl mb-3">👥</p>
-        <p className="text-sm font-medium text-gray-600">No members registered</p>
-        <p className="text-xs text-gray-400 mt-1">Use the Walk-in button to add members</p>
       </div>
-    ) : (
-    <div className="space-y-2">
+
+      {/* Legend */}
+      <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
+        <span className="font-medium text-gray-600">Tap a status to mark:</span>
+        {STATUS_OPTIONS.map(o => (
+          <span key={o.value} className={`px-2 py-0.5 rounded-full text-xs font-medium ${o.color}`}>
+            {o.label}
+          </span>
+        ))}
+        <span className="ml-2 text-blue-600 font-medium">↩ NSBA = credit refunded</span>
+      </div>
+
       {members.map(m => (
         <div key={m.userId}
-          className={`card p-4 flex items-center gap-4 border transition-colors ${m.status ? 'border-transparent' : 'border-gray-200'
+          className={`card p-4 border transition-colors ${m.status ? 'border-transparent' : 'border-gray-200'
             } ${statusStyle(m.status).replace('border-', 'border-l-4 border-l-').split(' ').filter(c => c.includes('border-l')).join(' ')}`}
         >
-          {/* Avatar */}
-          <div
-            className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 text-sm"
-            style={{ backgroundColor: 'var(--color-primary)' }}
-          >
-            {m.fullName.charAt(0)}
-          </div>
-
-          {/* Name */}
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-900">{m.fullName}</p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${statusStyle(m.status)}`}>
-                {statusLabel(m.status)}
-              </span>
-              {m.status === 'nsba' && m.creditRefunded && (
-                <span className="text-xs text-blue-500">Credit refunded</span>
-              )}
-              {m.creditBalance <= 0 && (
-                <span className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                  ⚠ {m.creditBalance < 0 ? `${m.creditBalance} credits` : 'No credits'} — top up needed
+          {/* Row 1 — avatar + name + current status */}
+          <div className="flex items-center gap-3 mb-3">
+            <div
+              className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 text-sm"
+              style={{ backgroundColor: 'var(--color-primary)' }}
+            >
+              {m.fullName.charAt(0)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-900 truncate">{m.fullName}</p>
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${statusStyle(m.status)}`}>
+                  {statusLabel(m.status)}
                 </span>
-              )}
+                {m.status === 'nsba' && m.creditRefunded && (
+                  <span className="text-xs text-blue-500">Credit refunded</span>
+                )}
+                {m.creditBalance <= 0 && (
+                  <span className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                    ⚠ {m.creditBalance < 0 ? `${m.creditBalance} credits` : 'No credits'} — top up needed
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Status buttons */}
-          <div className="flex gap-1.5 flex-shrink-0 flex-wrap justify-end">
+          {/* Row 2 — status action buttons */}
+          <div className="flex gap-1.5 flex-wrap">
             {STATUS_OPTIONS.map(opt => (
               <button
                 key={opt.value}
                 onClick={() => markAttendance(m.userId, opt.value)}
                 disabled={marking === m.userId}
                 className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${m.status === opt.value
-                  ? opt.color + ' ring-2 ring-offset-1 ring-current'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? opt.color + ' ring-2 ring-offset-1 ring-current'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
               >
                 {marking === m.userId ? '…' : opt.label}
@@ -493,122 +483,120 @@ export default function AttendanceSheetPage() {
           </div>
         </div>
       ))}
-    </div>
-  )
-  }
 
-  {/* ── QR Code Modal ─────────────────────────────────────────────────── */ }
-  {
-    qrOpen && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm text-center">
-          <div className="flex items-center justify-between p-6 border-b border-gray-100">
-            <div>
-              <h2 className="font-bold text-gray-900">Session QR Code</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Members scan to check in automatically</p>
+
+      {/* ── QR Code Modal ─────────────────────────────────────────────────── */}
+      {
+        qrOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm text-center">
+              <div className="flex items-center justify-between p-6 border-b border-gray-100">
+                <div>
+                  <h2 className="font-bold text-gray-900">Session QR Code</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">Members scan to check in automatically</p>
+                </div>
+                <button onClick={() => setQrOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="p-6">
+                {qrLoading ? (
+                  <div className="w-[280px] h-[280px] mx-auto bg-gray-100 rounded-xl animate-pulse" />
+                ) : (
+                  <canvas ref={qrCanvasRef} className="mx-auto rounded-xl" />
+                )}
+
+                {qrData && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-xs text-gray-400">
+                      Expires {new Date(qrData.expiresAt).toLocaleTimeString('en-AU', {
+                        hour: '2-digit', minute: '2-digit', hour12: true
+                      })}
+                    </p>
+                    <p className="text-xs font-mono text-gray-400 break-all bg-gray-50 rounded-lg p-2">
+                      {qrData.checkinUrl}
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => { setQrData(null); openQr() }}
+                  className="btn-secondary w-full py-2 mt-4 text-sm"
+                >
+                  Regenerate QR
+                </button>
+              </div>
             </div>
-            <button onClick={() => setQrOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
+        )
+      }
 
-          <div className="p-6">
-            {qrLoading ? (
-              <div className="w-[280px] h-[280px] mx-auto bg-gray-100 rounded-xl animate-pulse" />
-            ) : (
-              <canvas ref={qrCanvasRef} className="mx-auto rounded-xl" />
-            )}
-
-            {qrData && (
-              <div className="mt-4 space-y-2">
-                <p className="text-xs text-gray-400">
-                  Expires {new Date(qrData.expiresAt).toLocaleTimeString('en-AU', {
-                    hour: '2-digit', minute: '2-digit', hour12: true
-                  })}
-                </p>
-                <p className="text-xs font-mono text-gray-400 break-all bg-gray-50 rounded-lg p-2">
-                  {qrData.checkinUrl}
-                </p>
+      {/* ── Walk-in Modal ──────────────────────────────────────────────────── */}
+      {
+        walkinOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
+                <div>
+                  <h2 className="font-bold text-gray-900">Add Walk-in</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">Member will be registered and marked attended</p>
+                </div>
+                <button onClick={() => setWalkinOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
-            )}
 
-            <button
-              onClick={() => { setQrData(null); openQr() }}
-              className="btn-secondary w-full py-2 mt-4 text-sm"
-            >
-              Regenerate QR
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
+              <div className="p-4 border-b border-gray-100 flex-shrink-0">
+                <input
+                  type="text"
+                  placeholder="Search members…"
+                  className="input"
+                  value={walkinSearch}
+                  onChange={e => setWalkinSearch(e.target.value)}
+                  autoFocus
+                />
+              </div>
 
-  {/* ── Walk-in Modal ──────────────────────────────────────────────────── */ }
-  {
-    walkinOpen && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col">
-          <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
-            <div>
-              <h2 className="font-bold text-gray-900">Add Walk-in</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Member will be registered and marked attended</p>
+              <div className="overflow-y-auto flex-1 p-4">
+                {filteredWalkins.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-sm text-gray-400">
+                      {walkinSearch ? 'No matching members' : 'All members are already registered'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredWalkins.map(m => (
+                      <button
+                        key={m.id}
+                        onClick={() => handleWalkin(m.id)}
+                        disabled={walkinLoading}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                      >
+                        <div
+                          className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                          style={{ backgroundColor: 'var(--color-primary)' }}
+                        >
+                          {m.firstName.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{m.firstName} {m.lastName}</p>
+                          <p className="text-xs text-gray-400">{m.email}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <button onClick={() => setWalkinOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
-
-          <div className="p-4 border-b border-gray-100 flex-shrink-0">
-            <input
-              type="text"
-              placeholder="Search members…"
-              className="input"
-              value={walkinSearch}
-              onChange={e => setWalkinSearch(e.target.value)}
-              autoFocus
-            />
-          </div>
-
-          <div className="overflow-y-auto flex-1 p-4">
-            {filteredWalkins.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-sm text-gray-400">
-                  {walkinSearch ? 'No matching members' : 'All members are already registered'}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {filteredWalkins.map(m => (
-                  <button
-                    key={m.id}
-                    onClick={() => handleWalkin(m.id)}
-                    disabled={walkinLoading}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-                  >
-                    <div
-                      className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                      style={{ backgroundColor: 'var(--color-primary)' }}
-                    >
-                      {m.firstName.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{m.firstName} {m.lastName}</p>
-                      <p className="text-xs text-gray-400">{m.email}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    )
-  }
+        )
+      }
     </div >
   )
 }
