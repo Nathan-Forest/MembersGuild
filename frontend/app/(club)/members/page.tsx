@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import { getCurrentUser,  hasPermission } from '@/lib/auth'
+import { getCurrentUser, hasPermission } from '@/lib/auth'
 import type { MemberListResponse, MemberDetailResponse, MemberStatsResponse } from '@/types'
 import { ROLE_LABELS } from '@/types'
 import type { UserRole } from '@/types'
@@ -32,8 +32,6 @@ type ModalTab = 'details' | 'emergency' | 'credits' | 'role'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-
-
 const CREDIT_FILTERS = [
   { value: '', label: 'All Members' },
   { value: 'none', label: 'No Credits' },
@@ -58,13 +56,13 @@ function getVisibleTabs(role: UserRole | null): { key: ModalTab; label: string }
 
 function roleBadgeClass(role: string) {
   switch (role) {
-    case 'webmaster': return 'bg-purple-100 text-purple-800'
-    case 'coach': return 'bg-blue-100 text-blue-800'
-    case 'finance': return 'bg-green-100 text-green-800'
+    case 'webmaster':  return 'bg-purple-100 text-purple-800'
+    case 'coach':      return 'bg-blue-100 text-blue-800'
+    case 'finance':    return 'bg-green-100 text-green-800'
     case 'membership': return 'bg-indigo-100 text-indigo-800'
-    case 'committee': return 'bg-cyan-100 text-cyan-800'
-    case 'cats': return 'bg-amber-100 text-amber-800'
-    default: return 'bg-gray-100 text-gray-700'
+    case 'committee':  return 'bg-cyan-100 text-cyan-800'
+    case 'cats':       return 'bg-amber-100 text-amber-800'
+    default:           return 'bg-gray-100 text-gray-700'
   }
 }
 
@@ -120,40 +118,45 @@ export default function MembersPage() {
   const router = useRouter()
 
   // Core
-  const [currentRole, setCurrentRole] = useState<UserRole | null>(null)
-  const [availableRoles, setAvailableRoles] = useState<{ value: string, label: string }[]>([])
-  const [members, setMembers] = useState<MemberListResponse[]>([])
-  const [stats, setStats] = useState<MemberStatsResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [assocLabel, setAssocLabel] = useState('Association Number')
+  const [currentRole,     setCurrentRole]     = useState<UserRole | null>(null)
+  const [availableRoles,  setAvailableRoles]  = useState<{ value: string; label: string }[]>([])
+  const [members,         setMembers]         = useState<MemberListResponse[]>([])
+  const [stats,           setStats]           = useState<MemberStatsResponse | null>(null)
+  const [loading,         setLoading]         = useState(true)
+  const [assocLabel,      setAssocLabel]      = useState('Association Number')
 
   // Search / filter
-  const [search, setSearch] = useState('')
+  const [search,       setSearch]       = useState('')
   const [creditFilter, setCreditFilter] = useState('')
 
+  // Checkbox selection for bulk actions
+  const [checkedIds,  setCheckedIds]  = useState<number[]>([])
+  const [resending,   setResending]   = useState(false)
+  const [resendMsg,   setResendMsg]   = useState('')
+
   // Member detail modal
-  const [selected, setSelected] = useState<MemberDetailResponse | null>(null)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [modalTab, setModalTab] = useState<ModalTab>('details')
-  const [joinedAtEdit, setJoinedAtEdit] = useState('')
-  const [assocNumberEdit, setAssocNumberEdit] = useState('')
+  const [selected,       setSelected]       = useState<MemberDetailResponse | null>(null)
+  const [modalOpen,      setModalOpen]      = useState(false)
+  const [modalTab,       setModalTab]       = useState<ModalTab>('details')
+  const [joinedAtEdit,   setJoinedAtEdit]   = useState('')
+  const [assocNumberEdit,setAssocNumberEdit]= useState('')
 
   // Add member modal
-  const [addModalOpen, setAddModalOpen] = useState(false)
-  const [addForm, setAddForm] = useState({
+  const [addModalOpen,      setAddModalOpen]      = useState(false)
+  const [addForm,           setAddForm]           = useState({
     firstName: '', lastName: '', email: '', phone: '', role: 'member', memberNumber: '',
   })
-  const [addLoading, setAddLoading] = useState(false)
-  const [addError, setAddError] = useState('')
+  const [addLoading,        setAddLoading]        = useState(false)
+  const [addError,          setAddError]          = useState('')
   const [newMemberPassword, setNewMemberPassword] = useState<string | null>(null)
 
   // Import CSV modal
-  const [importOpen, setImportOpen] = useState(false)
-  const [importStep, setImportStep] = useState<'upload' | 'preview' | 'done'>('upload')
-  const [importRows, setImportRows] = useState<ImportRow[]>([])
+  const [importOpen,   setImportOpen]   = useState(false)
+  const [importStep,   setImportStep]   = useState<'upload' | 'preview' | 'done'>('upload')
+  const [importRows,   setImportRows]   = useState<ImportRow[]>([])
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
-  const [importing, setImporting] = useState(false)
-  const [importError, setImportError] = useState('')
+  const [importing,    setImporting]    = useState(false)
+  const [importError,  setImportError]  = useState('')
 
   // ── Init ───────────────────────────────────────────────────────────────────
 
@@ -182,23 +185,19 @@ export default function MembersPage() {
       setStats(statsData)
       api.get<{ associationNumberLabel: string }>('/settings/labels')
         .then(d => setAssocLabel(d.associationNumberLabel))
-        .catch(() => { })
-      api.get<{ baseRoles: string[], customRoles: { roleName: string, displayLabel: string }[] }>('/roles')
+        .catch(() => {})
+      api.get<{ baseRoles: string[]; customRoles: { roleName: string; displayLabel: string }[] }>('/roles')
         .then(d => {
           const locked = [
-            { value: 'cats', label: 'CATS' },
+            { value: 'cats',   label: 'CATS' },
             { value: 'member', label: 'Member' },
-            { value: 'coach', label: 'Coach' },
+            { value: 'coach',  label: 'Coach' },
           ]
-          const base = d.baseRoles.map(r => ({
-            value: r,
-            label: r.charAt(0).toUpperCase() + r.slice(1)
-          }))
+          const base   = d.baseRoles.map(r => ({ value: r, label: r.charAt(0).toUpperCase() + r.slice(1) }))
           const custom = d.customRoles.map(r => ({ value: r.roleName, label: r.displayLabel }))
-          const webmaster = [{ value: 'webmaster', label: 'Webmaster' }]
-          setAvailableRoles([...locked, ...base, ...custom, ...webmaster])
+          setAvailableRoles([...locked, ...base, ...custom, { value: 'webmaster', label: 'Webmaster' }])
         })
-        .catch(() => { })
+        .catch(() => {})
     } catch {
     } finally {
       setLoading(false)
@@ -207,12 +206,12 @@ export default function MembersPage() {
 
   async function loadFiltered() {
     const params = new URLSearchParams()
-    if (search) params.set('search', search)
+    if (search)       params.set('search',  search)
     if (creditFilter) params.set('credits', creditFilter)
     try {
       const data = await api.get<MemberListResponse[]>(`/members?${params}`)
       setMembers(data)
-    } catch { }
+    } catch {}
   }
 
   async function openMember(id: number) {
@@ -223,7 +222,32 @@ export default function MembersPage() {
       setJoinedAtEdit(detail.joinedAt ? new Date(detail.joinedAt).toISOString().split('T')[0] : '')
       setModalTab('details')
       setModalOpen(true)
-    } catch { }
+    } catch {}
+  }
+
+  // ── Checkbox selection ─────────────────────────────────────────────────────
+
+  function toggleCheck(id: number) {
+    setCheckedIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id])
+  }
+
+  function toggleAll() {
+    setCheckedIds(p => p.length === members.length ? [] : members.map(m => m.id))
+  }
+
+  async function handleResendWelcome() {
+    if (checkedIds.length === 0) return
+    setResending(true); setResendMsg('')
+    try {
+      const res = await api.post<{ sent: number }>('/members/resend-welcome', { userIds: checkedIds })
+      setResendMsg(`Welcome email sent to ${res.sent} member${res.sent !== 1 ? 's' : ''}`)
+      setCheckedIds([])
+      setTimeout(() => setResendMsg(''), 5000)
+    } catch {
+      setResendMsg('Failed to send — please try again')
+    } finally {
+      setResending(false)
+    }
   }
 
   // ── Member actions ─────────────────────────────────────────────────────────
@@ -233,7 +257,7 @@ export default function MembersPage() {
       await api.put(`/members/${id}/role`, { role })
       await loadData()
       if (selected) setSelected({ ...selected, role })
-    } catch { }
+    } catch {}
   }
 
   async function handleToggleActive(id: number, current: boolean) {
@@ -241,7 +265,7 @@ export default function MembersPage() {
       await api.put(`/members/${id}/active`, !current)
       await loadData()
       if (selected) setSelected({ ...selected, isActive: !current })
-    } catch { }
+    } catch {}
   }
 
   async function handleResetPassword(id: number) {
@@ -249,7 +273,7 @@ export default function MembersPage() {
     try {
       const result = await api.post<{ temporaryPassword: string }>(`/members/${id}/reset-password`, {})
       alert(`Temporary password: ${result.temporaryPassword}\n\nShare this with the member securely.`)
-    } catch { }
+    } catch {}
   }
 
   async function handleDelete(id: number, name: string) {
@@ -260,40 +284,39 @@ export default function MembersPage() {
       setModalOpen(false)
       setSelected(null)
       await loadData()
-    } catch { }
+    } catch {}
   }
 
   async function handleSaveDetails() {
     if (!selected) return
     try {
       const detail = await api.put<MemberDetailResponse>(`/members/${selected.id}`, {
-        firstName: selected.firstName,
-        lastName: selected.lastName,
-        phone: selected.phone,
-        memberNumber: selected.memberNumber,
-        dateOfBirth: selected.dateOfBirth,
+        firstName:            selected.firstName,
+        lastName:             selected.lastName,
+        phone:                selected.phone,
+        memberNumber:         selected.memberNumber,
+        dateOfBirth:          selected.dateOfBirth,
         emergencyContactName: selected.emergencyContactName,
-        emergencyContactPhone: selected.emergencyContactPhone,
-        joinedAt: joinedAtEdit ? new Date(joinedAtEdit).toISOString() : null,
-        associationNumber: assocNumberEdit || null,
+        emergencyContactPhone:selected.emergencyContactPhone,
+        joinedAt:             joinedAtEdit ? new Date(joinedAtEdit).toISOString() : null,
+        associationNumber:    assocNumberEdit || null,
       })
       setSelected(detail)
-    } catch { }
+    } catch {}
   }
 
   // ── Add member ─────────────────────────────────────────────────────────────
 
   async function handleAddMember(e: React.FormEvent) {
     e.preventDefault()
-    setAddError('')
-    setAddLoading(true)
+    setAddError(''); setAddLoading(true)
     try {
       const result = await api.post<{ generatedPassword?: string } & MemberDetailResponse>('/members', {
-        firstName: addForm.firstName,
-        lastName: addForm.lastName,
-        email: addForm.email,
-        phone: addForm.phone || null,
-        role: addForm.role,
+        firstName:    addForm.firstName,
+        lastName:     addForm.lastName,
+        email:        addForm.email,
+        phone:        addForm.phone || null,
+        role:         addForm.role,
         memberNumber: addForm.memberNumber || null,
       })
       setNewMemberPassword(result.generatedPassword ?? null)
@@ -309,11 +332,8 @@ export default function MembersPage() {
   // ── CSV import ─────────────────────────────────────────────────────────────
 
   function openImport() {
-    setImportOpen(true)
-    setImportStep('upload')
-    setImportRows([])
-    setImportResult(null)
-    setImportError('')
+    setImportOpen(true); setImportStep('upload')
+    setImportRows([]); setImportResult(null); setImportError('')
   }
 
   function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -321,31 +341,27 @@ export default function MembersPage() {
     if (!file) return
     const reader = new FileReader()
     reader.onload = (ev) => {
-      const text = ev.target?.result as string
+      const text  = ev.target?.result as string
       const lines = text.split('\n').filter(l => l.trim())
       if (lines.length < 2) { setImportError('File is empty or has no data rows'); return }
-
       const rows: ImportRow[] = lines.slice(1).map(line => {
-        const cols = parseCsvLine(line)
+        const cols    = parseCsvLine(line)
         const credits = parseInt(cols[6] ?? '0')
         const row: ImportRow = {
-          firstName: cols[0] ?? '',
-          lastName: cols[1] ?? '',
-          email: cols[2] ?? '',
-          phone: cols[3] ?? '',
-          joinDate: cols[4] ?? '',
+          firstName:         cols[0] ?? '',
+          lastName:          cols[1] ?? '',
+          email:             cols[2] ?? '',
+          phone:             cols[3] ?? '',
+          joinDate:          cols[4] ?? '',
           associationNumber: cols[5] ?? '',
-          startingCredits: isNaN(credits) ? 0 : credits,
-          role: (cols[7] ?? 'member').toLowerCase().trim() || 'member',
-          errors: [],
+          startingCredits:   isNaN(credits) ? 0 : credits,
+          role:              (cols[7] ?? 'member').toLowerCase().trim() || 'member',
+          errors:            [],
         }
         row.errors = validateRow(row)
         return row
       }).filter(r => r.firstName || r.lastName || r.email)
-
-      setImportRows(rows)
-      setImportStep('preview')
-      setImportError('')
+      setImportRows(rows); setImportStep('preview'); setImportError('')
     }
     reader.readAsText(file)
   }
@@ -356,17 +372,16 @@ export default function MembersPage() {
     setImporting(true)
     try {
       const result = await api.post<ImportResult>('/members/import', validRows.map(r => ({
-        firstName: r.firstName,
-        lastName: r.lastName,
-        email: r.email,
-        phone: r.phone || null,
-        joinDate: r.joinDate || null,
+        firstName:         r.firstName,
+        lastName:          r.lastName,
+        email:             r.email,
+        phone:             r.phone || null,
+        joinDate:          r.joinDate || null,
         associationNumber: r.associationNumber || null,
-        startingCredits: r.startingCredits,
-        role: r.role,
+        startingCredits:   r.startingCredits,
+        role:              r.role,
       })))
-      setImportResult(result)
-      setImportStep('done')
+      setImportResult(result); setImportStep('done')
       await loadData()
     } catch (err) {
       setImportError(err instanceof Error ? err.message : 'Import failed')
@@ -377,11 +392,13 @@ export default function MembersPage() {
 
   // ── Derived ────────────────────────────────────────────────────────────────
 
-  const user = getCurrentUser()
-  const canManage = user ? hasPermission(user, 'membership', 'webmaster') : false
-  const canManageCredits = user ? hasPermission(user, 'finance', 'webmaster') : false
-  const isWebmaster = user ? hasPermission(user, 'webmaster') : false
-  const validImportRows = importRows.filter(r => r.errors.length === 0).length
+  const user               = getCurrentUser()
+  const canManage          = user ? hasPermission(user, 'membership', 'webmaster') : false
+  const canManageCredits   = user ? hasPermission(user, 'finance', 'webmaster') : false
+  const isWebmaster        = user ? hasPermission(user, 'webmaster') : false
+  const validImportRows    = importRows.filter(r => r.errors.length === 0).length
+  const allChecked         = members.length > 0 && checkedIds.length === members.length
+  const someChecked        = checkedIds.length > 0 && !allChecked
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -393,13 +410,10 @@ export default function MembersPage() {
         <h1 className="page-title">Members</h1>
         {canManage && (
           <div className="flex gap-2">
-            <button onClick={openImport} className="btn-secondary px-4 py-2">
-              ↑ Import CSV
-            </button>
+            <button onClick={openImport} className="btn-secondary px-4 py-2">↑ Import CSV</button>
             <button
               onClick={() => { setAddModalOpen(true); setNewMemberPassword(null); setAddError('') }}
-              className="btn-primary px-4 py-2"
-            >
+              className="btn-primary px-4 py-2">
               + Add Member
             </button>
           </div>
@@ -409,10 +423,10 @@ export default function MembersPage() {
       {/* Stats */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard label="Total Members" value={stats.totalMembers} color="blue" />
-          <StatCard label="Active" value={stats.activeMembers} color="green" />
-          <StatCard label="Low Credits" value={stats.lowCreditMembers} color="amber" />
-          <StatCard label="No Credits" value={stats.noCreditsMembers} color="red" />
+          <StatCard label="Total Members"  value={stats.totalMembers}    color="blue" />
+          <StatCard label="Active"         value={stats.activeMembers}   color="green" />
+          <StatCard label="Low Credits"    value={stats.lowCreditMembers} color="amber" />
+          <StatCard label="No Credits"     value={stats.noCreditsMembers} color="red" />
         </div>
       )}
 
@@ -434,11 +448,50 @@ export default function MembersPage() {
         </select>
       </div>
 
+      {/* Bulk action bar — shown when members are checked */}
+      {checkedIds.length > 0 && (
+        <div className="flex items-center justify-between rounded-xl px-5 py-3 text-white"
+          style={{ backgroundColor: 'var(--color-primary)' }}>
+          <span className="text-sm font-medium">
+            {checkedIds.length} member{checkedIds.length !== 1 ? 's' : ''} selected
+          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleResendWelcome}
+              disabled={resending}
+              className="bg-white text-sm font-semibold px-4 py-1.5 rounded-lg hover:bg-white/90 disabled:opacity-50 transition-opacity"
+              style={{ color: 'var(--color-primary)' }}>
+              {resending ? 'Sending…' : '✉ Resend Welcome Email'}
+            </button>
+            <button onClick={() => setCheckedIds([])}
+              className="text-white/70 hover:text-white text-sm">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Resend success message */}
+      {resendMsg && (
+        <div className="rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3">
+          ✓ {resendMsg}
+        </div>
+      )}
+
       {/* Members table */}
       <div className="table-wrapper">
         <table className="table">
           <thead>
             <tr>
+              <th className="w-10">
+                <input
+                  type="checkbox"
+                  checked={allChecked}
+                  ref={el => { if (el) el.indeterminate = someChecked }}
+                  onChange={toggleAll}
+                  className="rounded border-gray-300 cursor-pointer"
+                />
+              </th>
               <th>Name</th>
               <th>Role</th>
               <th>Credits</th>
@@ -450,11 +503,27 @@ export default function MembersPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="text-center py-10 text-gray-400 text-sm">Loading members…</td></tr>
+              <tr>
+                <td colSpan={8} className="text-center py-10 text-gray-400 text-sm">
+                  Loading members…
+                </td>
+              </tr>
             ) : members.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-10 text-gray-400 text-sm">No members found</td></tr>
+              <tr>
+                <td colSpan={8} className="text-center py-10 text-gray-400 text-sm">
+                  No members found
+                </td>
+              </tr>
             ) : members.map(m => (
               <tr key={m.id}>
+                <td>
+                  <input
+                    type="checkbox"
+                    checked={checkedIds.includes(m.id)}
+                    onChange={() => toggleCheck(m.id)}
+                    className="rounded border-gray-300 cursor-pointer"
+                  />
+                </td>
                 <td>
                   <div className="flex items-center gap-3">
                     <div className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
@@ -497,7 +566,6 @@ export default function MembersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
 
-            {/* Modal header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold"
@@ -518,14 +586,14 @@ export default function MembersPage() {
               </button>
             </div>
 
-            {/* Tabs */}
             <div className="flex border-b border-gray-100">
               {getVisibleTabs(currentRole).map(tab => (
                 <button key={tab.key} onClick={() => setModalTab(tab.key)}
-                  className={`flex-1 py-3 text-xs font-medium transition-colors ${modalTab === tab.key
-                    ? 'border-b-2 text-[var(--color-primary)]'
-                    : 'text-gray-500 hover:text-gray-700'
-                    }`}
+                  className={`flex-1 py-3 text-xs font-medium transition-colors ${
+                    modalTab === tab.key
+                      ? 'border-b-2 text-[var(--color-primary)]'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
                   style={modalTab === tab.key ? { borderColor: 'var(--color-primary)' } : {}}>
                   {tab.label}
                 </button>
@@ -538,13 +606,13 @@ export default function MembersPage() {
               {modalTab === 'details' && (
                 <div className="space-y-4">
                   <dl className="space-y-0 divide-y divide-gray-100">
-                    <ModalRow label="Email" value={selected.email} />
-                    <ModalRow label="Phone" value={selected.phone ?? '—'} />
+                    <ModalRow label="Email"      value={selected.email} />
+                    <ModalRow label="Phone"      value={selected.phone ?? '—'} />
                     <ModalRow label="Member No." value={selected.memberNumber ? `#${selected.memberNumber}` : '—'} />
                     {selected.associationNumber && (
                       <ModalRow label={assocLabel} value={selected.associationNumber} />
                     )}
-                    <ModalRow label="Status" value={selected.isActive ? 'Active' : 'Inactive'} />
+                    <ModalRow label="Status"  value={selected.isActive ? 'Active' : 'Inactive'} />
                     <ModalRow label="Credits" value={String(selected.creditBalance)} />
                     <ModalRow label="Member Since" value={
                       new Date(selected.effectiveJoinDate ?? selected.createdAt).toLocaleDateString('en-AU', {
@@ -567,7 +635,6 @@ export default function MembersPage() {
                     )}
                   </dl>
 
-                  {/* Actions */}
                   {canManage && (
                     <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
                       <button
@@ -590,7 +657,6 @@ export default function MembersPage() {
                     </div>
                   )}
 
-                  {/* Editable fields — Membership/Webmaster */}
                   {canManage && (
                     <div className="pt-3 border-t border-gray-100 space-y-3">
                       <div>
@@ -599,9 +665,7 @@ export default function MembersPage() {
                           <input type="text" className="input text-sm flex-1" placeholder="Optional"
                             value={assocNumberEdit}
                             onChange={e => setAssocNumberEdit(e.target.value)} />
-                          <button onClick={handleSaveDetails} className="btn-secondary text-xs px-3">
-                            Save
-                          </button>
+                          <button onClick={handleSaveDetails} className="btn-secondary text-xs px-3">Save</button>
                         </div>
                       </div>
                       <div>
@@ -610,9 +674,7 @@ export default function MembersPage() {
                           <input type="date" className="input text-sm flex-1"
                             value={joinedAtEdit}
                             onChange={e => setJoinedAtEdit(e.target.value)} />
-                          <button onClick={handleSaveDetails} className="btn-secondary text-xs px-3">
-                            Save
-                          </button>
+                          <button onClick={handleSaveDetails} className="btn-secondary text-xs px-3">Save</button>
                         </div>
                         <p className="text-xs text-gray-400 mt-1">Leave blank to use system entry date</p>
                       </div>
@@ -634,7 +696,7 @@ export default function MembersPage() {
                         </div>
                       </div>
                       <dl className="space-y-0 divide-y divide-gray-100">
-                        <ModalRow label="Name" value={selected.emergencyContactName ?? '—'} />
+                        <ModalRow label="Name"  value={selected.emergencyContactName ?? '—'} />
                         <ModalRow label="Phone" value={selected.emergencyContactPhone ?? '—'} />
                       </dl>
                       {selected.emergencyContactPhone && (
@@ -648,7 +710,9 @@ export default function MembersPage() {
                     <div className="rounded-xl bg-amber-50 border border-amber-200 p-6 text-center">
                       <p className="text-2xl mb-2">⚠️</p>
                       <p className="text-sm font-semibold text-amber-800">No emergency contact on file</p>
-                      <p className="text-xs text-amber-600 mt-1">Ask {selected.firstName} to update their profile</p>
+                      <p className="text-xs text-amber-600 mt-1">
+                        Ask {selected.firstName} to update their profile
+                      </p>
                     </div>
                   )}
                 </div>
@@ -695,7 +759,6 @@ export default function MembersPage() {
                   )}
                 </div>
               )}
-
             </div>
           </div>
         </div>
@@ -810,15 +873,13 @@ export default function MembersPage() {
       {importOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-
-            {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
               <div>
                 <h2 className="font-bold text-gray-900">Import Members from CSV</h2>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {importStep === 'upload' && 'Upload a CSV file to bulk-add members'}
+                  {importStep === 'upload'  && 'Upload a CSV file to bulk-add members'}
                   {importStep === 'preview' && `${importRows.length} rows found — review before importing`}
-                  {importStep === 'done' && 'Import complete'}
+                  {importStep === 'done'    && 'Import complete'}
                 </p>
               </div>
               <button onClick={() => setImportOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
@@ -828,10 +889,7 @@ export default function MembersPage() {
               </button>
             </div>
 
-            {/* Body */}
             <div className="overflow-y-auto flex-1 p-6">
-
-              {/* Step 1 — Upload */}
               {importStep === 'upload' && (
                 <div className="space-y-6">
                   <div className="rounded-xl border-2 border-dashed border-gray-200 p-8 text-center">
@@ -856,7 +914,6 @@ export default function MembersPage() {
                 </div>
               )}
 
-              {/* Step 2 — Preview */}
               {importStep === 'preview' && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-3 gap-3">
@@ -875,24 +932,18 @@ export default function MembersPage() {
                       <p className="text-xs text-blue-600 mt-0.5">Total rows</p>
                     </div>
                   </div>
-
                   {importRows.some(r => r.errors.length > 0) && (
                     <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-700">
                       ⚠️ Rows with errors will be skipped. Fix the CSV and re-upload, or proceed to import valid rows only.
                     </div>
                   )}
-
                   <div className="overflow-x-auto rounded-xl border border-gray-100">
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-3 py-2 text-left font-medium text-gray-500">Status</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-500">Name</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-500">Email</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-500">Phone</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-500">Join Date</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-500">Credits</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-500">Role</th>
+                          {['Status', 'Name', 'Email', 'Phone', 'Join Date', 'Credits', 'Role'].map(h => (
+                            <th key={h} className="px-3 py-2 text-left font-medium text-gray-500">{h}</th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -925,7 +976,6 @@ export default function MembersPage() {
                 </div>
               )}
 
-              {/* Step 3 — Done */}
               {importStep === 'done' && importResult && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-3 gap-3">
@@ -944,9 +994,7 @@ export default function MembersPage() {
                   </div>
                   {importResult.errors.length > 0 && (
                     <div className="rounded-xl border border-red-100 overflow-hidden">
-                      <div className="bg-red-50 px-4 py-2 text-xs font-semibold text-red-700">
-                        Errors / Skipped
-                      </div>
+                      <div className="bg-red-50 px-4 py-2 text-xs font-semibold text-red-700">Errors / Skipped</div>
                       <ul className="divide-y divide-red-50 max-h-48 overflow-y-auto">
                         {importResult.errors.map((e, i) => (
                           <li key={i} className="px-4 py-2 text-xs text-red-600">{e}</li>
@@ -960,10 +1008,8 @@ export default function MembersPage() {
                   </p>
                 </div>
               )}
-
             </div>
 
-            {/* Footer */}
             <div className="flex justify-between gap-3 p-6 border-t border-gray-100 flex-shrink-0">
               {importStep === 'upload' && (
                 <button onClick={() => setImportOpen(false)} className="btn-secondary px-4 py-2 text-sm ml-auto">
@@ -987,7 +1033,6 @@ export default function MembersPage() {
                 </button>
               )}
             </div>
-
           </div>
         </div>
       )}
@@ -1002,10 +1047,10 @@ function StatCard({ label, value, color }: {
   label: string; value: number; color: 'blue' | 'green' | 'amber' | 'red'
 }) {
   const colors = {
-    blue: 'bg-blue-50 text-blue-700 border-blue-100',
+    blue:  'bg-blue-50 text-blue-700 border-blue-100',
     green: 'bg-green-50 text-green-700 border-green-100',
     amber: 'bg-amber-50 text-amber-700 border-amber-100',
-    red: 'bg-red-50 text-red-700 border-red-100',
+    red:   'bg-red-50 text-red-700 border-red-100',
   }
   return (
     <div className={`rounded-xl border p-4 ${colors[color]}`}>
@@ -1028,21 +1073,19 @@ function CreditAdjustForm({ memberId, onAdjusted }: {
   memberId: number; onAdjusted: () => void
 }) {
   const [amount, setAmount] = useState('')
-  const [notes, setNotes] = useState('')
+  const [notes,  setNotes]  = useState('')
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+  const [error,  setError]  = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError('')
+    e.preventDefault(); setError('')
     const n = parseInt(amount)
     if (isNaN(n) || n === 0) { setError('Enter a non-zero amount'); return }
-    if (!notes.trim()) { setError('Notes are required'); return }
+    if (!notes.trim())        { setError('Notes are required'); return }
     setSaving(true)
     try {
       await api.post('/credits/adjust', { userId: memberId, amount: n, notes })
-      setAmount('')
-      setNotes('')
+      setAmount(''); setNotes('')
       onAdjusted()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to adjust credits')

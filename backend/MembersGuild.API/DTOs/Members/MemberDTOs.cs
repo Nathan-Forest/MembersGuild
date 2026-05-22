@@ -99,3 +99,5 @@ public record ImportResult(
     int Skipped,
     List<string> Errors
 );
+
+public record ResendWelcomeRequest(List<int> UserIds);

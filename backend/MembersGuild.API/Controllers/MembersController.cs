@@ -1,8 +1,13 @@
 using MembersGuild.API.DTOs.Members;
+using MembersGuild.API.Extensions;
+using MembersGuild.API.Middleware;
 using MembersGuild.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using MembersGuild.Data.Models.Club;
+using Microsoft.EntityFrameworkCore;
 
 namespace MembersGuild.API.Controllers;
 
@@ -12,10 +17,17 @@ namespace MembersGuild.API.Controllers;
 public class MembersController : ControllerBase
 {
     private readonly IMemberService _members;
+    private readonly ClubDbContextFactory _dbFactory;
+    private readonly ClubContext _clubContext;
 
-    public MembersController(IMemberService members)
+    public MembersController(
+        IMemberService members,
+        ClubDbContextFactory dbFactory,
+        ClubContext clubContext)
     {
         _members = members;
+        _dbFactory = dbFactory;
+        _clubContext = clubContext;
     }
 
     private int CurrentUserId => int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
@@ -131,6 +143,67 @@ public class MembersController : ControllerBase
 
         var result = await _members.ImportMembersAsync(requests, CurrentUserId);
         return Ok(result);
+    }
+
+    // POST /api/members/resend-welcome
+    [HttpPost("resend-welcome")]
+    [Authorize(Roles = "webmaster,membership")]
+    public async Task<IActionResult> ResendWelcome(
+        [FromBody] ResendWelcomeRequest req,
+        [FromServices] EmailService emailService)
+    {
+        if (req.UserIds is null || req.UserIds.Count == 0)
+            return BadRequest(new { error = "No members selected" });
+
+        await using var db = _dbFactory.CreateForCurrentClub();
+
+        var users = await db.Users
+            .Where(u => req.UserIds.Contains(u.Id) && u.IsActive)
+            .ToListAsync();
+
+        if (users.Count == 0)
+            return BadRequest(new { error = "No valid members found" });
+
+        // Generate a reset token per user and send a welcome+reset email
+        foreach (var user in users)
+        {
+            // Invalidate existing tokens
+            var existing = await db.PasswordResetTokens
+                .Where(t => t.UserId == user.Id && t.UsedAt == null)
+                .ToListAsync();
+            db.PasswordResetTokens.RemoveRange(existing);
+
+            var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48))
+                .Replace("+", "-").Replace("/", "_").Replace("=", "");
+
+            db.PasswordResetTokens.Add(new PasswordResetToken
+            {
+                UserId = user.Id,
+                Token = token,
+                ExpiresAt = DateTime.UtcNow.AddHours(24), // 24hr for welcome context
+            });
+            await db.SaveChangesAsync();
+
+            var resetUrl = $"https://{_clubContext.Slug}.membersguild.com.au/reset-password?token={token}";
+            var capturedUser = user;
+            var capturedToken = resetUrl;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await emailService.SendWelcomeResendAsync(
+                        capturedUser.Email,
+                        capturedUser.FirstName,
+                        _clubContext.DisplayName,
+                        _clubContext.Slug,
+                        capturedToken);
+                }
+                catch { }
+            });
+        }
+
+        return Ok(new { success = true, sent = users.Count });
     }
 
     private bool HasRole(params string[] roles) =>

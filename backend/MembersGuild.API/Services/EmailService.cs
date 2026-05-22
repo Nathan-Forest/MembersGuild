@@ -67,37 +67,46 @@ public class EmailService
 
     // Welcome email to the new member
     public async Task SendWelcomeEmailAsync(
-        string recipientEmail,
-        string firstName,
-        string clubName,
-        string clubSlug,
-        string subjectTemplate,
-        string bodyTemplate)
+    string recipientEmail,
+    string firstName,
+    string clubName,
+    string clubSlug,
+    string subjectTemplate,
+    string bodyTemplate,
+    string? password = null)       // ← optional, null for self-registered
     {
         var portalUrl = $"https://{clubSlug}.membersguild.com.au";
 
-        var subject = subjectTemplate
-            .Replace("{{clubName}}", clubName);
+        // Remove the password line entirely if no password was generated
+        if (string.IsNullOrEmpty(password))
+        {
+            bodyTemplate = string.Join('\n', bodyTemplate
+                .Split('\n')
+                .Where(l => !l.Contains("{{password}}")));
+        }
+
+        var subject = subjectTemplate.Replace("{{clubName}}", clubName);
 
         var body = bodyTemplate
             .Replace("{{firstName}}", firstName)
             .Replace("{{clubName}}", clubName)
             .Replace("{{email}}", recipientEmail)
+            .Replace("{{password}}", password ?? "")
             .Replace("{{portalUrl}}", portalUrl);
 
         var html = $@"
-            <div style='font-family:sans-serif;max-width:600px;'>
-              {string.Join("", body.Split('\n')
+        <div style='font-family:sans-serif;max-width:600px;'>
+          {string.Join("", body.Split('\n')
                   .Select(l => $"<p style='line-height:1.6;color:#333;'>{l}</p>"))}
-              <hr style='border:none;border-top:1px solid #eee;margin:24px 0;'/>
-              <p style='color:#999;font-size:12px;'>Sent by MembersGuild · {clubName}</p>
-            </div>";
+          <hr style='border:none;border-top:1px solid #eee;margin:24px 0;'/>
+          <p style='color:#999;font-size:12px;'>Sent by MembersGuild · {clubName}</p>
+        </div>";
 
         var message = new EmailMessage
         {
             From = $"{clubName} <{From}>",
             Subject = subject,
-            HtmlBody = html
+            HtmlBody = html,
         };
         message.To.Add(recipientEmail);
 
@@ -138,6 +147,41 @@ public class EmailService
         {
             From = $"{clubName} <{From}>",
             Subject = $"Reset your {clubName} password",
+            HtmlBody = html,
+        };
+        message.To.Add(recipientEmail);
+
+        await _resend.EmailSendAsync(message);
+    }
+
+    public async Task SendWelcomeResendAsync(
+    string recipientEmail,
+    string firstName,
+    string clubName,
+    string clubSlug,
+    string resetUrl)
+    {
+        var html = $@"
+        <div style='font-family:sans-serif;max-width:600px;'>
+          <h2 style='color:#1a2744;'>Welcome to {clubName}!</h2>
+          <p style='color:#333;'>Hi {firstName},</p>
+          <p style='color:#333;'>Your account is ready. Click below to set your password and access your member portal:</p>
+          <p style='margin:32px 0;'>
+            <a href='{resetUrl}'
+               style='background:#1a2744;color:white;padding:14px 28px;border-radius:8px;
+                      text-decoration:none;font-weight:600;font-size:15px;'>
+              Access My Account
+            </a>
+          </p>
+          <p style='color:#888;font-size:13px;'>This link expires in <strong>24 hours</strong>.</p>
+          <hr style='border:none;border-top:1px solid #eee;margin:24px 0;'/>
+          <p style='color:#999;font-size:12px;'>Sent by MembersGuild · {clubName}</p>
+        </div>";
+
+        var message = new EmailMessage
+        {
+            From = $"{clubName} <{From}>",
+            Subject = $"Welcome to {clubName} — Access your account",
             HtmlBody = html,
         };
         message.To.Add(recipientEmail);
