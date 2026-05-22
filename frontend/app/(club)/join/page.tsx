@@ -1,261 +1,295 @@
 'use client'
+import { useEffect, useState } from 'react'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { publicApi } from '@/lib/api'
-import type { CatsFormField } from '@/types'
+interface ClubConfig {
+  displayName:     string
+  catsDescription: string
+}
+
+interface FormField {
+  fieldKey:     string
+  fieldLabel:   string
+  fieldType:    string   // text, select, date, checkbox
+  fieldOptions: string | null
+  isRequired:   boolean
+}
 
 export default function JoinPage() {
-  const router = useRouter()
+  const [config,      setConfig]      = useState<ClubConfig | null>(null)
+  const [fields,      setFields]      = useState<FormField[]>([])
+  const [step,        setStep]        = useState<'form' | 'success'>('form')
+  const [loading,     setLoading]     = useState(false)
+  const [error,       setError]       = useState('')
+  const [initialCredits, setInitialCredits] = useState(0)
 
-  const [fields, setFields] = useState<CatsFormField[]>([])
   const [form, setForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
+    firstName: '', lastName: '', email: '',
+    phone: '', password: '', confirmPassword: ''
   })
   const [customFields, setCustomFields] = useState<Record<string, string>>({})
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState<{ generatedPassword?: string } | null>(null)
-  const [clubConfig, setClubConfig] = useState<{
-    logoUrl: string | null
-    displayName: string
-    catsDescription?: string | null
-  } | null>(null)
 
   useEffect(() => {
-    publicApi.catsFormFields().then(setFields).catch(() => { })
-    publicApi.clubConfig().then(setClubConfig).catch(() => { })
+    fetch('/api/public/club-config', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(setConfig)
+      .catch(() => {})
+
+    fetch('/api/public/cats-form-fields', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(setFields)
+      .catch(() => {})
   }, [])
 
-  useEffect(() => {
-    publicApi.catsFormFields().then(setFields).catch(() => { })
-  }, [])
-
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
-    setForm(f => ({ ...f, [e.target.name]: e.target.value }))
-  }
-
-  function handleCustomChange(key: string, value: string) {
-    setCustomFields(f => ({ ...f, [key]: value }))
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  function update(field: string, value: string) {
+    setForm(p => ({ ...p, [field]: value }))
     setError('')
+  }
 
-    if (form.password && form.password !== form.confirmPassword) {
-      setError('Passwords do not match')
+  function updateCustom(key: string, value: string) {
+    setCustomFields(p => ({ ...p, [key]: value }))
+    setError('')
+  }
+
+  function renderField(f: FormField) {
+    const options = f.fieldOptions
+      ? f.fieldOptions.split(',').map(o => o.trim()).filter(Boolean)
+      : []
+
+    const baseClass = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary,#1a2744)]'
+
+    return (
+      <div key={f.fieldKey}>
+        <label className="block text-xs font-medium text-gray-500 mb-1">
+          {f.fieldLabel}
+          {f.isRequired
+            ? <span className="text-red-400 ml-0.5">*</span>
+            : <span className="text-gray-400 ml-1">(optional)</span>}
+        </label>
+
+        {f.fieldType === 'select' ? (
+          <select
+            value={customFields[f.fieldKey] ?? ''}
+            onChange={e => updateCustom(f.fieldKey, e.target.value)}
+            className={baseClass}
+          >
+            <option value="">Select…</option>
+            {options.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+        ) : f.fieldType === 'date' ? (
+          <input type="date"
+            value={customFields[f.fieldKey] ?? ''}
+            onChange={e => updateCustom(f.fieldKey, e.target.value)}
+            className={baseClass} />
+        ) : f.fieldType === 'checkbox' ? (
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox"
+              checked={customFields[f.fieldKey] === 'true'}
+              onChange={e => updateCustom(f.fieldKey, e.target.checked ? 'true' : 'false')}
+              className="rounded border-gray-300 text-[var(--color-primary,#1a2744)]" />
+            <span className="text-sm text-gray-600">{f.fieldLabel}</span>
+          </label>
+        ) : (
+          <input type="text"
+            value={customFields[f.fieldKey] ?? ''}
+            onChange={e => updateCustom(f.fieldKey, e.target.value)}
+            placeholder={f.fieldLabel}
+            className={baseClass} />
+        )}
+      </div>
+    )
+  }
+
+  async function handleSubmit() {
+    if (!form.firstName || !form.lastName || !form.email || !form.password) {
+      setError('Please fill in all required fields'); return
+    }
+    if (form.password.length < 8) {
+      setError('Password must be at least 8 characters'); return
+    }
+    if (form.password !== form.confirmPassword) {
+      setError('Passwords do not match'); return
+    }
+
+    // Check required custom fields
+    const missingRequired = fields.filter(
+      f => f.isRequired && !customFields[f.fieldKey]
+    )
+    if (missingRequired.length > 0) {
+      setError(`Please complete: ${missingRequired.map(f => f.fieldLabel).join(', ')}`)
       return
     }
 
     setLoading(true)
+    setError('')
 
-    try {
-      const payload = {
-        firstName: form.firstName,
-        lastName: form.lastName,
-        email: form.email,
-        phone: form.phone,
-        password: form.password || undefined,
-        customFields: Object.keys(customFields).length > 0 ? customFields : undefined,
-      }
-
-      const result: any = await publicApi.catsSignup(payload)
-
-      setSuccess({
-        generatedPassword: result.generatedPassword || undefined,
+    const res = await fetch('/api/public/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        firstName:    form.firstName,
+        lastName:     form.lastName,
+        email:        form.email,
+        password:     form.password,
+        phone:        form.phone || null,
+        customFields: Object.keys(customFields).length > 0 ? customFields : null
       })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.')
-    } finally {
-      setLoading(false)
+    })
+
+    const data = await res.json()
+    if (res.ok) {
+      setInitialCredits(data.initialCredits ?? 0)
+      setStep('success')
+    } else {
+      setError(data.error ?? 'Something went wrong. Please try again.')
     }
+    setLoading(false)
   }
 
-  if (success) {
+  // ── Success ─────────────────────────────────────────────────────────────
+  if (step === 'success') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
-        <div className="w-full max-w-md">
-          <div className="card p-8 text-center space-y-4">
-            <div className="mx-auto h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
-              <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-bold text-gray-900">You're registered!</h2>
-            <p className="text-gray-500 text-sm">
-              Welcome to the club. Your CATS membership is active with 3 free sessions.
-            </p>
-
-            {success.generatedPassword && (
-              <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-left">
-                <p className="text-sm font-semibold text-amber-800 mb-1">Your temporary password</p>
-                <p className="font-mono text-lg text-amber-900">{success.generatedPassword}</p>
-                <p className="text-xs text-amber-700 mt-2">Save this — you won't see it again. Change it after your first login.</p>
-              </div>
-            )}
-
-            <button
-              onClick={() => router.push('/login')}
-              className="btn-primary w-full py-2.5 mt-2"
-            >
-              Go to login
-            </button>
+      <div className="min-h-screen bg-[var(--color-bg,#f3f4f6)] flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
           </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Welcome to {config?.displayName}!
+          </h1>
+          <p className="text-gray-500 mb-2">Your account has been created successfully.</p>
+          {initialCredits > 0 && (
+            <p className="text-sm text-[var(--color-primary,#1a2744)] font-medium mb-6">
+              🎉 You've been given {initialCredits} credit{initialCredits !== 1 ? 's' : ''} to get started.
+            </p>
+          )}
+          <a href="/login"
+            className="block w-full bg-[var(--color-primary,#1a2744)] text-white rounded-xl py-3 font-semibold hover:opacity-90 transition-opacity">
+            Sign in to your account
+          </a>
         </div>
       </div>
     )
   }
 
+  // ── Form ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
-      <div className="w-full max-w-lg">
-        <div className="text-center mb-8">
-          {clubConfig?.logoUrl ? (
-            <img
-              src={clubConfig.logoUrl}
-              alt={clubConfig.displayName}
-              className="mx-auto h-16 w-16 object-contain mb-4"
-            />
-          ) : (
-            <div
-              className="mx-auto h-16 w-16 rounded-2xl flex items-center justify-center text-white text-2xl font-bold mb-4"
-              style={{ backgroundColor: 'var(--color-primary)' }}
-            >
-              {clubConfig?.displayName?.charAt(0) ?? 'C'}
-            </div>
-          )}
-          <h1 className="text-2xl font-bold text-gray-900">Come and Try</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            {clubConfig?.catsDescription ?? 'Register for a free trial membership and get 3 complimentary sessions'}
+    <div className="min-h-screen bg-[var(--color-bg,#f3f4f6)] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-lg w-full max-w-lg">
+
+        {/* Header */}
+        <div className="px-8 pt-8 pb-6 border-b border-gray-100 text-center">
+          <p className="text-xs font-semibold tracking-widest text-gray-400 uppercase mb-1">
+            {config?.displayName ?? ''}
           </p>
+          <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
+          {config?.catsDescription && (
+            <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+              {config.catsDescription}
+            </p>
+          )}
         </div>
 
-        <div className="card p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Form body */}
+        <div className="px-8 py-6 space-y-4">
 
-            {error && (
-              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-                {error}
+          {/* Name row */}
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: 'First Name', field: 'firstName', placeholder: 'Alex' },
+              { label: 'Last Name',  field: 'lastName',  placeholder: 'Morgan' },
+            ].map(f => (
+              <div key={f.field}>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  {f.label} <span className="text-red-400">*</span>
+                </label>
+                <input type="text"
+                  placeholder={f.placeholder}
+                  value={(form as any)[f.field]}
+                  onChange={e => update(f.field, e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary,#1a2744)]" />
               </div>
+            ))}
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              Email <span className="text-red-400">*</span>
+            </label>
+            <input type="email"
+              placeholder="alex@example.com"
+              value={form.email}
+              onChange={e => update('email', e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary,#1a2744)]" />
+          </div>
+
+          {/* Phone */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              Phone <span className="text-gray-400">(optional)</span>
+            </label>
+            <input type="tel"
+              placeholder="04xx xxx xxx"
+              value={form.phone}
+              onChange={e => update('phone', e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary,#1a2744)]" />
+          </div>
+
+          {/* Dynamic custom fields */}
+          {fields.map(f => renderField(f))}
+
+          {/* Password */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              Password <span className="text-red-400">*</span>
+            </label>
+            <input type="password"
+              placeholder="Minimum 8 characters"
+              value={form.password}
+              onChange={e => update('password', e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary,#1a2744)]" />
+          </div>
+
+          {/* Confirm password */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              Confirm Password <span className="text-red-400">*</span>
+            </label>
+            <input type="password"
+              placeholder="Repeat your password"
+              value={form.confirmPassword}
+              onChange={e => update('confirmPassword', e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+              className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary,#1a2744)] ${
+                form.confirmPassword && form.password !== form.confirmPassword
+                  ? 'border-red-300 bg-red-50'
+                  : 'border-gray-200'
+              }`} />
+            {form.confirmPassword && form.password !== form.confirmPassword && (
+              <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
             )}
+          </div>
 
-            {/* Fixed required fields */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="label">First name <span className="text-red-500">*</span></label>
-                <input name="firstName" type="text" required className="input"
-                  value={form.firstName} onChange={handleChange} disabled={loading} />
-              </div>
-              <div>
-                <label className="label">Last name <span className="text-red-500">*</span></label>
-                <input name="lastName" type="text" required className="input"
-                  value={form.lastName} onChange={handleChange} disabled={loading} />
-              </div>
-            </div>
+          {/* Error */}
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )}
 
-            <div>
-              <label className="label">Email address <span className="text-red-500">*</span></label>
-              <input name="email" type="email" required className="input"
-                value={form.email} onChange={handleChange} disabled={loading} />
-            </div>
+          {/* Submit */}
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="w-full bg-[var(--color-primary,#1a2744)] text-white rounded-xl py-3 font-semibold text-sm hover:opacity-90 disabled:opacity-50 transition-opacity">
+            {loading ? 'Creating account…' : 'Create Account'}
+          </button>
 
-            <div>
-              <label className="label">Phone <span className="text-red-500">*</span></label>
-              <input name="phone" type="tel" required className="input"
-                value={form.phone} onChange={handleChange} disabled={loading} />
-            </div>
-
-            <div>
-              <label className="label">Password <span className="text-gray-400 font-normal">(optional — we'll generate one)</span></label>
-              <input name="password" type="password" className="input"
-                value={form.password} onChange={handleChange} disabled={loading} />
-            </div>
-
-            {form.password && (
-              <div>
-                <label className="label">Confirm password</label>
-                <input name="confirmPassword" type="password" className="input"
-                  value={form.confirmPassword} onChange={handleChange} disabled={loading} />
-              </div>
-            )}
-
-            {/* Dynamic club-configured fields */}
-            {fields.length > 0 && (
-              <>
-                <hr className="border-gray-200" />
-                <p className="text-sm font-medium text-gray-700">About you</p>
-
-                {fields.map(field => (
-                  <div key={field.fieldKey}>
-                    <label className="label">
-                      {field.fieldLabel}
-                      {field.isRequired && <span className="text-red-500 ml-1">*</span>}
-                    </label>
-
-                    {field.fieldType === 'select' && field.fieldOptions ? (
-                      <select
-                        required={field.isRequired}
-                        className="input"
-                        value={customFields[field.fieldKey] ?? ''}
-                        onChange={e => handleCustomChange(field.fieldKey, e.target.value)}
-                        disabled={loading}
-                      >
-                        <option value="">Select…</option>
-                        {field.fieldOptions.map(opt => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                    ) : field.fieldType === 'boolean' ? (
-                      <div className="flex gap-4 mt-1">
-                        {['Yes', 'No'].map(opt => (
-                          <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
-                            <input
-                              type="radio"
-                              name={field.fieldKey}
-                              value={opt}
-                              required={field.isRequired}
-                              checked={customFields[field.fieldKey] === opt}
-                              onChange={() => handleCustomChange(field.fieldKey, opt)}
-                              disabled={loading}
-                              className="accent-[var(--color-primary)]"
-                            />
-                            {opt}
-                          </label>
-                        ))}
-                      </div>
-                    ) : (
-                      <input
-                        type={field.fieldType === 'number' ? 'number' : 'text'}
-                        required={field.isRequired}
-                        className="input"
-                        value={customFields[field.fieldKey] ?? ''}
-                        onChange={e => handleCustomChange(field.fieldKey, e.target.value)}
-                        disabled={loading}
-                      />
-                    )}
-                  </div>
-                ))}
-              </>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full py-2.5 mt-2"
-            >
-              {loading ? 'Registering…' : 'Register for free'}
-            </button>
-          </form>
-
-          <p className="mt-4 text-center text-sm text-gray-500">
+          <p className="text-center text-sm text-gray-500">
             Already have an account?{' '}
-            <a href="/login" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>
+            <a href="/login" className="text-[var(--color-primary,#1a2744)] font-medium hover:underline">
               Sign in
             </a>
           </p>

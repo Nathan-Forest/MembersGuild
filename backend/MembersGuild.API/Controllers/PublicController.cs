@@ -16,15 +16,18 @@ public class PublicController : ControllerBase
     private readonly ClubContext _clubContext;
     private readonly ClubDbContextFactory _dbFactory;
     private readonly IAuthService _authService;
+    private readonly PlatformDbContext _platformDb;
 
     public PublicController(
         ClubContext clubContext,
         ClubDbContextFactory dbFactory,
-        IAuthService authService)
+        IAuthService authService,
+        PlatformDbContext    platformDb)
     {
         _clubContext = clubContext;
         _dbFactory = dbFactory;
         _authService = authService;
+        _platformDb  = platformDb;
     }
 
     /// <summary>
@@ -162,5 +165,77 @@ public class PublicController : ControllerBase
             .ToListAsync();
 
         return Ok(fields);
+    }
+
+    // GET /api/public/join-config
+    [HttpGet("join-config")]
+    public async Task<IActionResult> GetJoinConfig()
+    {
+        await using var db = await _dbFactory.CreateForCurrentClub();
+
+        var settings = await db.ClubSettings
+            .ToDictionaryAsync(s => s.Key, s => s.Value);
+
+        var club = await _platformDb.Clubs
+            .FirstOrDefaultAsync(c => c.Slug == _clubContext.ClubSlug);
+
+        settings.TryGetValue("cats_description", out var description);
+        settings.TryGetValue("association_number_label", out var assocLabel);
+        settings.TryGetValue("cats_initial_credits", out var creditsStr);
+
+        return Ok(new
+        {
+            clubName = club?.DisplayName ?? _clubContext.ClubSlug,
+            catsDescription = description ?? "Join our community and start booking sessions.",
+            associationLabel = assocLabel ?? "Membership Number",
+            initialCredits = int.TryParse(creditsStr, out var c) ? c : 0
+        });
+    }
+
+    // POST /api/public/join
+    [HttpPost("join")]
+    public async Task<IActionResult> Join([FromBody] JoinRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.FirstName) ||
+            string.IsNullOrWhiteSpace(req.LastName) ||
+            string.IsNullOrWhiteSpace(req.Email) ||
+            string.IsNullOrWhiteSpace(req.Password))
+            return BadRequest(new { error = "All required fields must be completed" });
+
+        if (req.Password.Length < 8)
+            return BadRequest(new { error = "Password must be at least 8 characters" });
+
+        await using var db = await _dbFactory.CreateForCurrentClub();
+
+        var exists = await db.Users
+            .AnyAsync(u => u.Email == req.Email.ToLower().Trim());
+
+        if (exists)
+            return BadRequest(new { error = "An account with this email already exists" });
+
+        var settings = await db.ClubSettings
+            .ToDictionaryAsync(s => s.Key, s => s.Value);
+
+        settings.TryGetValue("cats_initial_credits", out var creditsStr);
+        var initialCredits = int.TryParse(creditsStr, out var c) ? c : 0;
+
+        var user = new User
+        {
+            FirstName = req.FirstName.Trim(),
+            LastName = req.LastName.Trim(),
+            Email = req.Email.ToLower().Trim(),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
+            Role = "cats",
+            IsActive = true,
+            CreditBalance = initialCredits,
+            AssociationNumber = req.AssociationNumber?.Trim(),
+            JoinedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        return Ok(new { success = true, initialCredits });
     }
 }

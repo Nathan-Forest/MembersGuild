@@ -50,3 +50,11 @@ public record CatsSignupResponse(
     int InitialCredits,
     string Message
 );
+
+public record JoinRequest(
+    string  FirstName,
+    string  LastName,
+    string  Email,
+    string  Password,
+    string? AssociationNumber
+);
