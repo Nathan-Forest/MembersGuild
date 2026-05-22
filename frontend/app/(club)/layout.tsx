@@ -3,14 +3,19 @@ import type { Metadata } from 'next'
 import { getClubConfig, buildCssVariables } from '@/lib/club-config'
 import ClubNav from '@/components/layout/ClubNav'
 import MembersGuildContactForm from '@/components/MembersGuildContactForm'
+import { PwaRegistration } from '@/components/PwaRegistration'
 
-export async function generateMetadata(): Promise<Metadata> {
-  const headersList = await headers()
-  const host = headersList.get('host') ?? ''
-  const config = await getClubConfig(host)
+export async function generateMetadata() {
   return {
-    title: config ? `${config.displayName} | MembersGuild` : 'Members Guild',
-    manifest: '/manifest.json',
+    manifest: '/api/manifest',
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'default',
+      title: 'MembersGuild',
+    },
+    other: {
+      'mobile-web-app-capable': 'yes',
+    },
   }
 }
 
@@ -25,6 +30,7 @@ export default async function ClubLayout({ children }: { children: React.ReactNo
 
   return (
     <>
+      <PwaRegistration />
       <style dangerouslySetInnerHTML={{ __html: cssVars }} />
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <ClubNav config={config} />
@@ -41,19 +47,19 @@ export default async function ClubLayout({ children }: { children: React.ReactNo
 }
 
 function PlatformLandingPage() {
-  const navy   = '#1a56db'
-  const dark   = '#0a0a0f'
-  const card   = '#0a0f1a'
-  const muted  = '#94a3b8'
+  const navy = '#1a56db'
+  const dark = '#0a0a0f'
+  const card = '#0a0f1a'
+  const muted = '#94a3b8'
   const border = '#0f1f35'
 
   const features = [
-    { icon: '🏊', title: 'Session Booking',      desc: 'Members register for sessions online. Credits deduct automatically. Capacity enforced. No spreadsheets.' },
-    { icon: '💳', title: 'Credit System',         desc: 'Members purchase credit packs. Finance confirms bank transfers. Credits release instantly.' },
-    { icon: '📋', title: 'Attendance Tracking',   desc: 'Coaches mark attendance with QR codes. Credits refunded automatically. Full audit trail.' },
-    { icon: '👥', title: 'Member Management',     desc: 'Full member database with role-based access. Emergency contacts. Credit history. One-tap call.' },
-    { icon: '🏪', title: 'Club Shop',             desc: 'Sell credit packs and merchandise. Finance confirms payments. Orders tracked end to end.' },
-    { icon: '📱', title: 'Mobile Ready',           desc: 'Installs on iPhone and Android from the browser. No App Store needed. Works offline.' },
+    { icon: '🏊', title: 'Session Booking', desc: 'Members register for sessions online. Credits deduct automatically. Capacity enforced. No spreadsheets.' },
+    { icon: '💳', title: 'Credit System', desc: 'Members purchase credit packs. Finance confirms bank transfers. Credits release instantly.' },
+    { icon: '📋', title: 'Attendance Tracking', desc: 'Coaches mark attendance with QR codes. Credits refunded automatically. Full audit trail.' },
+    { icon: '👥', title: 'Member Management', desc: 'Full member database with role-based access. Emergency contacts. Credit history. One-tap call.' },
+    { icon: '🏪', title: 'Club Shop', desc: 'Sell credit packs and merchandise. Finance confirms payments. Orders tracked end to end.' },
+    { icon: '📱', title: 'Mobile Ready', desc: 'Installs on iPhone and Android from the browser. No App Store needed. Works offline.' },
   ]
 
   const standardPlans = [
