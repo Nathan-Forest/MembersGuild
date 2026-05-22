@@ -22,6 +22,8 @@ services:
     ports:
       - "5015:5015"
     environment:
+      Resend__ApiKey: ${Resend__ApiKey}
+      Resend__FromAddress: ${Resend__FromAddress}
       Stripe__SecretKey: ${Stripe__SecretKey}
       Stripe__WebhookSecret: ${Stripe__WebhookSecret}
       Platform__ApiKey: ${Platform__ApiKey}

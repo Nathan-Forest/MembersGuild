@@ -13,6 +13,7 @@ interface ClubSettings {
   associationNumberLabel: string
   catsInitialCredits: number
   catsDescription: string
+  catsNotificationEmail: string 
   attendanceLanesLabel: string
   attendanceLanesEnabled: boolean
   clubTimezone: string
@@ -237,8 +238,25 @@ export default function SettingsPage() {
               value={form.catsDescription}
               onChange={e => update('catsDescription', e.target.value)} />
           </Field>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              CATS Notification Email
+            </label>
+            <p className="text-xs text-gray-400 mb-1">
+              Who gets notified when a new CATS member signs up. Separate multiple addresses with a comma.
+            </p>
+            <input
+              value={form.catsNotificationEmail}
+              onChange={e => update('catsNotificationEmail', e.target.value)}
+              placeholder="membership@yourclub.com, captain@yourclub.com"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+            />
+          </div>
         </div>
       </SettingsCard>
+
+
 
       {/* ── Attendance ──────────────────────────────────────────────────── */}
       <SettingsCard title="Attendance" icon="✓">
@@ -285,57 +303,57 @@ export default function SettingsPage() {
 
       {/* ── Features ────────────────────────────────────────────────── */}
       <SettingsCard title="Features" icon="🌏">
-      {features.map(f => (
-        <div key={f.key}>
-          <div className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-            <div className="flex-1">
-              <p className={`text-sm font-medium ${!f.platformGranted ? 'text-gray-400' : 'text-gray-700'}`}>
-                {f.label}
-                {!f.platformGranted && (
-                  <span className="ml-2 text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">
-                    Not available on your plan
-                  </span>
-                )}
-              </p>
-            </div>
-            <button
-              onClick={() => f.platformGranted && handleFeatureToggle(f.key, !f.isEnabled)}
-              disabled={!f.platformGranted}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${!f.platformGranted ? 'bg-gray-100 cursor-not-allowed'
+        {features.map(f => (
+          <div key={f.key}>
+            <div className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+              <div className="flex-1">
+                <p className={`text-sm font-medium ${!f.platformGranted ? 'text-gray-400' : 'text-gray-700'}`}>
+                  {f.label}
+                  {!f.platformGranted && (
+                    <span className="ml-2 text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">
+                      Not available on your plan
+                    </span>
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={() => f.platformGranted && handleFeatureToggle(f.key, !f.isEnabled)}
+                disabled={!f.platformGranted}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${!f.platformGranted ? 'bg-gray-100 cursor-not-allowed'
                   : f.isEnabled ? 'bg-[var(--color-primary)]' : 'bg-gray-200'
-                }`}>
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${f.isEnabled ? 'translate-x-6' : 'translate-x-1'
-                }`} />
-            </button>
-          </div>
-
-          {/* Training sub-features — shown when training is enabled */}
-          {f.key === 'training' && f.isEnabled && f.platformGranted && form && (
-            <div className="ml-4 mt-2 mb-3 pl-4 border-l-2 border-gray-100 space-y-2">
-              {[
-                { key: 'trainingMetricsEnabled' as keyof ClubSettings, label: 'Personal Bests', desc: 'Member performance tracking' },
-                { key: 'trainingSetsEnabled' as keyof ClubSettings, label: 'Training Sets', desc: 'Swim sets library and set of the week' },
-                { key: 'trainingVideosEnabled' as keyof ClubSettings, label: 'Training Videos', desc: 'YouTube video library' },
-              ].map(sub => (
-                <div key={sub.key} className="flex items-center justify-between py-1.5">
-                  <div>
-                    <p className="text-sm text-gray-600">{sub.label}</p>
-                    <p className="text-xs text-gray-400">{sub.desc}</p>
-                  </div>
-                  <button
-                    onClick={() => update(sub.key, !form[sub.key] as ClubSettings[typeof sub.key])}
-                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${form[sub.key] ? 'bg-[var(--color-primary)]' : 'bg-gray-200'
-                      }`}>
-                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${form[sub.key] ? 'translate-x-5' : 'translate-x-1'
-                      }`} />
-                  </button>
-                </div>
-              ))}
-              <p className="text-xs text-gray-400 pt-1">Sub-feature changes save with "Save Changes"</p>
+                  }`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${f.isEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+              </button>
             </div>
-          )}
-        </div>
-      ))}
+
+            {/* Training sub-features — shown when training is enabled */}
+            {f.key === 'training' && f.isEnabled && f.platformGranted && form && (
+              <div className="ml-4 mt-2 mb-3 pl-4 border-l-2 border-gray-100 space-y-2">
+                {[
+                  { key: 'trainingMetricsEnabled' as keyof ClubSettings, label: 'Personal Bests', desc: 'Member performance tracking' },
+                  { key: 'trainingSetsEnabled' as keyof ClubSettings, label: 'Training Sets', desc: 'Swim sets library and set of the week' },
+                  { key: 'trainingVideosEnabled' as keyof ClubSettings, label: 'Training Videos', desc: 'YouTube video library' },
+                ].map(sub => (
+                  <div key={sub.key} className="flex items-center justify-between py-1.5">
+                    <div>
+                      <p className="text-sm text-gray-600">{sub.label}</p>
+                      <p className="text-xs text-gray-400">{sub.desc}</p>
+                    </div>
+                    <button
+                      onClick={() => update(sub.key, !form[sub.key] as ClubSettings[typeof sub.key])}
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${form[sub.key] ? 'bg-[var(--color-primary)]' : 'bg-gray-200'
+                        }`}>
+                      <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${form[sub.key] ? 'translate-x-5' : 'translate-x-1'
+                        }`} />
+                    </button>
+                  </div>
+                ))}
+                <p className="text-xs text-gray-400 pt-1">Sub-feature changes save with "Save Changes"</p>
+              </div>
+            )}
+          </div>
+        ))}
       </SettingsCard>
 
       {/* ── Welcome Email ────────────────────────────────────────────────── */}

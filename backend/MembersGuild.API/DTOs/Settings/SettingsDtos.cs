@@ -18,6 +18,7 @@ public record ClubSettingsResponse(
     // Welcome Email (Phase 10)
     string WelcomeEmailSubject,
     string WelcomeEmailBody,
+    string CatsNotificationEmail,
     bool TrainingMetricsEnabled,
     bool TrainingSetsEnabled,
     bool TrainingVideosEnabled
@@ -36,7 +37,9 @@ public record UpdateClubSettingsRequest(
     string CreditPriceAud,
     string WelcomeEmailSubject,
     string WelcomeEmailBody,
+    string CatsNotificationEmail,
     bool TrainingMetricsEnabled,
     bool TrainingSetsEnabled,
     bool TrainingVideosEnabled
+    
 );

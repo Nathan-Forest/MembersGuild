@@ -16,18 +16,15 @@ public class PublicController : ControllerBase
     private readonly ClubContext _clubContext;
     private readonly ClubDbContextFactory _dbFactory;
     private readonly IAuthService _authService;
-    private readonly PlatformDbContext _platformDb;
 
     public PublicController(
         ClubContext clubContext,
         ClubDbContextFactory dbFactory,
-        IAuthService authService,
-        PlatformDbContext    platformDb)
+        IAuthService authService)
     {
         _clubContext = clubContext;
         _dbFactory = dbFactory;
         _authService = authService;
-        _platformDb  = platformDb;
     }
 
     /// <summary>
@@ -71,23 +68,26 @@ public class PublicController : ControllerBase
     /// No auth required. Creates a CATS trial member account.
     /// </summary>
     [HttpPost("signup")]
-    public async Task<IActionResult> CatsSignup([FromBody] CatsSignupRequest request)
+    public async Task<IActionResult> CatsSignup(
+    [FromBody] CatsSignupRequest request,
+    [FromServices] EmailService emailService)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
 
-        // Check email uniqueness
         var exists = await db.Users.AnyAsync(u => u.Email == request.Email.ToLower());
         if (exists)
             return Conflict(new { error = "An account with this email already exists" });
 
-        // Get configured initial credits for this club
-        var creditSetting = await db.ClubSettings
-            .FirstOrDefaultAsync(s => s.Key == ClubSettingKeys.CatsInitialCredits);
-        var initialCredits = int.TryParse(creditSetting?.Value, out var c) ? c : 3;
+        var settings = await db.ClubSettings
+            .ToDictionaryAsync(s => s.Key, s => s.Value);
 
-        // Generate password if not provided
+        settings.TryGetValue(ClubSettingKeys.CatsInitialCredits, out var creditsStr);
+        var initialCredits = int.TryParse(creditsStr, out var c) ? c : 3;
+
         var passwordProvided = !string.IsNullOrWhiteSpace(request.Password);
-        var rawPassword = passwordProvided ? request.Password! : _authService.GenerateTemporaryPassword();
+        var rawPassword = passwordProvided
+            ? request.Password!
+            : _authService.GenerateTemporaryPassword();
 
         var user = new User
         {
@@ -107,18 +107,6 @@ public class PublicController : ControllerBase
         db.Users.Add(user);
         await db.SaveChangesAsync();
 
-        // Store custom CATS fields if provided
-        if (request.CustomFields?.Count > 0)
-        {
-            db.CatsProfiles.Add(new CatsProfile
-            {
-                UserId = user.Id,
-                CustomFields = System.Text.Json.JsonSerializer.Serialize(request.CustomFields),
-            });
-            await db.SaveChangesAsync();
-        }
-
-        // Log initial credit grant
         db.CreditTransactions.Add(new CreditTransaction
         {
             UserId = user.Id,
@@ -129,7 +117,71 @@ public class PublicController : ControllerBase
         });
         await db.SaveChangesAsync();
 
-        // TODO: Send CATS welcome email
+        // Build answer list — join custom field answers with their question labels
+        var answers = new List<(string Label, string Answer)>();
+        if (request.CustomFields?.Count > 0)
+        {
+            var fieldDefs = await db.CatsFormFields
+                .Where(f => f.IsActive && request.CustomFields.Keys.Contains(f.FieldKey))
+                .OrderBy(f => f.DisplayOrder)
+                .ToListAsync();
+
+            answers = fieldDefs
+                .Where(f => request.CustomFields.ContainsKey(f.FieldKey)
+                         && !string.IsNullOrWhiteSpace(request.CustomFields[f.FieldKey]))
+                .Select(f => (f.FieldLabel, request.CustomFields[f.FieldKey]))
+                .ToList();
+        }
+
+        // Fire notification email to membership officer / club captain
+        settings.TryGetValue("cats_notification_email", out var notificationEmailRaw);
+        if (!string.IsNullOrWhiteSpace(notificationEmailRaw))
+        {
+            var recipients = notificationEmailRaw
+                .Split(',')
+                .Select(e => e.Trim())
+                .Where(e => !string.IsNullOrEmpty(e))
+                .ToList();
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await emailService.SendCatsNotificationAsync(
+                        recipients,
+                        _clubContext.DisplayName,
+                        _clubContext.Slug,
+                        user.FirstName,
+                        user.LastName,
+                        user.Email,
+                        user.Phone,
+                        initialCredits,
+                        answers);
+                }
+                catch { /* log in future — don't fail signup */ }
+            });
+        }
+
+        // Fire welcome email to the new member
+        settings.TryGetValue("welcome_email_subject", out var welcomeSubject);
+        settings.TryGetValue("welcome_email_body", out var welcomeBody);
+        if (!string.IsNullOrWhiteSpace(welcomeSubject) && !string.IsNullOrWhiteSpace(welcomeBody))
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await emailService.SendWelcomeEmailAsync(
+                        user.Email,
+                        user.FirstName,
+                        _clubContext.DisplayName,
+                        _clubContext.Slug,
+                        welcomeSubject,
+                        welcomeBody);
+                }
+                catch { /* log in future — don't fail signup */ }
+            });
+        }
 
         return Created($"/api/members/{user.Id}", new CatsSignupResponse(
             user.Id,
@@ -167,75 +219,4 @@ public class PublicController : ControllerBase
         return Ok(fields);
     }
 
-    // GET /api/public/join-config
-    [HttpGet("join-config")]
-    public async Task<IActionResult> GetJoinConfig()
-    {
-        await using var db = await _dbFactory.CreateForCurrentClub();
-
-        var settings = await db.ClubSettings
-            .ToDictionaryAsync(s => s.Key, s => s.Value);
-
-        var club = await _platformDb.Clubs
-            .FirstOrDefaultAsync(c => c.Slug == _clubContext.ClubSlug);
-
-        settings.TryGetValue("cats_description", out var description);
-        settings.TryGetValue("association_number_label", out var assocLabel);
-        settings.TryGetValue("cats_initial_credits", out var creditsStr);
-
-        return Ok(new
-        {
-            clubName = club?.DisplayName ?? _clubContext.ClubSlug,
-            catsDescription = description ?? "Join our community and start booking sessions.",
-            associationLabel = assocLabel ?? "Membership Number",
-            initialCredits = int.TryParse(creditsStr, out var c) ? c : 0
-        });
-    }
-
-    // POST /api/public/join
-    [HttpPost("join")]
-    public async Task<IActionResult> Join([FromBody] JoinRequest req)
-    {
-        if (string.IsNullOrWhiteSpace(req.FirstName) ||
-            string.IsNullOrWhiteSpace(req.LastName) ||
-            string.IsNullOrWhiteSpace(req.Email) ||
-            string.IsNullOrWhiteSpace(req.Password))
-            return BadRequest(new { error = "All required fields must be completed" });
-
-        if (req.Password.Length < 8)
-            return BadRequest(new { error = "Password must be at least 8 characters" });
-
-        await using var db = await _dbFactory.CreateForCurrentClub();
-
-        var exists = await db.Users
-            .AnyAsync(u => u.Email == req.Email.ToLower().Trim());
-
-        if (exists)
-            return BadRequest(new { error = "An account with this email already exists" });
-
-        var settings = await db.ClubSettings
-            .ToDictionaryAsync(s => s.Key, s => s.Value);
-
-        settings.TryGetValue("cats_initial_credits", out var creditsStr);
-        var initialCredits = int.TryParse(creditsStr, out var c) ? c : 0;
-
-        var user = new User
-        {
-            FirstName = req.FirstName.Trim(),
-            LastName = req.LastName.Trim(),
-            Email = req.Email.ToLower().Trim(),
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
-            Role = "cats",
-            IsActive = true,
-            CreditBalance = initialCredits,
-            AssociationNumber = req.AssociationNumber?.Trim(),
-            JoinedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        db.Users.Add(user);
-        await db.SaveChangesAsync();
-
-        return Ok(new { success = true, initialCredits });
-    }
 }

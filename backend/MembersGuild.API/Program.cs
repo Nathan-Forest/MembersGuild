@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Stripe;
+using Resend;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +59,11 @@ builder.Services.AddScoped<ShopService>();
 builder.Services.AddScoped<SettingsService>();
 builder.Services.AddScoped<ReportsService>();
 builder.Services.AddScoped<PlatformService>();
+builder.Services.AddResend(options =>
+{
+    options.ApiToken = builder.Configuration["Resend:ApiKey"] ?? "";
+});
+builder.Services.AddScoped<EmailService>();
 
 // ── API ───────────────────────────────────────────────────────────────────────
 
