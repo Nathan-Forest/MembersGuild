@@ -129,7 +129,14 @@ public class PublicController : ControllerBase
             answers = fieldDefs
                 .Where(f => request.CustomFields.ContainsKey(f.FieldKey)
                          && !string.IsNullOrWhiteSpace(request.CustomFields[f.FieldKey]))
-                .Select(f => (f.FieldLabel, request.CustomFields[f.FieldKey]))
+                .Select(f =>
+    {
+        var raw = request.CustomFields[f.FieldKey];
+        var display = f.FieldType == "checkbox"
+            ? (raw == "true" ? "Yes" : "No")
+            : raw;
+        return (f.FieldLabel, display);
+    })
                 .ToList();
         }
 
