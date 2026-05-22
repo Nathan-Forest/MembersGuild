@@ -39,6 +39,7 @@ public class ClubDbContext : DbContext
     public DbSet<PaymentSettings> PaymentSettings => Set<PaymentSettings>();
     public DbSet<ClubUpdate> ClubUpdates => Set<ClubUpdate>();
     public DbSet<ClubCustomRole> ClubCustomRoles => Set<ClubCustomRole>();
+    public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

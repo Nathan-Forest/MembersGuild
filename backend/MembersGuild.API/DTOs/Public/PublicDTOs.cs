@@ -58,3 +58,6 @@ public record JoinRequest(
     string  Password,
     string? AssociationNumber
 );
+
+public record ForgotPasswordRequest(string Email);
+public record ResetPasswordRequest(string Token, string Password);

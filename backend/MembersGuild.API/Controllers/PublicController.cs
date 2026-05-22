@@ -6,6 +6,7 @@ using MembersGuild.Data.Models.Club;
 using MembersGuild.Data.Models.Platform;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
 
 namespace MembersGuild.API.Controllers;
 
@@ -224,6 +225,84 @@ public class PublicController : ControllerBase
             .ToListAsync();
 
         return Ok(fields);
+    }
+
+    // POST /api/public/forgot-password
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(
+        [FromBody] ForgotPasswordRequest req,
+        [FromServices] EmailService emailService)
+    {
+        // Always return success — never reveal whether email exists
+        if (string.IsNullOrWhiteSpace(req.Email))
+            return Ok(new { success = true });
+
+        await using var db = _dbFactory.CreateForCurrentClub();
+
+        var user = await db.Users
+            .FirstOrDefaultAsync(u => u.Email == req.Email.ToLower().Trim() && u.IsActive);
+
+        if (user is null) return Ok(new { success = true });
+
+        // Invalidate any existing unused tokens
+        var existing = await db.PasswordResetTokens
+            .Where(t => t.UserId == user.Id && t.UsedAt == null)
+            .ToListAsync();
+        db.PasswordResetTokens.RemoveRange(existing);
+
+        // Generate URL-safe token
+        var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48))
+            .Replace("+", "-").Replace("/", "_").Replace("=", "");
+
+        db.PasswordResetTokens.Add(new PasswordResetToken
+        {
+            UserId = user.Id,
+            Token = token,
+            ExpiresAt = DateTime.UtcNow.AddHours(1),
+        });
+        await db.SaveChangesAsync();
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await emailService.SendPasswordResetAsync(
+                    user.Email, user.FirstName,
+                    _clubContext.DisplayName, _clubContext.Slug, token);
+            }
+            catch { }
+        });
+
+        return Ok(new { success = true });
+    }
+
+    // POST /api/public/reset-password
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.Token) || string.IsNullOrWhiteSpace(req.Password))
+            return BadRequest(new { error = "Token and password are required" });
+
+        if (req.Password.Length < 8)
+            return BadRequest(new { error = "Password must be at least 8 characters" });
+
+        await using var db = _dbFactory.CreateForCurrentClub();
+
+        var resetToken = await db.PasswordResetTokens
+            .Include(t => t.User)
+            .FirstOrDefaultAsync(t => t.Token == req.Token);
+
+        if (resetToken is null || resetToken.UsedAt is not null)
+            return BadRequest(new { error = "This reset link is invalid or has already been used" });
+
+        if (resetToken.ExpiresAt < DateTime.UtcNow)
+            return BadRequest(new { error = "This link has expired. Please request a new one." });
+
+        resetToken.User!.PasswordHash = _authService.HashPassword(req.Password);
+        resetToken.UsedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        return Ok(new { success = true });
     }
 
 }
