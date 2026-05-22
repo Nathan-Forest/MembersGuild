@@ -342,47 +342,47 @@ export default function AttendanceSheetPage() {
       </div>
 
       {/* Stats bar */}
-      <div className="card p-4 flex items-center gap-6">
-        <div className="text-center">
-          <p className="text-2xl font-bold text-green-600">{attended}</p>
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Attended</p>
-        </div>
-        <div className="text-center">
-          <p className="text-2xl font-bold" style={{ color: 'var(--color-primary)' }}>{marked}</p>
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Marked</p>
-        </div>
-        <div className="text-center">
-          <p className="text-2xl font-bold text-gray-600">{total}</p>
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Registered</p>
-        </div>
+      <div className="card p-4 space-y-4">
 
-        {/* Lanes Used — only show if enabled in settings */}
-        {data?.lanesEnabled && (
+        {/* Row 1 — stats */}
+        <div className="flex items-center gap-6 flex-wrap">
           <div className="text-center">
-            <input
-              type="number"
-              min="1"
-              max="20"
-              value={lanesCount}
-              onChange={e => setLanesCount(e.target.value === '' ? '' : parseInt(e.target.value))}
-              onBlur={() => {
-                if (lanesCount !== '' && !isNaN(lanesCount as number)) {
-                  handleLanesChange(String(lanesCount))
-                }
-              }}
-              className="w-14 text-2xl font-bold text-center text-purple-600 bg-transparent border-0 border-b-2 border-purple-200 focus:border-purple-500 focus:outline-none"
-              placeholder="—"
-            />
-            <p className={`text-xs uppercase tracking-wide mt-0.5 ${lanesSaved ? 'text-green-600' : 'text-gray-400'}`}>
-              {savingLanes ? 'Saving...' : lanesSaved ? '✓ Saved' : (data?.lanesLabel ?? 'Lanes')}
-            </p>
+            <p className="text-2xl font-bold text-green-600">{attended}</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wide">Attended</p>
           </div>
-        )}
+          <div className="text-center">
+            <p className="text-2xl font-bold" style={{ color: 'var(--color-primary)' }}>{marked}</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wide">Marked</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-gray-600">{total}</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wide">Registered</p>
+          </div>
+          {data?.lanesEnabled && (
+            <div className="text-center">
+              <input
+                type="number"
+                min="1"
+                max="20"
+                value={lanesCount}
+                onChange={e => setLanesCount(e.target.value === '' ? '' : parseInt(e.target.value))}
+                onBlur={() => {
+                  if (lanesCount !== '' && !isNaN(lanesCount as number)) {
+                    handleLanesChange(String(lanesCount))
+                  }
+                }}
+                className="w-14 text-2xl font-bold text-center text-purple-600 bg-transparent border-0 border-b-2 border-purple-200 focus:border-purple-500 focus:outline-none"
+                placeholder="—"
+              />
+              <p className={`text-xs uppercase tracking-wide mt-0.5 ${lanesSaved ? 'text-green-600' : 'text-gray-400'}`}>
+                {savingLanes ? 'Saving...' : lanesSaved ? '✓ Saved' : (data?.lanesLabel ?? 'Lanes')}
+              </p>
+            </div>
+          )}
+        </div>
 
-        <div className="flex-1" />
-
-        {/* Progress bar */}
-        <div className="flex-1 max-w-xs">
+        {/* Row 2 — progress bar */}
+        <div>
           <div className="flex justify-between text-xs text-gray-400 mb-1">
             <span>Progress</span>
             <span>{total > 0 ? Math.round((marked / total) * 100) : 0}%</span>
@@ -398,11 +398,9 @@ export default function AttendanceSheetPage() {
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <button
-            onClick={openWalkin}
-            className="btn-secondary text-sm px-3 py-2"
-          >
+        {/* Row 3 — action buttons */}
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={openWalkin} className="btn-secondary text-sm px-3 py-2">
             + Walk-in
           </button>
           <button
@@ -423,188 +421,262 @@ export default function AttendanceSheetPage() {
             Refresh
           </button>
         </div>
-      </div>
-
-      {/* Legend */}
-      <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
-        <span className="font-medium text-gray-600">Tap a status to mark:</span>
-        {STATUS_OPTIONS.map(o => (
-          <span key={o.value} className={`px-2 py-0.5 rounded-full text-xs font-medium ${o.color}`}>
-            {o.label}
-          </span>
-        ))}
-        <span className="ml-2 text-blue-600 font-medium">↩ NSBA = credit refunded</span>
-      </div>
-
-      {/* Member list */}
-      {members.length === 0 ? (
-        <div className="card p-12 text-center">
-          <p className="text-3xl mb-3">👥</p>
-          <p className="text-sm font-medium text-gray-600">No members registered</p>
-          <p className="text-xs text-gray-400 mt-1">Use the Walk-in button to add members</p>
+        
+      {/* Lanes Used — only show if enabled in settings */}
+      {data?.lanesEnabled && (
+        <div className="text-center">
+          <input
+            type="number"
+            min="1"
+            max="20"
+            value={lanesCount}
+            onChange={e => setLanesCount(e.target.value === '' ? '' : parseInt(e.target.value))}
+            onBlur={() => {
+              if (lanesCount !== '' && !isNaN(lanesCount as number)) {
+                handleLanesChange(String(lanesCount))
+              }
+            }}
+            className="w-14 text-2xl font-bold text-center text-purple-600 bg-transparent border-0 border-b-2 border-purple-200 focus:border-purple-500 focus:outline-none"
+            placeholder="—"
+          />
+          <p className={`text-xs uppercase tracking-wide mt-0.5 ${lanesSaved ? 'text-green-600' : 'text-gray-400'}`}>
+            {savingLanes ? 'Saving...' : lanesSaved ? '✓ Saved' : (data?.lanesLabel ?? 'Lanes')}
+          </p>
         </div>
-      ) : (
-        <div className="space-y-2">
-          {members.map(m => (
-            <div key={m.userId}
-              className={`card p-4 flex items-center gap-4 border transition-colors ${m.status ? 'border-transparent' : 'border-gray-200'
-                } ${statusStyle(m.status).replace('border-', 'border-l-4 border-l-').split(' ').filter(c => c.includes('border-l')).join(' ')}`}
-            >
-              {/* Avatar */}
-              <div
-                className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 text-sm"
-                style={{ backgroundColor: 'var(--color-primary)' }}
+      )}
+
+      <div className="flex-1" />
+
+      {/* Progress bar */}
+      <div className="flex-1 max-w-xs">
+        <div className="flex justify-between text-xs text-gray-400 mb-1">
+          <span>Progress</span>
+          <span>{total > 0 ? Math.round((marked / total) * 100) : 0}%</span>
+        </div>
+        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${total > 0 ? (marked / total) * 100 : 0}%`,
+              backgroundColor: marked === total && total > 0 ? '#16a34a' : 'var(--color-primary)'
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          onClick={openWalkin}
+          className="btn-secondary text-sm px-3 py-2"
+        >
+          + Walk-in
+        </button>
+        <button
+          onClick={markAllAttended}
+          disabled={markingAll || members.every(m => m.status)}
+          className="btn-primary text-sm px-3 py-2"
+        >
+          {markingAll ? 'Marking…' : 'Mark All Attended'}
+        </button>
+        <button
+          onClick={loadSheet}
+          className="btn-secondary text-sm px-3 py-2 flex items-center gap-1.5"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+
+      {/* Legend */ }
+  <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
+    <span className="font-medium text-gray-600">Tap a status to mark:</span>
+    {STATUS_OPTIONS.map(o => (
+      <span key={o.value} className={`px-2 py-0.5 rounded-full text-xs font-medium ${o.color}`}>
+        {o.label}
+      </span>
+    ))}
+    <span className="ml-2 text-blue-600 font-medium">↩ NSBA = credit refunded</span>
+  </div>
+
+  {/* Member list */ }
+  {
+    members.length === 0 ? (
+      <div className="card p-12 text-center">
+        <p className="text-3xl mb-3">👥</p>
+        <p className="text-sm font-medium text-gray-600">No members registered</p>
+        <p className="text-xs text-gray-400 mt-1">Use the Walk-in button to add members</p>
+      </div>
+    ) : (
+    <div className="space-y-2">
+      {members.map(m => (
+        <div key={m.userId}
+          className={`card p-4 flex items-center gap-4 border transition-colors ${m.status ? 'border-transparent' : 'border-gray-200'
+            } ${statusStyle(m.status).replace('border-', 'border-l-4 border-l-').split(' ').filter(c => c.includes('border-l')).join(' ')}`}
+        >
+          {/* Avatar */}
+          <div
+            className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 text-sm"
+            style={{ backgroundColor: 'var(--color-primary)' }}
+          >
+            {m.fullName.charAt(0)}
+          </div>
+
+          {/* Name */}
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-gray-900">{m.fullName}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${statusStyle(m.status)}`}>
+                {statusLabel(m.status)}
+              </span>
+              {m.status === 'nsba' && m.creditRefunded && (
+                <span className="text-xs text-blue-500">Credit refunded</span>
+              )}
+              {m.creditBalance <= 0 && (
+                <span className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                  ⚠ {m.creditBalance < 0 ? `${m.creditBalance} credits` : 'No credits'} — top up needed
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Status buttons */}
+          <div className="flex gap-1.5 flex-shrink-0 flex-wrap justify-end">
+            {STATUS_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => markAttendance(m.userId, opt.value)}
+                disabled={marking === m.userId}
+                className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${m.status === opt.value
+                  ? opt.color + ' ring-2 ring-offset-1 ring-current'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
               >
-                {m.fullName.charAt(0)}
-              </div>
+                {marking === m.userId ? '…' : opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+  }
 
-              {/* Name */}
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-900">{m.fullName}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${statusStyle(m.status)}`}>
-                    {statusLabel(m.status)}
-                  </span>
-                  {m.status === 'nsba' && m.creditRefunded && (
-                    <span className="text-xs text-blue-500">Credit refunded</span>
-                  )}
-                  {m.creditBalance <= 0 && (
-                    <span className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                      ⚠ {m.creditBalance < 0 ? `${m.creditBalance} credits` : 'No credits'} — top up needed
-                    </span>
-                  )}
-                </div>
-              </div>
+  {/* ── QR Code Modal ─────────────────────────────────────────────────── */ }
+  {
+    qrOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm text-center">
+          <div className="flex items-center justify-between p-6 border-b border-gray-100">
+            <div>
+              <h2 className="font-bold text-gray-900">Session QR Code</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Members scan to check in automatically</p>
+            </div>
+            <button onClick={() => setQrOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
 
-              {/* Status buttons */}
-              <div className="flex gap-1.5 flex-shrink-0 flex-wrap justify-end">
-                {STATUS_OPTIONS.map(opt => (
+          <div className="p-6">
+            {qrLoading ? (
+              <div className="w-[280px] h-[280px] mx-auto bg-gray-100 rounded-xl animate-pulse" />
+            ) : (
+              <canvas ref={qrCanvasRef} className="mx-auto rounded-xl" />
+            )}
+
+            {qrData && (
+              <div className="mt-4 space-y-2">
+                <p className="text-xs text-gray-400">
+                  Expires {new Date(qrData.expiresAt).toLocaleTimeString('en-AU', {
+                    hour: '2-digit', minute: '2-digit', hour12: true
+                  })}
+                </p>
+                <p className="text-xs font-mono text-gray-400 break-all bg-gray-50 rounded-lg p-2">
+                  {qrData.checkinUrl}
+                </p>
+              </div>
+            )}
+
+            <button
+              onClick={() => { setQrData(null); openQr() }}
+              className="btn-secondary w-full py-2 mt-4 text-sm"
+            >
+              Regenerate QR
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  {/* ── Walk-in Modal ──────────────────────────────────────────────────── */ }
+  {
+    walkinOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col">
+          <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
+            <div>
+              <h2 className="font-bold text-gray-900">Add Walk-in</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Member will be registered and marked attended</p>
+            </div>
+            <button onClick={() => setWalkinOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="p-4 border-b border-gray-100 flex-shrink-0">
+            <input
+              type="text"
+              placeholder="Search members…"
+              className="input"
+              value={walkinSearch}
+              onChange={e => setWalkinSearch(e.target.value)}
+              autoFocus
+            />
+          </div>
+
+          <div className="overflow-y-auto flex-1 p-4">
+            {filteredWalkins.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-sm text-gray-400">
+                  {walkinSearch ? 'No matching members' : 'All members are already registered'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredWalkins.map(m => (
                   <button
-                    key={opt.value}
-                    onClick={() => markAttendance(m.userId, opt.value)}
-                    disabled={marking === m.userId}
-                    className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${m.status === opt.value
-                      ? opt.color + ' ring-2 ring-offset-1 ring-current'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
+                    key={m.id}
+                    onClick={() => handleWalkin(m.id)}
+                    disabled={walkinLoading}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-left"
                   >
-                    {marking === m.userId ? '…' : opt.label}
+                    <div
+                      className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                      style={{ backgroundColor: 'var(--color-primary)' }}
+                    >
+                      {m.firstName.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{m.firstName} {m.lastName}</p>
+                      <p className="text-xs text-gray-400">{m.email}</p>
+                    </div>
                   </button>
                 ))}
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── QR Code Modal ─────────────────────────────────────────────────── */}
-      {qrOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm text-center">
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <div>
-                <h2 className="font-bold text-gray-900">Session QR Code</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Members scan to check in automatically</p>
-              </div>
-              <button onClick={() => setQrOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="p-6">
-              {qrLoading ? (
-                <div className="w-[280px] h-[280px] mx-auto bg-gray-100 rounded-xl animate-pulse" />
-              ) : (
-                <canvas ref={qrCanvasRef} className="mx-auto rounded-xl" />
-              )}
-
-              {qrData && (
-                <div className="mt-4 space-y-2">
-                  <p className="text-xs text-gray-400">
-                    Expires {new Date(qrData.expiresAt).toLocaleTimeString('en-AU', {
-                      hour: '2-digit', minute: '2-digit', hour12: true
-                    })}
-                  </p>
-                  <p className="text-xs font-mono text-gray-400 break-all bg-gray-50 rounded-lg p-2">
-                    {qrData.checkinUrl}
-                  </p>
-                </div>
-              )}
-
-              <button
-                onClick={() => { setQrData(null); openQr() }}
-                className="btn-secondary w-full py-2 mt-4 text-sm"
-              >
-                Regenerate QR
-              </button>
-            </div>
+            )}
           </div>
         </div>
-      )}
-
-      {/* ── Walk-in Modal ──────────────────────────────────────────────────── */}
-      {walkinOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
-              <div>
-                <h2 className="font-bold text-gray-900">Add Walk-in</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Member will be registered and marked attended</p>
-              </div>
-              <button onClick={() => setWalkinOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="p-4 border-b border-gray-100 flex-shrink-0">
-              <input
-                type="text"
-                placeholder="Search members…"
-                className="input"
-                value={walkinSearch}
-                onChange={e => setWalkinSearch(e.target.value)}
-                autoFocus
-              />
-            </div>
-
-            <div className="overflow-y-auto flex-1 p-4">
-              {filteredWalkins.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-sm text-gray-400">
-                    {walkinSearch ? 'No matching members' : 'All members are already registered'}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {filteredWalkins.map(m => (
-                    <button
-                      key={m.id}
-                      onClick={() => handleWalkin(m.id)}
-                      disabled={walkinLoading}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-                    >
-                      <div
-                        className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                        style={{ backgroundColor: 'var(--color-primary)' }}
-                      >
-                        {m.firstName.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{m.firstName} {m.lastName}</p>
-                        <p className="text-xs text-gray-400">{m.email}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      </div>
+    )
+  }
+    </div >
   )
 }
