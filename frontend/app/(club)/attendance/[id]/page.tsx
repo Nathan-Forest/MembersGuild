@@ -549,6 +549,79 @@ export default function AttendanceSheetPage() {
         )
       }
 
+      {/* ── Email Report Modal ─────────────────────────────────────────────── */}
+      {reportOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <div>
+                <h2 className="font-bold text-gray-900">Send Attendance Report</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{session.title}</p>
+              </div>
+              <button onClick={() => setReportOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {reportSent ? (
+                <div className="text-center py-4 space-y-2">
+                  <p className="text-3xl">✅</p>
+                  <p className="font-medium text-gray-900">Report sent!</p>
+                  <p className="text-sm text-gray-400">{reportEmail}</p>
+                  <button onClick={() => setReportOpen(false)}
+                    className="btn-secondary px-6 py-2 text-sm mt-2">
+                    Close
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Send to
+                    </label>
+                    <input
+                      type="email"
+                      className="input"
+                      placeholder="coach@yourclub.com"
+                      value={reportEmail}
+                      onChange={e => setReportEmail(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="flex justify-end gap-3">
+                    <button onClick={() => setReportOpen(false)}
+                      className="btn-secondary px-4 py-2 text-sm">
+                      Cancel
+                    </button>
+                    <button
+                      disabled={sendingReport || !reportEmail.trim()}
+                      onClick={async () => {
+                        setSendingReport(true)
+                        try {
+                          await api.post(`/attendance/sessions/${sessionId}/email-report`,
+                            { email: reportEmail })
+                          setReportSent(true)
+                        } catch {
+                          alert('Failed to send report')
+                        } finally {
+                          setSendingReport(false)
+                        }
+                      }}
+                      className="btn-primary px-4 py-2 text-sm">
+                      {sendingReport ? 'Sending…' : 'Send Report'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Walk-in Modal ──────────────────────────────────────────────────── */}
       {
         walkinOpen && (
