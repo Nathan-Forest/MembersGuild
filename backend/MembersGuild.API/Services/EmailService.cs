@@ -4,34 +4,34 @@ namespace MembersGuild.API.Services;
 
 public class EmailService
 {
-    private readonly IResend _resend;
-    private readonly IConfiguration _config;
+  private readonly IResend _resend;
+  private readonly IConfiguration _config;
 
-    public EmailService(IResend resend, IConfiguration config)
-    {
-        _resend = resend;
-        _config = config;
-    }
+  public EmailService(IResend resend, IConfiguration config)
+  {
+    _resend = resend;
+    _config = config;
+  }
 
-    private string From => _config["Resend:FromAddress"] ?? "noreply@membersguild.com.au";
+  private string From => _config["Resend:FromAddress"] ?? "noreply@membersguild.com.au";
 
-    // ── Branded email shell ────────────────────────────────────────────────────
-    private static string BuildHtml(
-        string content,
-        string clubName,
-        string clubSlug,
-        string? logoUrl = null,
-        string primaryColor = "#1a2744")
-    {
-        var portalUrl = $"https://{clubSlug}.membersguild.com.au";
+  // ── Branded email shell ────────────────────────────────────────────────────
+  private static string BuildHtml(
+      string content,
+      string clubName,
+      string clubSlug,
+      string? logoUrl = null,
+      string primaryColor = "#1a2744")
+  {
+    var portalUrl = $"https://{clubSlug}.membersguild.com.au";
 
-        var logoHtml = !string.IsNullOrEmpty(logoUrl)
-            ? $@"<img src='{logoUrl}' alt='{clubName}' 
+    var logoHtml = !string.IsNullOrEmpty(logoUrl)
+        ? $@"<img src='{logoUrl}' alt='{clubName}' 
                       style='height:64px;max-width:200px;object-fit:contain;display:block;margin:0 auto;' />"
-            : $@"<p style='color:#ffffff;font-size:20px;font-weight:700;
+        : $@"<p style='color:#ffffff;font-size:20px;font-weight:700;
                            letter-spacing:0.05em;margin:0;'>{clubName}</p>";
 
-        return $@"<!DOCTYPE html>
+    return $@"<!DOCTYPE html>
 <html>
 <body style='margin:0;padding:0;background:#f4f4f5;
              font-family:-apple-system,BlinkMacSystemFont,""Segoe UI"",sans-serif;'>
@@ -75,11 +75,11 @@ public class EmailService
   </table>
 </body>
 </html>";
-    }
+  }
 
-    // ── Shared button helper ───────────────────────────────────────────────────
-    private static string ActionButton(string url, string label, string color = "#1a2744") =>
-        $@"<p style='margin:32px 0;text-align:center;'>
+  // ── Shared button helper ───────────────────────────────────────────────────
+  private static string ActionButton(string url, string label, string color = "#1a2744") =>
+      $@"<p style='margin:32px 0;text-align:center;'>
              <a href='{url}'
                 style='background:{color};color:#ffffff;padding:14px 32px;
                        border-radius:8px;text-decoration:none;font-weight:600;
@@ -88,30 +88,30 @@ public class EmailService
              </a>
            </p>";
 
-    // ── CATS notification ──────────────────────────────────────────────────────
-    public async Task SendCatsNotificationAsync(
-        IEnumerable<string> recipients,
-        string clubName,
-        string clubSlug,
-        string firstName,
-        string lastName,
-        string email,
-        string? phone,
-        int initialCredits,
-        IEnumerable<(string Label, string Answer)> answers,
-        string? logoUrl = null,
-        string primaryColor = "#1a2744")
-    {
-        var answersHtml = answers.Any()
-            ? $@"<h3 style='color:#1a2744;margin-top:24px;'>Their responses</h3>
+  // ── CATS notification ──────────────────────────────────────────────────────
+  public async Task SendCatsNotificationAsync(
+      IEnumerable<string> recipients,
+      string clubName,
+      string clubSlug,
+      string firstName,
+      string lastName,
+      string email,
+      string? phone,
+      int initialCredits,
+      IEnumerable<(string Label, string Answer)> answers,
+      string? logoUrl = null,
+      string primaryColor = "#1a2744")
+  {
+    var answersHtml = answers.Any()
+        ? $@"<h3 style='color:#1a2744;margin-top:24px;'>Their responses</h3>
                  <ul style='line-height:1.8;color:#374151;'>
                  {string.Join("", answers.Select(a =>
-                     $"<li><strong>{a.Label}:</strong> {a.Answer}</li>"))}</ul>"
-            : "";
+                 $"<li><strong>{a.Label}:</strong> {a.Answer}</li>"))}</ul>"
+        : "";
 
-        var portalUrl = $"https://{clubSlug}.membersguild.com.au";
+    var portalUrl = $"https://{clubSlug}.membersguild.com.au";
 
-        var content = $@"
+    var content = $@"
             <h2 style='color:#111827;margin-top:0;'>New Come &amp; Try Sign-Up</h2>
             <table style='width:100%;border-collapse:collapse;font-size:14px;'>
               <tr style='background:#f9fafb;'>
@@ -135,79 +135,84 @@ public class EmailService
             {answersHtml}
             {ActionButton(portalUrl, "View in Portal", primaryColor)}";
 
-        var html = BuildHtml(content, clubName, clubSlug, logoUrl, primaryColor);
+    var html = BuildHtml(content, clubName, clubSlug, logoUrl, primaryColor);
 
-        var message = new EmailMessage
-        {
-            From = $"{clubName} <{From}>",
-            Subject = $"New CATS Sign-Up — {firstName} {lastName}",
-            HtmlBody = html
-        };
-        foreach (var r in recipients) message.To.Add(r);
-        await _resend.EmailSendAsync(message);
-    }
-
-    // ── Welcome email ──────────────────────────────────────────────────────────
-    public async Task SendWelcomeEmailAsync(
-        string recipientEmail,
-        string firstName,
-        string clubName,
-        string clubSlug,
-        string subjectTemplate,
-        string bodyTemplate,
-        string? password = null,
-        string? logoUrl = null,
-        string primaryColor = "#1a2744")
+    var message = new EmailMessage
     {
-        var portalUrl = $"https://{clubSlug}.membersguild.com.au";
+      From = $"{clubName} <{From}>",
+      Subject = $"New CATS Sign-Up — {firstName} {lastName}",
+      HtmlBody = html
+    };
+    foreach (var r in recipients) message.To.Add(r);
+    await _resend.EmailSendAsync(message);
+  }
 
-        if (string.IsNullOrEmpty(password))
-            bodyTemplate = string.Join('\n', bodyTemplate
-                .Split('\n')
-                .Where(l => !l.Contains("{{password}}")));
+  // ── Welcome email ──────────────────────────────────────────────────────────
+  public async Task SendWelcomeEmailAsync(
+      string recipientEmail,
+      string firstName,
+      string clubName,
+      string clubSlug,
+      string subjectTemplate,
+      string bodyTemplate,
+      string? password = null,
+      string? logoUrl = null,
+      string primaryColor = "#1a2744")
+  {
+    var portalUrl = $"https://{clubSlug}.membersguild.com.au";
 
-        var subject = subjectTemplate.Replace("{{clubName}}", clubName);
-        var body = bodyTemplate
-            .Replace("{{firstName}}", firstName)
-            .Replace("{{clubName}}", clubName)
-            .Replace("{{email}}", recipientEmail)
-            .Replace("{{password}}", password ?? "")
-            .Replace("{{portalUrl}}", portalUrl);
+    if (string.IsNullOrEmpty(password))
+      bodyTemplate = string.Join('\n', bodyTemplate
+          .Split('\n')
+          .Where(l => !l.Contains("{{password}}")));
 
-        var paragraphs = string.Join("", body.Split('\n')
-            .Where(l => !string.IsNullOrWhiteSpace(l))
-            .Select(l => $"<p style='margin:0 0 16px;color:#374151;'>{l}</p>"));
+    var subject = subjectTemplate.Replace("{{clubName}}", clubName);
+    var body = bodyTemplate
+        .Replace("{{firstName}}", firstName)
+        .Replace("{{clubName}}", clubName)
+        .Replace("{{email}}", recipientEmail)
+        .Replace("{{password}}", password ?? "")
+        .Replace("{{portalUrl}}", portalUrl);
 
-        var content = $@"
-            <h2 style='color:#111827;margin-top:0;'>Welcome to {clubName}!</h2>
-            {paragraphs}
-            {ActionButton(portalUrl, "Access My Portal", primaryColor)}";
+    var paragraphs = string.Join("", body.Split('\n')
+        .Where(l => !string.IsNullOrWhiteSpace(l))
+        .Select(l => $"<p style='margin:0 0 16px;color:#374151;'>{l}</p>"));
 
-        var html = BuildHtml(content, clubName, clubSlug, logoUrl, primaryColor);
+    var content = $@"
+    <h2 style='color:#111827;margin-top:0;'>Welcome to {clubName}!</h2>
+    {paragraphs}
+    {ActionButton(portalUrl, "Access My Portal", primaryColor)}
+    <p style='color:#9ca3af;font-size:13px;text-align:center;'>
+      Need help getting started? Visit our
+      <a href='{portalUrl}/support' style='color:{primaryColor};'>Help Centre</a>
+      for guides and FAQs.
+    </p>";
 
-        var message = new EmailMessage
-        {
-            From = $"{clubName} <{From}>",
-            Subject = subject,
-            HtmlBody = html,
-        };
-        message.To.Add(recipientEmail);
-        await _resend.EmailSendAsync(message);
-    }
+    var html = BuildHtml(content, clubName, clubSlug, logoUrl, primaryColor);
 
-    // ── Password reset ─────────────────────────────────────────────────────────
-    public async Task SendPasswordResetAsync(
-        string recipientEmail,
-        string firstName,
-        string clubName,
-        string clubSlug,
-        string token,
-        string? logoUrl = null,
-        string primaryColor = "#1a2744")
+    var message = new EmailMessage
     {
-        var resetUrl = $"https://{clubSlug}.membersguild.com.au/reset-password?token={token}";
+      From = $"{clubName} <{From}>",
+      Subject = subject,
+      HtmlBody = html,
+    };
+    message.To.Add(recipientEmail);
+    await _resend.EmailSendAsync(message);
+  }
 
-        var content = $@"
+  // ── Password reset ─────────────────────────────────────────────────────────
+  public async Task SendPasswordResetAsync(
+      string recipientEmail,
+      string firstName,
+      string clubName,
+      string clubSlug,
+      string token,
+      string? logoUrl = null,
+      string primaryColor = "#1a2744")
+  {
+    var resetUrl = $"https://{clubSlug}.membersguild.com.au/reset-password?token={token}";
+
+    var content = $@"
             <h2 style='color:#111827;margin-top:0;'>Reset Your Password</h2>
             <p style='color:#374151;'>Hi {firstName},</p>
             <p style='color:#374151;'>We received a request to reset your {clubName} password.
@@ -218,29 +223,29 @@ public class EmailService
               If you didn't request this, you can safely ignore this email.
             </p>";
 
-        var html = BuildHtml(content, clubName, clubSlug, logoUrl, primaryColor);
+    var html = BuildHtml(content, clubName, clubSlug, logoUrl, primaryColor);
 
-        var message = new EmailMessage
-        {
-            From = $"{clubName} <{From}>",
-            Subject = $"Reset your {clubName} password",
-            HtmlBody = html,
-        };
-        message.To.Add(recipientEmail);
-        await _resend.EmailSendAsync(message);
-    }
-
-    // ── Resend welcome ─────────────────────────────────────────────────────────
-    public async Task SendWelcomeResendAsync(
-        string recipientEmail,
-        string firstName,
-        string clubName,
-        string clubSlug,
-        string resetUrl,
-        string? logoUrl = null,
-        string primaryColor = "#1a2744")
+    var message = new EmailMessage
     {
-        var content = $@"
+      From = $"{clubName} <{From}>",
+      Subject = $"Reset your {clubName} password",
+      HtmlBody = html,
+    };
+    message.To.Add(recipientEmail);
+    await _resend.EmailSendAsync(message);
+  }
+
+  // ── Resend welcome ─────────────────────────────────────────────────────────
+  public async Task SendWelcomeResendAsync(
+      string recipientEmail,
+      string firstName,
+      string clubName,
+      string clubSlug,
+      string resetUrl,
+      string? logoUrl = null,
+      string primaryColor = "#1a2744")
+  {
+    var content = $@"
             <h2 style='color:#111827;margin-top:0;'>Welcome to {clubName}!</h2>
             <p style='color:#374151;'>Hi {firstName},</p>
             <p style='color:#374151;'>Your account is ready. Click below to set your
@@ -250,26 +255,26 @@ public class EmailService
               This link expires in <strong>24 hours</strong>.
             </p>";
 
-        var html = BuildHtml(content, clubName, clubSlug, logoUrl, primaryColor);
+    var html = BuildHtml(content, clubName, clubSlug, logoUrl, primaryColor);
 
-        var message = new EmailMessage
-        {
-            From = $"{clubName} <{From}>",
-            Subject = $"Welcome to {clubName} — Access your account",
-            HtmlBody = html,
-        };
-        message.To.Add(recipientEmail);
-        await _resend.EmailSendAsync(message);
-    }
-
-    // ── Support request ────────────────────────────────────────────────────────
-    public async Task SendSupportRequestAsync(
-        string clubName, string clubSlug,
-        string category, string name, string email,
-        string description, string? startedAt,
-        string? device, bool guideRead)
+    var message = new EmailMessage
     {
-        var content = $@"
+      From = $"{clubName} <{From}>",
+      Subject = $"Welcome to {clubName} — Access your account",
+      HtmlBody = html,
+    };
+    message.To.Add(recipientEmail);
+    await _resend.EmailSendAsync(message);
+  }
+
+  // ── Support request ────────────────────────────────────────────────────────
+  public async Task SendSupportRequestAsync(
+      string clubName, string clubSlug,
+      string category, string name, string email,
+      string description, string? startedAt,
+      string? device, bool guideRead)
+  {
+    var content = $@"
             <h2 style='color:#111827;margin-top:0;'>Support Request</h2>
             <table style='width:100%;border-collapse:collapse;font-size:14px;'>
               <tr style='background:#f9fafb;'>
@@ -308,15 +313,15 @@ public class EmailService
               <p style='color:#555;margin:0;white-space:pre-wrap;'>{description}</p>
             </div>";
 
-        var html = BuildHtml(content, clubName, clubSlug);
+    var html = BuildHtml(content, clubName, clubSlug);
 
-        var message = new EmailMessage
-        {
-            From = From,
-            Subject = $"[Support] {clubName} — {category}",
-            HtmlBody = html,
-        };
-        message.To.Add("support@membersguild.com.au");
-        await _resend.EmailSendAsync(message);
-    }
+    var message = new EmailMessage
+    {
+      From = From,
+      Subject = $"[Support] {clubName} — {category}",
+      HtmlBody = html,
+    };
+    message.To.Add("support@membersguild.com.au");
+    await _resend.EmailSendAsync(message);
+  }
 }
