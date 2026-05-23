@@ -220,7 +220,7 @@ export function PlatformLandingPage() {
     
               {/* Stats */}
               <div style={{ display: 'flex', gap: '3rem', justifyContent: 'center', marginTop: '4rem', paddingTop: '3rem', borderTop: `1px solid ${border}`, flexWrap: 'wrap' }}>
-                {[['1 day', 'To go live'], ['7 roles', 'Access levels'], ['$49', 'From per month']].map(([val, lbl]) => (
+                {[['1 day', 'To go live'], ['0', 'Headaches'], ['$49', 'From per month']].map(([val, lbl]) => (
                   <div key={lbl} style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '2rem', fontWeight: 700, color: '#fff' }}>{val}</div>
                     <div style={{ fontSize: '0.8rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '0.25rem' }}>{lbl}</div>
