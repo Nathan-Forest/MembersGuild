@@ -5,11 +5,12 @@ import remarkGfm from 'remark-gfm'
 import { getGuideById, getGuidesByCategory, fetchGuideContent, GUIDES } from '@/lib/guides'
 
 interface Props {
-  params: { slug: string }
+  params: Promise<{ slug: string }>   // ← was { slug: string }
 }
 
 export default async function GuidePage({ params }: Props) {
-  const guide = getGuideById(params.slug)
+  const { slug } = await params        // ← await it
+  const guide = getGuideById(slug)
   if (!guide) notFound()
 
   const content    = await fetchGuideContent(guide.s3Key)
