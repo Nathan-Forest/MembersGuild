@@ -1,13 +1,18 @@
 'use client'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { marked } from 'marked'
 
-interface Props { content: string }
+interface Props {
+  content: string
+  className?: string
+}
 
-export function MarkdownRenderer({ content }: Props) {
+export function MarkdownRenderer({ content, className }: Props) {
+  const html = marked(content, { breaks: true }) as string
+
   return (
-    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-      {content}
-    </ReactMarkdown>
+    <div
+      className={className}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   )
 }
