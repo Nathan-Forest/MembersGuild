@@ -67,4 +67,15 @@ public class PlatformService
         "large"  => 999,
         _        => 50
     };
+
+    public async Task<int> GetMemberCapAsync(int clubId)
+{
+    // Cap = highest MemberCap across all active packages for this club
+    var cap = await _platformDb.ClubPackages
+        .Include(cp => cp.Package)
+        .Where(cp => cp.ClubId == clubId && cp.EndDate == null && cp.Package != null)
+        .MaxAsync(cp => (int?)cp.Package!.MemberCap);
+
+    return cap ?? 50; // default to Small cap if no packages assigned
+}
 }

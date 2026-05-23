@@ -5,6 +5,7 @@ public record PackageResponse(
     string   Name,
     string   Type,
     decimal  Price,
+    int      MemberCap,
     string?  Description,
     bool     IsActive,
     int      SortOrder,
@@ -15,6 +16,7 @@ public record CreatePackageRequest(
     string   Name,
     string   Type,
     decimal  Price,
+    int      MemberCap, 
     string?  Description,
     List<string> FeatureKeys
 );
@@ -22,6 +24,7 @@ public record CreatePackageRequest(
 public record UpdatePackageRequest(
     string   Name,
     decimal  Price,
+    int      MemberCap,  
     string?  Description,
     bool     IsActive,
     List<string> FeatureKeys

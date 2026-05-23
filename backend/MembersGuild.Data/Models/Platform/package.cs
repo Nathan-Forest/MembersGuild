@@ -6,6 +6,7 @@ public class Package
     public string   Name        { get; set; } = string.Empty;
     public string   Type        { get; set; } = "tier";
     public decimal  Price       { get; set; }
+    public int      MemberCap   { get; set; } = 999; 
     public string?  Description { get; set; }
     public bool     IsActive    { get; set; } = true;
     public int      SortOrder   { get; set; }

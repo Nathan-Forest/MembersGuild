@@ -502,9 +502,9 @@ public class PlatformController : ControllerBase
             .Include(p => p.Features)
             .OrderBy(p => p.SortOrder)
             .Select(p => new PackageResponse(
-                p.Id, p.Name, p.Type, p.Price, p.Description,
-                p.IsActive, p.SortOrder,
-                p.Features.Select(f => f.FeatureKey).ToList()))
+    p.Id, p.Name, p.Type, p.Price, p.MemberCap,
+    p.Description, p.IsActive, p.SortOrder,
+    p.Features.Select(f => f.FeatureKey).ToList()))
             .ToListAsync();
 
         return Ok(packages);
@@ -543,7 +543,7 @@ public class PlatformController : ControllerBase
             metadata: new { package.Name, package.Type, package.Price });
 
         return Ok(new PackageResponse(
-            package.Id, package.Name, package.Type, package.Price,
+            package.Id, package.Name, package.Type, package.Price, package.MemberCap,
             package.Description, package.IsActive, package.SortOrder,
             req.FeatureKeys));
     }
@@ -579,7 +579,7 @@ public class PlatformController : ControllerBase
             metadata: new { package.Name, package.Price });
 
         return Ok(new PackageResponse(
-            package.Id, package.Name, package.Type, package.Price,
+            package.Id, package.Name, package.Type, package.Price, package.MemberCap,
             package.Description, package.IsActive, package.SortOrder,
             req.FeatureKeys));
     }
@@ -604,8 +604,8 @@ public class PlatformController : ControllerBase
         var packages = clubPackages
             .Where(cp => cp.Package != null)
             .Select(cp => new PackageResponse(
-                cp.Package!.Id, cp.Package.Name, cp.Package.Type,
-                cp.Package.Price, cp.Package.Description, cp.Package.IsActive,
+                cp.Package!.Id, cp.Package.Name, cp.Package.Type, cp.Package.Price, cp.Package.MemberCap,
+                cp.Package.Description, cp.Package.IsActive,
                 cp.Package.SortOrder,
                 cp.Package.Features.Select(f => f.FeatureKey).ToList()))
             .ToList();

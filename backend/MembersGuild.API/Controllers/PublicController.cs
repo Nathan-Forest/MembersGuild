@@ -4,6 +4,7 @@ using MembersGuild.API.Middleware;
 using MembersGuild.API.Services;
 using MembersGuild.Data.Models.Club;
 using MembersGuild.Data.Models.Platform;
+using MembersGuild.Data.Contexts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
@@ -17,15 +18,21 @@ public class PublicController : ControllerBase
     private readonly ClubContext _clubContext;
     private readonly ClubDbContextFactory _dbFactory;
     private readonly IAuthService _authService;
+    private readonly PlatformDbContext _platformDb;
+    private readonly PlatformService _platformSvc;
 
     public PublicController(
         ClubContext clubContext,
         ClubDbContextFactory dbFactory,
-        IAuthService authService)
+        IAuthService authService,
+        PlatformDbContext platformDb,
+        PlatformService platformSvc)
     {
         _clubContext = clubContext;
         _dbFactory = dbFactory;
         _authService = authService;
+        _platformDb = platformDb;
+        _platformSvc = platformSvc;
     }
 
     /// <summary>
@@ -84,6 +91,23 @@ public class PublicController : ControllerBase
         var exists = await db.Users.AnyAsync(u => u.Email == request.Email.ToLower());
         if (exists)
             return Conflict(new { error = "An account with this email already exists" });
+
+        // Check member cap
+        var platformClub = await _platformDb.Clubs
+            .FirstOrDefaultAsync(c => c.Slug == _clubContext.Slug);
+
+        if (platformClub != null)
+        {
+            var cap = await _platformSvc.GetMemberCapAsync(platformClub.Id);
+            var activeCount = await db.Users.CountAsync(u => u.IsActive);
+
+            if (activeCount >= cap)
+                return BadRequest(new
+                {
+                    error = "This club has reached its member limit. " +
+                            "Please contact the club administrator."
+                });
+        }
 
         var settings = await db.ClubSettings
             .ToDictionaryAsync(s => s.Key, s => s.Value);

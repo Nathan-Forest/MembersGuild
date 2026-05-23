@@ -7,7 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using MembersGuild.Data.Models.Club;
+using MembersGuild.Data.Contexts;
 using Microsoft.EntityFrameworkCore;
+using MembersGuild.Data.Models.Platform;
 
 namespace MembersGuild.API.Controllers;
 
@@ -19,15 +21,21 @@ public class MembersController : ControllerBase
     private readonly IMemberService _members;
     private readonly ClubDbContextFactory _dbFactory;
     private readonly ClubContext _clubContext;
+    private readonly PlatformDbContext _platformDb;    
+    private readonly PlatformService _platformSvc;
 
     public MembersController(
         IMemberService members,
         ClubDbContextFactory dbFactory,
-        ClubContext clubContext)
+        ClubContext clubContext,
+        PlatformDbContext platformDb,     // ← add
+        PlatformService platformSvc)    // ← add
     {
         _members = members;
         _dbFactory = dbFactory;
         _clubContext = clubContext;
+        _platformDb = platformDb;          // ← add
+        _platformSvc = platformSvc;         // ← add
     }
 
     private int CurrentUserId => int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
@@ -65,6 +73,24 @@ public class MembersController : ControllerBase
     public async Task<IActionResult> CreateMember([FromBody] CreateMemberRequest request)
     {
         if (!CanManageMembers()) return Forbid();
+
+        // Check member cap
+        var club = await _platformDb.Clubs
+            .FirstOrDefaultAsync(c => c.Slug == _clubContext.Slug);
+
+        if (club != null)
+        {
+            var cap = await _platformSvc.GetMemberCapAsync(club.Id);
+            await using var db = _dbFactory.CreateForCurrentClub();
+            var activeCount = await db.Users.CountAsync(u => u.IsActive);
+
+            if (activeCount >= cap)
+                return BadRequest(new
+                {
+                    error = $"Member limit reached. Your plan allows up to {cap} members. " +
+                             "Please upgrade your plan to add more members."
+                });
+        }
 
         try
         {
