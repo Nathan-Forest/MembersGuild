@@ -13,16 +13,17 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return
-
-  // API calls — always network, never cache
   if (event.request.url.includes('/api/')) return
 
-  // Next.js static chunks — cache first (immutable content hashes)
+  // Next.js static chunks — cache first
   if (event.request.url.includes('/_next/static/')) {
     event.respondWith(
       caches.match(event.request).then(cached => cached ??
         fetch(event.request).then(res => {
-          caches.open(CACHE).then(c => c.put(event.request, res.clone()))
+          if (res.ok) {
+            const clone = res.clone()
+            caches.open(CACHE).then(c => c.put(event.request, clone))
+          }
           return res
         })
       )
@@ -30,11 +31,14 @@ self.addEventListener('fetch', event => {
     return
   }
 
-  // Pages — network first, cache as fallback
+  // Pages — network first, cache fallback
   event.respondWith(
     fetch(event.request)
       .then(res => {
-        caches.open(CACHE).then(c => c.put(event.request, res.clone()))
+        if (res.ok && !res.url.includes('/api/manifest')) {
+          const clone = res.clone()
+          caches.open(CACHE).then(c => c.put(event.request, clone))
+        }
         return res
       })
       .catch(() => caches.match(event.request))
