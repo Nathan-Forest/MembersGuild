@@ -1,11 +1,11 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import { api } from '@/lib/api'
 import { getCurrentUser, hasPermission, type ParsedUser } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
-
-export const dynamic = 'force-dynamic'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

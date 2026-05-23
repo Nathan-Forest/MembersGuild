@@ -1,12 +1,12 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { getCurrentUser, hasPermission } from '@/lib/auth'
 import type { UserRole } from '@/types'
-
-export const dynamic = 'force-dynamic'
 
 interface Location {
   id: number

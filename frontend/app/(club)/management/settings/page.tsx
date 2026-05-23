@@ -1,11 +1,11 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { getCurrentUser } from '@/lib/auth'
-
-export const dynamic = 'force-dynamic'
 
 interface ClubSettings {
   displayName: string

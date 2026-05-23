@@ -1,7 +1,5 @@
 import MembersGuildContactForm from '@/components/MembersGuildContactForm'
 
-export const dynamic = 'force-dynamic'
-
 function PlatformLandingPage() {
   const navy   = '#1a56db'
   const dark   = '#0a0a0f'
