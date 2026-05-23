@@ -3,6 +3,7 @@ import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { getGuideById, getGuidesByCategory, fetchGuideContent, GUIDES } from '@/lib/guides'
+import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 
 interface Props {
   params: Promise<{ slug: string }>   // ← was { slug: string }
@@ -70,9 +71,7 @@ export default async function GuidePage({ params }: Props) {
           prose-hr:border-gray-100 prose-hr:my-6
           prose-code:text-sm prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
         ">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {content}
-          </ReactMarkdown>
+          <MarkdownRenderer content={content} />
         </div>
       </div>
 
