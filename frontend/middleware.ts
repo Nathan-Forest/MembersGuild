@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const PUBLIC_PATHS = [
   '/login', '/join', '/forgot-password', '/reset-password',
-  '/api/public', '/api/auth/login', '/checkin'
+  '/api/public', '/api/auth/login','/api/manifest', '/checkin'
 ]
 
 export function middleware(request: NextRequest) {
