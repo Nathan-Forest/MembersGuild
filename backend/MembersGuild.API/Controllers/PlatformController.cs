@@ -637,16 +637,13 @@ public class PlatformController : ControllerBase
         club.DiscountNote = req.DiscountNote;
         club.UpdatedAt = DateTime.UtcNow;
 
-        // Replace club packages
+        // Replace packages — delete existing, insert new
         var existing = await _platformDb.ClubPackages
-            .Where(cp => cp.ClubId == club.Id && cp.EndDate == null)
+            .Where(cp => cp.ClubId == club.Id)
             .ToListAsync();
+        _platformDb.ClubPackages.RemoveRange(existing);
+        await _platformDb.SaveChangesAsync();
 
-        // End existing
-        foreach (var cp in existing)
-            cp.EndDate = DateTime.UtcNow;
-
-        // Add new
         foreach (var packageId in req.PackageIds)
         {
             _platformDb.ClubPackages.Add(new ClubPackage
@@ -655,6 +652,50 @@ public class PlatformController : ControllerBase
                 PackageId = packageId,
                 StartDate = DateTime.UtcNow,
             });
+        }
+        await _platformDb.SaveChangesAsync();
+
+        // Sync ClubFeatures.PlatformGranted from new packages
+        // This updates what ClubResolutionMiddleware sees on next request
+        var grantedKeys = await _platformDb.ClubPackages
+            .Include(cp => cp.Package)
+                .ThenInclude(p => p!.Features)
+            .Where(cp => cp.ClubId == club.Id && cp.Package != null)
+            .SelectMany(cp => cp.Package!.Features.Select(f => f.FeatureKey))
+            .Distinct()
+            .ToListAsync();
+
+        var allKeys = new[]
+        {
+        "calendar", "my_sessions", "attendance",
+        "training", "shop", "my_account", "news"
+    };
+
+        var clubFeatures = await _platformDb.ClubFeatures
+            .Where(f => f.ClubId == club.Id)
+            .ToListAsync();
+
+        foreach (var key in allKeys)
+        {
+            var granted = grantedKeys.Contains(key);
+            var feature = clubFeatures.FirstOrDefault(f => f.FeatureKey == key);
+
+            if (feature is null)
+            {
+                _platformDb.ClubFeatures.Add(new ClubFeature
+                {
+                    ClubId = club.Id,
+                    FeatureKey = key,
+                    PlatformGranted = granted,
+                    IsEnabled = granted,
+                    EnabledBy = "platform",
+                });
+            }
+            else
+            {
+                feature.PlatformGranted = granted;
+                if (!granted) feature.IsEnabled = false;
+            }
         }
 
         await _platformDb.SaveChangesAsync();
