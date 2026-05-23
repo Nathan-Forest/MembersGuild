@@ -5,10 +5,10 @@ import { useState } from 'react'
 const navy = '#1a56db'
 
 export default function MembersGuildContactForm() {
-  const [form, setForm]       = useState({ name: '', email: '', phone: '', club: '', message: '' })
+  const [form, setForm] = useState({ name: '', email: '', phone: '', club: '', package: '', message: '' })
   const [sending, setSending] = useState(false)
-  const [sent, setSent]       = useState(false)
-  const [error, setError]     = useState('')
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState('')
 
   function set(field: string, value: string) {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -64,6 +64,14 @@ export default function MembersGuildContactForm() {
         <input type="text" placeholder="Club name" value={form.club}
           onChange={e => set('club', e.target.value)} style={{ ...input, flex: 1 }} />
       </div>
+      <select value={form.package} onChange={e => set('package', e.target.value)}
+        style={{ ...input, color: form.package ? '#fff' : '#64748b', cursor: 'pointer',  appearance: 'none' as any }}>
+        <option value="" disabled>Interested in which package?</option>
+        <option value="small">Small — up to 50 members ($49/mo)</option>
+        <option value="medium">Medium — up to 150 members ($99/mo)</option>
+        <option value="large">Large — unlimited members ($199/mo)</option>
+        <option value="unsure">Not sure yet — help me choose</option>
+      </select>
       <textarea placeholder="Tell me about your club and what you're looking for..." rows={4}
         value={form.message} onChange={e => set('message', e.target.value)}
         style={{ ...input, resize: 'none' }} />

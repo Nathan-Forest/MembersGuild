@@ -7,12 +7,17 @@ import { PwaRegistration } from '@/components/PwaRegistration'
 import { PlatformLandingPage } from '@/components/PlatformLandingPage' 
 
 export async function generateMetadata() {
+  const headersList = await headers()
+  const host = headersList.get('host') ?? ''
+  const config = await getClubConfig(host)
+
   return {
+    title: config?.displayName ?? 'MembersGuild',
     manifest: '/api/manifest',
     appleWebApp: {
-      capable: true,
+      capable:        true,
       statusBarStyle: 'default',
-      title: 'MembersGuild',
+      title:          config?.displayName ?? 'MembersGuild',
     },
     other: {
       'mobile-web-app-capable': 'yes',
