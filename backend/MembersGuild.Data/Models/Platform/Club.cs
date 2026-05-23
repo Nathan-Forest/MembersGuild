@@ -26,5 +26,7 @@ public class Club
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<ClubFeature> Features { get; set; } = new List<ClubFeature>();
-
+    public string DiscountType { get; set; } = "none";
+    public decimal DiscountValue { get; set; }
+    public string? DiscountNote { get; set; }
 }

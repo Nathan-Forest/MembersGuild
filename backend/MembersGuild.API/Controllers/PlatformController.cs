@@ -491,4 +491,238 @@ public class PlatformController : ControllerBase
                 nextRetry = invoice.NextPaymentAttempt
             });
     }
+
+    // ── Packages ──────────────────────────────────────────────────────────────────
+
+    // GET /platform/packages
+    [HttpGet("packages")]
+    public async Task<IActionResult> GetPackages()
+    {
+        var packages = await _platformDb.Packages
+            .Include(p => p.Features)
+            .OrderBy(p => p.SortOrder)
+            .Select(p => new PackageResponse(
+                p.Id, p.Name, p.Type, p.Price, p.Description,
+                p.IsActive, p.SortOrder,
+                p.Features.Select(f => f.FeatureKey).ToList()))
+            .ToListAsync();
+
+        return Ok(packages);
+    }
+
+    // POST /platform/packages
+    [HttpPost("packages")]
+    public async Task<IActionResult> CreatePackage([FromBody] CreatePackageRequest req)
+    {
+        var maxOrder = await _platformDb.Packages.MaxAsync(p => (int?)p.SortOrder) ?? 0;
+
+        var package = new Package
+        {
+            Name = req.Name.Trim(),
+            Type = req.Type,
+            Price = req.Price,
+            Description = req.Description?.Trim(),
+            IsActive = true,
+            SortOrder = maxOrder + 1,
+        };
+
+        _platformDb.Packages.Add(package);
+        await _platformDb.SaveChangesAsync();
+
+        foreach (var key in req.FeatureKeys)
+        {
+            _platformDb.PackageFeatures.Add(new PackageFeature
+            {
+                PackageId = package.Id,
+                FeatureKey = key,
+            });
+        }
+        await _platformDb.SaveChangesAsync();
+
+        await _platform.AuditAsync("package.created", "platform_admin",
+            metadata: new { package.Name, package.Type, package.Price });
+
+        return Ok(new PackageResponse(
+            package.Id, package.Name, package.Type, package.Price,
+            package.Description, package.IsActive, package.SortOrder,
+            req.FeatureKeys));
+    }
+
+    // PUT /platform/packages/{id}
+    [HttpPut("packages/{id}")]
+    public async Task<IActionResult> UpdatePackage(int id, [FromBody] UpdatePackageRequest req)
+    {
+        var package = await _platformDb.Packages
+            .Include(p => p.Features)
+            .FirstOrDefaultAsync(p => p.Id == id);
+
+        if (package is null) return NotFound();
+
+        package.Name = req.Name.Trim();
+        package.Price = req.Price;
+        package.Description = req.Description?.Trim();
+        package.IsActive = req.IsActive;
+
+        // Replace features
+        _platformDb.PackageFeatures.RemoveRange(package.Features);
+        foreach (var key in req.FeatureKeys)
+        {
+            _platformDb.PackageFeatures.Add(new PackageFeature
+            {
+                PackageId = package.Id,
+                FeatureKey = key,
+            });
+        }
+        await _platformDb.SaveChangesAsync();
+
+        await _platform.AuditAsync("package.updated", "platform_admin",
+            metadata: new { package.Name, package.Price });
+
+        return Ok(new PackageResponse(
+            package.Id, package.Name, package.Type, package.Price,
+            package.Description, package.IsActive, package.SortOrder,
+            req.FeatureKeys));
+    }
+
+    // ── Club Billing ──────────────────────────────────────────────────────────────
+
+    // GET /platform/clubs/{slug}/billing
+    [HttpGet("clubs/{slug}/billing")]
+    public async Task<IActionResult> GetClubBilling(string slug)
+    {
+        var club = await _platformDb.Clubs
+            .FirstOrDefaultAsync(c => c.Slug == slug && c.IsActive);
+
+        if (club is null) return NotFound();
+
+        var clubPackages = await _platformDb.ClubPackages
+            .Include(cp => cp.Package)
+                .ThenInclude(p => p!.Features)
+            .Where(cp => cp.ClubId == club.Id && cp.EndDate == null)
+            .ToListAsync();
+
+        var packages = clubPackages
+            .Where(cp => cp.Package != null)
+            .Select(cp => new PackageResponse(
+                cp.Package!.Id, cp.Package.Name, cp.Package.Type,
+                cp.Package.Price, cp.Package.Description, cp.Package.IsActive,
+                cp.Package.SortOrder,
+                cp.Package.Features.Select(f => f.FeatureKey).ToList()))
+            .ToList();
+
+        var gross = packages.Sum(p => p.Price);
+        var net = club.DiscountType == "free_forever" ? 0 :
+                      club.DiscountType == "percentage" ? gross * (1 - club.DiscountValue / 100) :
+                      gross;
+
+        return Ok(new ClubBillingResponse(
+            club.Id, club.Slug, club.DisplayName,
+            club.DiscountType, club.DiscountValue, club.DiscountNote,
+            gross, net, packages));
+    }
+
+    // PUT /platform/clubs/{slug}/billing
+    [HttpPut("clubs/{slug}/billing")]
+    public async Task<IActionResult> UpdateClubBilling(
+        string slug, [FromBody] UpdateClubBillingRequest req)
+    {
+        var club = await _platformDb.Clubs
+            .FirstOrDefaultAsync(c => c.Slug == slug && c.IsActive);
+
+        if (club is null) return NotFound();
+
+        // Update discount
+        club.DiscountType = req.DiscountType;
+        club.DiscountValue = req.DiscountValue;
+        club.DiscountNote = req.DiscountNote;
+        club.UpdatedAt = DateTime.UtcNow;
+
+        // Replace club packages
+        var existing = await _platformDb.ClubPackages
+            .Where(cp => cp.ClubId == club.Id && cp.EndDate == null)
+            .ToListAsync();
+
+        // End existing
+        foreach (var cp in existing)
+            cp.EndDate = DateTime.UtcNow;
+
+        // Add new
+        foreach (var packageId in req.PackageIds)
+        {
+            _platformDb.ClubPackages.Add(new ClubPackage
+            {
+                ClubId = club.Id,
+                PackageId = packageId,
+                StartDate = DateTime.UtcNow,
+            });
+        }
+
+        await _platformDb.SaveChangesAsync();
+
+        await _platform.AuditAsync("club.billing_updated", "platform_admin",
+            clubSlug: slug, clubId: club.Id,
+            metadata: new
+            {
+                discountType = req.DiscountType,
+                discountValue = req.DiscountValue,
+                packageIds = req.PackageIds
+            });
+
+        return Ok(new { success = true });
+    }
+
+    // ── Revenue Summary ───────────────────────────────────────────────────────────
+
+    // GET /platform/revenue/summary
+    [HttpGet("revenue/summary")]
+    public async Task<IActionResult> GetRevenueSummary()
+    {
+        var clubs = await _platformDb.Clubs
+            .Where(c => c.IsActive)
+            .ToListAsync();
+
+        var clubPackages = await _platformDb.ClubPackages
+            .Include(cp => cp.Package)
+            .Where(cp => cp.EndDate == null && cp.Package != null)
+            .ToListAsync();
+
+        decimal totalMrr = 0;
+        int freeClubs = 0;
+
+        var packageGroups = new Dictionary<string, (int Count, decimal Mrr)>();
+
+        foreach (var club in clubs)
+        {
+            var myPackages = clubPackages
+                .Where(cp => cp.ClubId == club.Id)
+                .ToList();
+
+            var gross = myPackages.Sum(cp => cp.Package!.Price);
+            var net = club.DiscountType == "free_forever" ? 0 :
+                        club.DiscountType == "percentage" ? gross * (1 - club.DiscountValue / 100) :
+                        gross;
+
+            totalMrr += net;
+            if (net == 0) freeClubs++;
+
+            foreach (var cp in myPackages)
+            {
+                var key = cp.Package!.Name;
+                if (!packageGroups.ContainsKey(key))
+                    packageGroups[key] = (0, 0);
+                packageGroups[key] = (
+                    packageGroups[key].Count + 1,
+                    packageGroups[key].Mrr + (club.DiscountType == "free_forever" ? 0 : cp.Package.Price)
+                );
+            }
+        }
+
+        var breakdown = packageGroups
+            .Select(g => new TierBreakdown(g.Key, g.Value.Count, g.Value.Mrr))
+            .OrderByDescending(t => t.Mrr)
+            .ToList();
+
+        return Ok(new RevenueSummaryResponse(
+            totalMrr, clubs.Count, freeClubs, breakdown));
+    }
 }
