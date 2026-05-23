@@ -223,7 +223,9 @@ public class MembersController : ControllerBase
                         capturedUser.FirstName,
                         _clubContext.DisplayName,
                         _clubContext.Slug,
-                        capturedToken);
+                        capturedToken,
+                        logoUrl: _clubContext.LogoUrl,
+                        primaryColor: _clubContext.PrimaryColor);
                 }
                 catch { }
             });

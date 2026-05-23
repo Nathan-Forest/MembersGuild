@@ -195,7 +195,9 @@ public class PublicController : ControllerBase
                         user.Email,
                         user.Phone,
                         initialCredits,
-                        answers);
+                        answers,
+                        logoUrl: _clubContext.LogoUrl,
+                        primaryColor: _clubContext.PrimaryColor);
                 }
                 catch { /* log in future — don't fail signup */ }
             });
@@ -216,7 +218,9 @@ public class PublicController : ControllerBase
                         _clubContext.DisplayName,
                         _clubContext.Slug,
                         welcomeSubject,
-                        welcomeBody);
+                        welcomeBody,
+                        logoUrl: _clubContext.LogoUrl, 
+                        primaryColor: _clubContext.PrimaryColor);
                 }
                 catch { /* log in future — don't fail signup */ }
             });
@@ -299,7 +303,10 @@ public class PublicController : ControllerBase
             {
                 await emailService.SendPasswordResetAsync(
                     user.Email, user.FirstName,
-                    _clubContext.DisplayName, _clubContext.Slug, token);
+                    _clubContext.DisplayName,
+                    _clubContext.Slug, token,
+                    logoUrl: _clubContext.LogoUrl,
+                    primaryColor: _clubContext.PrimaryColor);
             }
             catch { }
         });
