@@ -69,7 +69,8 @@ public class PublicController : ControllerBase
                 Attendance: _clubContext.HasFeature(FeatureKeys.Attendance),
                 Training: _clubContext.HasFeature(FeatureKeys.Training),
                 Shop: _clubContext.HasFeature(FeatureKeys.Shop),
-                MyAccount: _clubContext.HasFeature(FeatureKeys.MyAccount)
+                MyAccount: _clubContext.HasFeature(FeatureKeys.MyAccount),
+                News:       _clubContext.HasFeature(FeatureKeys.News) 
             ),
             catsDesc,
             icon192Url,

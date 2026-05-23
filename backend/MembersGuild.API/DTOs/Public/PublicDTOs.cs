@@ -25,7 +25,8 @@ public record ClubFeaturesDto(
     bool Attendance,
     bool Training,
     bool Shop,
-    bool MyAccount
+    bool MyAccount,
+    bool News
 );
 
 /// <summary>

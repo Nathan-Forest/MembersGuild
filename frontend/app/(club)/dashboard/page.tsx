@@ -37,6 +37,7 @@ export default function DashboardPage() {
   const [updates, setUpdates] = useState<ClubUpdate[]>([])
   const [updateIndex, setUpdateIndex] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [features, setFeatures] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     const u = getCurrentUser()
@@ -61,6 +62,9 @@ export default function DashboardPage() {
       })
       setUpdates(clubUpdates as ClubUpdate[])
     }).finally(() => setLoading(false))
+    api.get<{ features: Record<string, boolean> }>('/public/club-config')
+      .then(d => setFeatures(d.features))
+      .catch(() => { })
   }, [router])
 
   const roleLabel = role ? (ROLE_LABELS[role] ?? role) : ''
@@ -115,7 +119,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Club Update */}
-      {updates.length > 0 && currentUpdate && (
+      {features.news && updates.length > 0 && currentUpdate && (
         <div className="card overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between"
             style={{ backgroundColor: 'var(--color-primary)', opacity: 0.95 }}>
