@@ -287,7 +287,7 @@ export default function SettingsPage() {
       </SettingsCard>
 
       {/* ── Membership ──────────────────────────────────────────────────── */}
-      <SectionHeading title="CATS & Membership" id="Membership" />
+      <SectionHeading title="CATS & Membership" id="cats" />
       <SettingsCard title="Membership" icon="👥">
         <div className="space-y-5">
           <Field label="Association Number Label"
@@ -435,7 +435,7 @@ export default function SettingsPage() {
       </SettingsCard>
 
       {/* ── Attendance ──────────────────────────────────────────────────── */}
-      <SectionHeading title="Attendance" id="Attendance"/>
+      <SectionHeading title="Attendance" id="attendance"/>
       <SettingsCard title="Attendance" icon="✓">
         <div className="space-y-5">
           <div className="flex items-center justify-between">
@@ -466,7 +466,7 @@ export default function SettingsPage() {
       </SettingsCard>
 
       {/* ── Features ────────────────────────────────────────────────── */}
-      <SectionHeading title="Features" id="Features" />
+      <SectionHeading title="Features" id="features" />
       <SettingsCard title="Features" icon="⚙️">
         {features.map(f => (
           <div key={f.key}>
@@ -522,7 +522,7 @@ export default function SettingsPage() {
       </SettingsCard>
 
       {/* ── Welcome Email ────────────────────────────────────────────────── */}
-      <SectionHeading title="Email & Notifications" id="Email"/>
+      <SectionHeading title="Email & Notifications" id="email"/>
       <SettingsCard title="Welcome Email" icon="✉️">
         <div className="space-y-5">
           <Field label="Subject Line">
