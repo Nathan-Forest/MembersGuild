@@ -187,40 +187,43 @@ public class SettingsController : ControllerBase
 
     [HttpPost("logo")]
     [Authorize(Roles = "webmaster")]
-    public async Task<IActionResult> UploadLogo([FromBody] LogoUploadRequest req)
+    public async Task<IActionResult> UploadLogo(
+    [FromBody] LogoUploadRequest req,
+    [FromServices] StorageService storage)
     {
-        var allowedTypes = new[] { "image/png", "image/jpeg", "image/svg+xml", "image/webp" };
-        if (!allowedTypes.Contains(req.ContentType))
-            return BadRequest(new { error = "Unsupported file type" });
+        byte[] imageBytes;
+        try { imageBytes = Convert.FromBase64String(req.Data); }
+        catch { return BadRequest(new { error = "Invalid image data" }); }
 
-        var ext = req.ContentType switch
-        {
-            "image/png" => ".png",
-            "image/jpeg" => ".jpg",
-            "image/svg+xml" => ".svg",
-            "image/webp" => ".webp",
-            _ => ".png"
-        };
+        var (logoUrl, icon192Url, icon512Url) = await storage.UploadLogoWithIconsAsync(
+            imageBytes, _clubContext.Slug);
 
-        var slug = _clubContext.Slug;
-        var uploadDir = Path.Combine(_env.ContentRootPath, "uploads", slug, "logo");
-        Directory.CreateDirectory(uploadDir);
-
-        var bytes = Convert.FromBase64String(req.Data);
-        var path = Path.Combine(uploadDir, $"logo{ext}");
-        await System.IO.File.WriteAllBytesAsync(path, bytes);
-
-        var logoUrl = $"/api/files/{slug}/logo/logo{ext}";
-
-        var club = await _platformDb.Clubs.FirstOrDefaultAsync(c => c.Slug == slug);
-        if (club is not null)
+        // Update logo URL on platform.clubs
+        var club = await _platformDb.Clubs
+            .FirstOrDefaultAsync(c => c.Slug == _clubContext.Slug);
+        if (club != null)
         {
             club.LogoUrl = logoUrl;
             club.UpdatedAt = DateTime.UtcNow;
             await _platformDb.SaveChangesAsync();
         }
 
+        // Save icon URLs to club_settings for manifest
+        await using var db = _dbFactory.CreateForCurrentClub();
+        await UpsertSettingAsync(db, "pwa_icon_192_url", icon192Url);
+        await UpsertSettingAsync(db, "pwa_icon_512_url", icon512Url);
+
         return Ok(new { logoUrl });
+    }
+
+    private async Task UpsertSettingAsync(ClubDbContext db, string key, string value)
+    {
+        var setting = await db.ClubSettings.FirstOrDefaultAsync(s => s.Key == key);
+        if (setting is not null)
+            setting.Value = value;
+        else
+            db.ClubSettings.Add(new ClubSetting { Key = key, Value = value });
+        await db.SaveChangesAsync();
     }
 
     private static readonly Dictionary<string, string> FeatureLabels = new()

@@ -36,13 +36,18 @@ public class PublicController : ControllerBase
     public async Task<IActionResult> GetClubConfig()
     {
         string catsDesc;
+        string? icon192Url;
+        string? icon512Url;
+
         await using (var db = _dbFactory.CreateForCurrentClub())
         {
-            catsDesc = await db.ClubSettings
-                .Where(s => s.Key == "cats_description")
-                .Select(s => s.Value)
-                .FirstOrDefaultAsync()
-                ?? "Register for a free trial membership and get 3 complimentary sessions";
+            var settings = await db.ClubSettings
+                .ToDictionaryAsync(s => s.Key, s => s.Value);
+
+            catsDesc = settings.GetValueOrDefault("cats_description",
+                "Register for a free trial membership and get 3 complimentary sessions");
+            icon192Url = settings.GetValueOrDefault("pwa_icon_192_url");
+            icon512Url = settings.GetValueOrDefault("pwa_icon_512_url");
         }
 
         return Ok(new ClubConfigResponse(
@@ -59,9 +64,10 @@ public class PublicController : ControllerBase
                 Shop: _clubContext.HasFeature(FeatureKeys.Shop),
                 MyAccount: _clubContext.HasFeature(FeatureKeys.MyAccount)
             ),
-            catsDesc
+            catsDesc,
+            icon192Url,
+            icon512Url
         ));
-
     }
 
     /// <summary>

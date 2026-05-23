@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Stripe;
 using Resend;
+using Amazon.S3;
+using Amazon;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +21,14 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 // Platform context — single shared context for the platform.* schema
 builder.Services.AddDbContext<PlatformDbContext>(options =>
     options.UseNpgsql(connectionString));
+
+builder.Services.AddSingleton<IAmazonS3>(_ =>
+    new AmazonS3Client(
+        builder.Configuration["AWS:AccessKey"],
+        builder.Configuration["AWS:SecretKey"],
+        RegionEndpoint.GetBySystemName(
+            builder.Configuration["AWS:Region"] ?? "ap-southeast-2")
+    ));
 
 // ── Multi-tenancy ─────────────────────────────────────────────────────────────
 
@@ -59,7 +69,9 @@ builder.Services.AddScoped<ShopService>();
 builder.Services.AddScoped<SettingsService>();
 builder.Services.AddScoped<ReportsService>();
 builder.Services.AddScoped<PlatformService>();
+builder.Services.AddScoped<StorageService>();
 builder.Services.AddResend(options =>
+
 {
     options.ApiToken = builder.Configuration["Resend:ApiKey"] ?? "";
 });

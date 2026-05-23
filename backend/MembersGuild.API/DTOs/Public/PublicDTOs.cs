@@ -13,7 +13,9 @@ public record ClubConfigResponse(
     string PrimaryColor,
     string SecondaryColor,
     ClubFeaturesDto Features,
-    string CatsDescription
+    string CatsDescription,
+    string? PwaIcon192Url,
+    string? PwaIcon512Url
 
 );
 
