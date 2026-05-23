@@ -3,7 +3,7 @@ import nodemailer from 'nodemailer'
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, phone, club, message } = await request.json()
+    const { name, email, phone, club, message, package: pkg } = await request.json()
     if (!name || !email)
       return Response.json({ error: 'Required fields missing' }, { status: 400 })
 
@@ -15,10 +15,10 @@ export async function POST(request: NextRequest) {
       })
       await transporter.sendMail({
         from: 'Members Guild <hello@digitalguildhall.com.au>',
-        to:      process.env.CONTACT_EMAIL || 'hello@digitalguildhall.com.au',
+        to: process.env.CONTACT_EMAIL || 'hello@digitalguildhall.com.au',
         replyTo: email,
-        subject: `Members Guild Enquiry — ${name}${club ? ` (${club})` : ''}`,
-        text:    `MEMBERS GUILD ENQUIRY\n\nName: ${name}\nEmail: ${email}\nPhone: ${phone || 'Not provided'}\nClub: ${club || 'Not provided'}\n\nMessage:\n${message || 'No message provided'}`,
+        subject: `Members Guild Enquiry — ${name}${club ? ` (${club})` : ''}${pkg ? ` · ${pkg}` : ''}`,
+        text: `MEMBERS GUILD ENQUIRY\n\nName: ${name}\nEmail: ${email}\nPhone: ${phone || 'Not provided'}\nClub: ${club || 'Not provided'}\nPackage Interest: ${pkg || 'Not specified'}\n\nMessage:\n${message || 'No message provided'}`,
       })
     } else {
       console.log(`[MG Enquiry] ${name} <${email}> — ${club}`)
