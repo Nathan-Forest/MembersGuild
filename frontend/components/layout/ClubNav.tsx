@@ -86,14 +86,6 @@ export default function ClubNav({ config }: Props) {
   return (
     <nav className="bg-gray-900 shadow-sm sticky top-0 z-40">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-
-        <div className="border-t border-gray-200 bg-white py-4 text-center text-xs text-gray-400">
-          © {new Date().getFullYear()} {config.displayName} · Powered by{' '}
-          <a href="https://membersguild.com.au" className="hover:underline">MembersGuild</a>
-          {' '}·{' '}
-          <a href="/support" className="hover:underline">Help & Support</a>  {/* ← add */}
-        </div>
-        
         <div className="flex h-16 items-center justify-between">
 
           {/* Logo + club name */}

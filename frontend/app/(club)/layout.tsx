@@ -40,6 +40,8 @@ export default async function ClubLayout({ children }: { children: React.ReactNo
         <div className="border-t border-gray-200 bg-white py-4 text-center text-xs text-gray-400">
           © {new Date().getFullYear()} {config.displayName} · Powered by{' '}
           <a href="https://membersguild.com.au" className="hover:underline">MembersGuild</a>
+          {' '}·{' '}
+          <a href="/support" className="hover:underline">Help & Support</a>  {/* ← add */}
         </div>
       </div>
     </>
