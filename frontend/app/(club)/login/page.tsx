@@ -123,6 +123,7 @@ export default function LoginPage() {
         <p className="mt-6 text-center text-xs text-gray-400">
           Powered by{' '}
           <a href="https://membersguild.com.au" className="hover:underline">MembersGuild</a>
+          {' '}·{' '}
           <a href="/support" className="hover:underline">Help & Support</a>
         </p>
       </div>
