@@ -193,7 +193,7 @@ public class PlatformController : ControllerBase
             Tier: club.SubscriptionTier,
             Status: club.SubscriptionStatus,
             MemberCount: memberCount,
-            TierCap: _platform.GetTierCap(club.SubscriptionTier),
+            TierCap: await _platform.GetMemberCapAsync(club.Id),
             SessionCount: sessionCount,
             CreatedAt: club.CreatedAt,
             LastActivityAt: club.UpdatedAt
