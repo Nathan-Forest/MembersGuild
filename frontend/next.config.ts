@@ -33,7 +33,7 @@ const nextConfig: NextConfig = {
       },
     ]
   },
-serverExternalPackages: ['react-markdown', 'remark-gfm'],
+serverExternalPackages: [],
 
 }
 
