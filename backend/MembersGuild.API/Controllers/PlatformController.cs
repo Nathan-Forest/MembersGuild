@@ -657,10 +657,7 @@ public class PlatformController : ControllerBase
 
         // Sync ClubFeatures.PlatformGranted — UPDATE only, never INSERT
         // (provisioning creates all feature rows when club is first set up)
-        var clubFeatures = await _platformDb.ClubFeatures
-            .Where(f => f.ClubId == club.Id)
-            .ToListAsync();
-
+        // Sync ClubFeatures.PlatformGranted from new packages
         var grantedKeys = await _platformDb.ClubPackages
             .Include(cp => cp.Package)
                 .ThenInclude(p => p!.Features)
@@ -669,23 +666,44 @@ public class PlatformController : ControllerBase
             .Distinct()
             .ToListAsync();
 
-        foreach (var feature in clubFeatures)
+        var clubFeatures = await _platformDb.ClubFeatures
+            .Where(f => f.ClubId == club.Id)
+            .ToListAsync();
+
+        var allKeys = new[]
         {
-            var granted = grantedKeys.Contains(feature.FeatureKey);
-            feature.PlatformGranted = granted;
-            if (!granted) feature.IsEnabled = false;
+        "calendar", "my_sessions", "attendance",
+        "training", "shop", "my_account", "news"
+    };
+
+        foreach (var key in allKeys)
+        {
+            var granted = grantedKeys.Contains(key);
+            var feature = clubFeatures.FirstOrDefault(f => f.FeatureKey == key);
+
+            if (feature is not null)
+            {
+                feature.PlatformGranted = granted;
+                if (!granted) feature.IsEnabled = false;
+            }
+            else
+            {
+                _platformDb.ClubFeatures.Add(new ClubFeature
+                {
+                    ClubId = club.Id,
+                    FeatureKey = key,
+                    PlatformGranted = granted,
+                    IsEnabled = granted,
+                    EnabledBy = "platform",
+                });
+            }
         }
 
         await _platformDb.SaveChangesAsync();
 
         await _platform.AuditAsync("club.billing_updated", "platform_admin",
             clubSlug: slug, clubId: club.Id,
-            metadata: new
-            {
-                discountType = req.DiscountType,
-                discountValue = req.DiscountValue,
-                packageIds = req.PackageIds
-            });
+            metadata: new { discountType = req.DiscountType, discountValue = req.DiscountValue, packageIds = req.PackageIds });
 
         return Ok(new { success = true });
     }
