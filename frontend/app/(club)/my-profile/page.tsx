@@ -20,6 +20,7 @@ export default function MyProfilePage() {
     firstName: '',
     lastName: '',
     phone: '',
+    dateOfBirth: "",
     emergencyContactName: '',
     emergencyContactPhone: '',
   })
@@ -45,6 +46,9 @@ export default function MyProfilePage() {
           firstName: data.firstName,
           lastName: data.lastName,
           phone: data.phone ?? '',
+          dateOfBirth: data.dateOfBirth
+            ? new Date(data.dateOfBirth as unknown as string).toISOString().split('T')[0]
+            : '',
           emergencyContactName: data.emergencyContactName ?? '',
           emergencyContactPhone: data.emergencyContactPhone ?? '',
         })
@@ -67,7 +71,7 @@ export default function MyProfilePage() {
         lastName: form.lastName,
         phone: form.phone || null,
         memberNumber: profile!.memberNumber,
-        dateOfBirth: profile!.dateOfBirth,
+        dateOfBirth: form.dateOfBirth || null,
         emergencyContactName: form.emergencyContactName || null,
         emergencyContactPhone: form.emergencyContactPhone || null,
       })
@@ -211,6 +215,13 @@ export default function MyProfilePage() {
               <input type="tel" className="input"
                 value={form.phone}
                 onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+            </div>
+
+            <div>
+              <label className="label">Date of Birth</label>
+              <input type="date" className="input"
+                value={form.dateOfBirth}
+                onChange={e => setForm(f => ({ ...f, dateOfBirth: e.target.value }))} />
             </div>
 
             <div className="border-t border-gray-100 pt-4">

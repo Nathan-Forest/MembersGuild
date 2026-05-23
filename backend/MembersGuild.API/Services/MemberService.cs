@@ -160,7 +160,7 @@ public class MemberService : IMemberService
         await using var db = _dbFactory.CreateForCurrentClub();
 
         var user = await db.Users.FindAsync(id);
-        
+
         if (user is null) return false;
 
         // Auto-track CATS → Member conversion
@@ -288,6 +288,14 @@ public class MemberService : IMemberService
                 }
             }
 
+            // Parse DateOfBirth
+            DateOnly? dob = null;
+            if (!string.IsNullOrWhiteSpace(req.DateOfBirth) &&
+                DateOnly.TryParseExact(req.DateOfBirth, "dd/MM/yyyy", out var parsedDob))
+            {
+                dob = parsedDob;
+            }
+
             var user = new User
             {
                 Email = email,
@@ -299,6 +307,7 @@ public class MemberService : IMemberService
                 Role = role,
                 CreditBalance = Math.Max(0, req.StartingCredits),
                 JoinedAt = joinedAt,
+                DateOfBirth = dob,
                 IsActive = true,
             };
 

@@ -89,6 +89,7 @@ public record ImportMemberRequest(
     string Email,
     string? Phone,
     string? JoinDate,            // DD/MM/YYYY
+    string? DateOfBirth,         // DD/MM/YYYY
     string? AssociationNumber,
     int StartingCredits,
     string? Role                 // defaults to "member"
