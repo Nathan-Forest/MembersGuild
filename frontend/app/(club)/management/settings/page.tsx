@@ -194,6 +194,22 @@ export default function SettingsPage() {
         </button>
       </div>
 
+      {/* Jump nav */}
+      <div className="flex gap-4 text-xs text-gray-400 border-b border-gray-100 pb-3 -mt-2">
+        {[
+          { label: 'General', href: '#general' },
+          { label: 'CATS & Membership', href: '#cats' },
+          { label: 'Attendance', href: '#attendance' },
+          { label: 'Features', href: '#features' },
+          { label: 'Email & Notifications', href: '#email' },
+        ].map(item => (
+          <a key={item.href} href={item.href}
+            className="hover:text-gray-700 transition-colors">
+            {item.label}
+          </a>
+        ))}
+      </div>
+
       {error && (
         <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
           {error}
@@ -201,7 +217,7 @@ export default function SettingsPage() {
       )}
 
       {/* ── Club Identity ───────────────────────────────────────────────── */}
-      <SectionHeading title="General" />
+      <SectionHeading title="General" id="general"/>
       <SettingsCard title="Club Identity" icon="🏛">
         <div className="space-y-5">
           <Field label="Display Name" hint="Shown in the nav bar and throughout the portal">
@@ -257,7 +273,7 @@ export default function SettingsPage() {
         </div>
       </SettingsCard>
 
-          {/* ── Regional ────────────────────────────────────────────────────── */}
+      {/* ── Regional ────────────────────────────────────────────────────── */}
       <SettingsCard title="Regional" icon="🌏">
         <Field label="Club Timezone"
           hint="Used for reports and day-of-week calculations. Select the timezone your club operates in.">
@@ -271,7 +287,7 @@ export default function SettingsPage() {
       </SettingsCard>
 
       {/* ── Membership ──────────────────────────────────────────────────── */}
-      <SectionHeading title="CATS & Membership" />
+      <SectionHeading title="CATS & Membership" id="Membership" />
       <SettingsCard title="Membership" icon="👥">
         <div className="space-y-5">
           <Field label="Association Number Label"
@@ -419,7 +435,7 @@ export default function SettingsPage() {
       </SettingsCard>
 
       {/* ── Attendance ──────────────────────────────────────────────────── */}
-      <SectionHeading title="Attendance" />
+      <SectionHeading title="Attendance" id="Attendance"/>
       <SettingsCard title="Attendance" icon="✓">
         <div className="space-y-5">
           <div className="flex items-center justify-between">
@@ -450,7 +466,7 @@ export default function SettingsPage() {
       </SettingsCard>
 
       {/* ── Features ────────────────────────────────────────────────── */}
-      <SectionHeading title="Features" />
+      <SectionHeading title="Features" id="Features" />
       <SettingsCard title="Features" icon="⚙️">
         {features.map(f => (
           <div key={f.key}>
@@ -506,7 +522,7 @@ export default function SettingsPage() {
       </SettingsCard>
 
       {/* ── Welcome Email ────────────────────────────────────────────────── */}
-      <SectionHeading title="Email & Notifications" />
+      <SectionHeading title="Email & Notifications" id="Email"/>
       <SettingsCard title="Welcome Email" icon="✉️">
         <div className="space-y-5">
           <Field label="Subject Line">
@@ -576,9 +592,9 @@ function Field({ label, hint, children }: {
   )
 }
 
-function SectionHeading({ title }: { title: string }) {
+function SectionHeading({ title, id }: { title: string; id?: string }) {
   return (
-    <div className="flex items-center gap-3 pt-2">
+    <div id={id} className="flex items-center gap-3 pt-2 scroll-mt-20">
       <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest whitespace-nowrap">
         {title}
       </h2>
@@ -586,3 +602,4 @@ function SectionHeading({ title }: { title: string }) {
     </div>
   )
 }
+
