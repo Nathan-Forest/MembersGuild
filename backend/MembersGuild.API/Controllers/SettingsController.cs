@@ -234,6 +234,7 @@ public class SettingsController : ControllerBase
         ["training"] = "Training & Personal Bests",
         ["shop"] = "Swim Shop",
         ["my_account"] = "Credits & My Account",
+        ["news"] = "Club News & Updates",
     };
 
     // GET /api/settings/features
@@ -247,15 +248,27 @@ public class SettingsController : ControllerBase
 
         if (club is null) return NotFound();
 
+        // Derive granted features from active packages
+        var grantedKeys = await _platformDb.ClubPackages
+            .Include(cp => cp.Package)
+                .ThenInclude(p => p!.Features)
+            .Where(cp => cp.ClubId == club.Id
+                      && cp.EndDate == null
+                      && cp.Package != null)
+            .SelectMany(cp => cp.Package!.Features.Select(f => f.FeatureKey))
+            .Distinct()
+            .ToListAsync();
+
         var result = FeatureLabels.Keys.Select(key =>
         {
             var feature = club.Features.FirstOrDefault(f => f.FeatureKey == key);
+            var platformGranted = grantedKeys.Contains(key);
             return new
             {
                 key,
                 label = FeatureLabels[key],
-                platformGranted = feature?.PlatformGranted ?? false,
-                isEnabled = feature?.IsEnabled ?? false,
+                platformGranted,
+                isEnabled = platformGranted && (feature?.IsEnabled ?? true),
             };
         });
 

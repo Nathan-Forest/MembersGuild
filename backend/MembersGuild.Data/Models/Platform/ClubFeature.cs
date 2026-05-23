@@ -23,4 +23,5 @@ public static class FeatureKeys
     public const string Training   = "training";
     public const string Shop       = "shop";
     public const string MyAccount  = "my_account";
+    public const string News       = "news";  
 }

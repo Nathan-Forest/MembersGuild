@@ -2,13 +2,13 @@
 import { useEffect, useState } from 'react'
 
 const ALL_FEATURES = [
-  { key: 'calendar',   label: 'Session Calendar & Booking' },
-  { key: 'mysessions', label: 'My Sessions' },
-  { key: 'attendance', label: 'Attendance Tracking' },
-  { key: 'training',   label: 'Training & Personal Bests' },
-  { key: 'shop',       label: 'Swim Shop' },
-  { key: 'myaccount',  label: 'Credits & My Account' },
-  { key: 'news',       label: 'Club News & Updates' },
+  { key: 'calendar',    label: 'Session Calendar & Booking' },
+  { key: 'my_sessions', label: 'My Sessions' },
+  { key: 'attendance',  label: 'Attendance Tracking' },
+  { key: 'training',    label: 'Training & Personal Bests' },
+  { key: 'shop',        label: 'Swim Shop' },
+  { key: 'my_account',  label: 'Credits & My Account' },
+  { key: 'news',        label: 'Club News & Updates' },
 ]
 
 interface Package {
