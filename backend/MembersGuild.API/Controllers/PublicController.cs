@@ -70,7 +70,7 @@ public class PublicController : ControllerBase
                 Training: _clubContext.HasFeature(FeatureKeys.Training),
                 Shop: _clubContext.HasFeature(FeatureKeys.Shop),
                 MyAccount: _clubContext.HasFeature(FeatureKeys.MyAccount),
-                News:       _clubContext.HasFeature(FeatureKeys.News) 
+                News: _clubContext.HasFeature(FeatureKeys.News)
             ),
             catsDesc,
             icon192Url,
@@ -336,4 +336,52 @@ public class PublicController : ControllerBase
         return Ok(new { success = true });
     }
 
+    // POST /api/public/support
+    [HttpPost("support")]
+    public async Task<IActionResult> SubmitSupport(
+        [FromBody] SubmitSupportRequest req,
+        [FromServices] EmailService emailService,
+        [FromServices] PlatformDbContext platformDb)
+    {
+        if (string.IsNullOrWhiteSpace(req.Name) ||
+            string.IsNullOrWhiteSpace(req.Email) ||
+            string.IsNullOrWhiteSpace(req.Description))
+            return BadRequest(new { error = "Name, email and description are required" });
+
+        // Store for Forge ticket system
+        platformDb.SupportRequests.Add(new SupportRequest
+        {
+            ClubSlug = _clubContext.Slug,
+            Category = req.Category,
+            Name = req.Name.Trim(),
+            Email = req.Email.Trim().ToLower(),
+            Description = req.Description.Trim(),
+            StartedAt = req.StartedAt,
+            Device = req.Device,
+            GuideRead = req.GuideRead,
+            Status = "open",
+        });
+        await platformDb.SaveChangesAsync();
+
+        // Email notification to support
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await emailService.SendSupportRequestAsync(
+                    _clubContext.DisplayName,
+                    _clubContext.Slug,
+                    req.Category,
+                    req.Name,
+                    req.Email,
+                    req.Description,
+                    req.StartedAt,
+                    req.Device,
+                    req.GuideRead);
+            }
+            catch { }
+        });
+
+        return Ok(new { success = true });
+    }
 }

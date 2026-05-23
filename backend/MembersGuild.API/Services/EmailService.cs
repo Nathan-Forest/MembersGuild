@@ -188,4 +188,53 @@ public class EmailService
 
         await _resend.EmailSendAsync(message);
     }
+
+    public async Task SendSupportRequestAsync(
+    string clubName, string clubSlug,
+    string category, string name, string email,
+    string description, string? startedAt,
+    string? device, bool guideRead)
+    {
+        var body = $"""
+        <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+          <h2 style="color:#1a2744">Support Request — {clubName}</h2>
+          <table style="width:100%;border-collapse:collapse">
+            <tr><td style="padding:8px;color:#666;width:140px">Club</td>
+                <td style="padding:8px;font-weight:600">{clubName} ({clubSlug})</td></tr>
+            <tr style="background:#f9f9f9">
+                <td style="padding:8px;color:#666">Category</td>
+                <td style="padding:8px;font-weight:600">{category}</td></tr>
+            <tr><td style="padding:8px;color:#666">Name</td>
+                <td style="padding:8px">{name}</td></tr>
+            <tr style="background:#f9f9f9">
+                <td style="padding:8px;color:#666">Email</td>
+                <td style="padding:8px"><a href="mailto:{email}">{email}</a></td></tr>
+            <tr><td style="padding:8px;color:#666">Guide Read</td>
+                <td style="padding:8px">{(guideRead ? "✓ Yes" : "✗ No")}</td></tr>
+            <tr style="background:#f9f9f9">
+                <td style="padding:8px;color:#666">Started</td>
+                <td style="padding:8px">{startedAt ?? "Not specified"}</td></tr>
+            <tr><td style="padding:8px;color:#666">Device</td>
+                <td style="padding:8px">{device ?? "Not specified"}</td></tr>
+          </table>
+          <div style="margin-top:20px;padding:16px;background:#f5f5f5;border-radius:8px">
+            <p style="color:#333;font-weight:600;margin:0 0 8px">Problem Description:</p>
+            <p style="color:#555;margin:0;white-space:pre-wrap">{description}</p>
+          </div>
+          <p style="color:#999;font-size:12px;margin-top:24px">
+            Sent by MembersGuild · {clubName}
+          </p>
+        </div>
+        """;
+
+        var message = new EmailMessage
+        {
+            From = From,
+            Subject = $"[Support] {clubName} — {category}",
+            HtmlBody = body,
+        };
+        message.To.Add("support@membersguild.com.au");
+
+        await _resend.EmailSendAsync(message); ;
+    }
 }

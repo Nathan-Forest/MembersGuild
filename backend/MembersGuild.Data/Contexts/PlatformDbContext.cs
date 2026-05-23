@@ -18,6 +18,7 @@ public class PlatformDbContext : DbContext
     public DbSet<Package> Packages { get; set; }
     public DbSet<PackageFeature> PackageFeatures { get; set; }
     public DbSet<ClubPackage> ClubPackages { get; set; }
+    public DbSet<SupportRequest> SupportRequests { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -62,6 +63,12 @@ public class PlatformDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Action).HasMaxLength(100).IsRequired();
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
+        });
+
+        modelBuilder.Entity<SupportRequest>(e =>
+        {
+            e.ToTable("support_requests", "platform");
+            e.HasKey(x => x.Id);
         });
     }
 }
