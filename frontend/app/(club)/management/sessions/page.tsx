@@ -6,6 +6,8 @@ import { api } from '@/lib/api'
 import { getCurrentUser, hasPermission } from '@/lib/auth'
 import type { UserRole, Location } from '@/types'
 
+export const dynamic = 'force-dynamic'
+
 interface SessionResponse {
   id: number
   title: string

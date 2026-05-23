@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { getCurrentUser } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 interface ClubSettings {
   displayName: string
   logoUrl: string | null

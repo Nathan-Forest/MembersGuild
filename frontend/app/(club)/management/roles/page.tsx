@@ -5,6 +5,8 @@ import { api } from '@/lib/api'
 import { getCurrentUser } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 
+export const dynamic = 'force-dynamic'
+
 interface CustomRole {
   id: number
   roleName: string
