@@ -51,7 +51,7 @@ const MANAGEMENT_ITEMS: NavItem[] = [
   { label: 'Training', href: '/management/training', roles: ['coach', 'committee', 'webmaster'] },
   { label: 'Shop', href: '/management/shop', roles: ['finance', 'webmaster'] },
   { label: 'Shop Orders', href: '/management/orders', roles: ['finance', 'webmaster'] },
-  { label: 'News', href: '/management/updates', roles: ['committee', 'membership', 'webmaster'] },
+  { label: 'News', href: '/management/updates', roles: ['committee', 'membership', 'webmaster'], feature: 'news' },
   { label: 'Site Settings', href: '/management/settings', roles: ['webmaster'] },
   { label: 'Custom Roles', href: '/management/roles', roles: ['webmaster'] },
 ]

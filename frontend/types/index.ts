@@ -16,6 +16,7 @@ export interface ClubFeatures {
   training: boolean
   shop: boolean
   myAccount: boolean
+  news:       boolean 
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
