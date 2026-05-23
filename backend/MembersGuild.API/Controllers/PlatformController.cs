@@ -655,8 +655,12 @@ public class PlatformController : ControllerBase
         }
         await _platformDb.SaveChangesAsync();
 
-        // Sync ClubFeatures.PlatformGranted from new packages
-        // This updates what ClubResolutionMiddleware sees on next request
+        // Sync ClubFeatures.PlatformGranted — UPDATE only, never INSERT
+        // (provisioning creates all feature rows when club is first set up)
+        var clubFeatures = await _platformDb.ClubFeatures
+            .Where(f => f.ClubId == club.Id)
+            .ToListAsync();
+
         var grantedKeys = await _platformDb.ClubPackages
             .Include(cp => cp.Package)
                 .ThenInclude(p => p!.Features)
@@ -665,37 +669,11 @@ public class PlatformController : ControllerBase
             .Distinct()
             .ToListAsync();
 
-        var allKeys = new[]
+        foreach (var feature in clubFeatures)
         {
-        "calendar", "my_sessions", "attendance",
-        "training", "shop", "my_account", "news"
-    };
-
-        var clubFeatures = await _platformDb.ClubFeatures
-            .Where(f => f.ClubId == club.Id)
-            .ToListAsync();
-
-        foreach (var key in allKeys)
-        {
-            var granted = grantedKeys.Contains(key);
-            var feature = clubFeatures.FirstOrDefault(f => f.FeatureKey == key);
-
-            if (feature is null)
-            {
-                _platformDb.ClubFeatures.Add(new ClubFeature
-                {
-                    ClubId = club.Id,
-                    FeatureKey = key,
-                    PlatformGranted = granted,
-                    IsEnabled = granted,
-                    EnabledBy = "platform",
-                });
-            }
-            else
-            {
-                feature.PlatformGranted = granted;
-                if (!granted) feature.IsEnabled = false;
-            }
+            var granted = grantedKeys.Contains(feature.FeatureKey);
+            feature.PlatformGranted = granted;
+            if (!granted) feature.IsEnabled = false;
         }
 
         await _platformDb.SaveChangesAsync();
