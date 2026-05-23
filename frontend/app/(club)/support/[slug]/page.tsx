@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { marked } from 'marked'
 import { getGuideById, getGuidesByCategory, fetchGuideContent, GUIDES } from '@/lib/guides'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 
