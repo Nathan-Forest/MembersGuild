@@ -111,6 +111,11 @@ export default function AttendanceSheetPage() {
   const [coaches, setCoaches] = useState<{ id: number; name: string }[]>([])
   const [updatingCoach, setUpdatingCoach] = useState(false)
 
+  const [reportOpen, setReportOpen] = useState(false)
+  const [reportEmail, setReportEmail] = useState('')
+  const [sendingReport, setSendingReport] = useState(false)
+  const [reportSent, setReportSent] = useState(false)
+
   useEffect(() => {
     const user = getCurrentUser()
     if (!user) { router.replace('/login'); return }
@@ -420,6 +425,16 @@ export default function AttendanceSheetPage() {
             </svg>
             Refresh
           </button>
+          <button
+            onClick={() => { setReportOpen(true); setReportSent(false) }}
+            className="btn-secondary text-sm px-3 py-2 flex items-center gap-1.5"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            Send Report
+          </button>
         </div>
       </div>
 
@@ -473,8 +488,8 @@ export default function AttendanceSheetPage() {
                 onClick={() => markAttendance(m.userId, opt.value)}
                 disabled={marking === m.userId}
                 className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${m.status === opt.value
-                    ? opt.color + ' ring-2 ring-offset-1 ring-current'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? opt.color + ' ring-2 ring-offset-1 ring-current'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
               >
                 {marking === m.userId ? '…' : opt.label}

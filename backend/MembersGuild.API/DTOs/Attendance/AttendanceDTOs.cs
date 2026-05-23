@@ -36,3 +36,10 @@ public record QrTokenResponse(
 );
 
 public record UpdateCoachRequest(int? CoachId, bool NoShow);
+public record EmailReportRequest(string Email);
+
+public record AttendanceReportMember(
+    string FullName,
+    string? Status,
+    bool CreditRefunded
+);

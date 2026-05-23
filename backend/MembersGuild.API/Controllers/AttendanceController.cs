@@ -3,6 +3,8 @@ using System.Security.Cryptography;
 using System.Text;
 using MembersGuild.API.DTOs.Attendance;
 using MembersGuild.API.Extensions;
+using MembersGuild.API.Services;
+using MembersGuild.API.Middleware;
 using MembersGuild.Data.Models.Club;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,12 +20,20 @@ public class AttendanceController : ControllerBase
     private readonly ClubDbContextFactory _dbFactory;
     private readonly IConfiguration _config;
 
-    public AttendanceController(ClubDbContextFactory dbFactory, IConfiguration config)
+    private readonly EmailService _email;
+    private readonly ClubContext _clubContext;
+
+    public AttendanceController(
+    ClubDbContextFactory dbFactory,
+    IConfiguration config,
+    EmailService email,
+    ClubContext clubContext)
     {
         _dbFactory = dbFactory;
         _config = config;
+        _email = email;
+        _clubContext = clubContext;
     }
-
     private int CurrentUserId => int.Parse(
         User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
     private string CurrentRole =>
@@ -508,6 +518,75 @@ public class AttendanceController : ControllerBase
             coachName,
             coachNoShow = session.CoachNoShow,
         });
+    }
+
+    // POST /api/attendance/sessions/{id}/email-report
+    [HttpPost("sessions/{id:int}/email-report")]
+    public async Task<IActionResult> EmailReport(int id, [FromBody] EmailReportRequest req)
+    {
+        if (!CanManageAttendance()) return Forbid();
+        if (string.IsNullOrWhiteSpace(req.Email))
+            return BadRequest(new { error = "Email is required" });
+
+        await using var db = _dbFactory.CreateForCurrentClub();
+
+        var session = await db.Sessions
+            .Include(s => s.Location)
+            .Include(s => s.Coach)
+            .FirstOrDefaultAsync(s => s.Id == id);
+
+        if (session is null) return NotFound();
+
+        var bookings = await db.SessionBookings
+            .Include(b => b.User)
+            .Where(b => b.SessionId == id)
+            .OrderBy(b => b.User!.FirstName)
+            .ToListAsync();
+
+        var records = await db.AttendanceRecords
+            .Where(a => a.SessionId == id)
+            .ToListAsync();
+
+        var members = bookings.Select(b =>
+        {
+            var record = records.FirstOrDefault(r => r.UserId == b.UserId);
+            return new AttendanceReportMember(
+                $"{b.User!.FirstName} {b.User.LastName}",
+                record?.Status,
+                record?.CreditRefunded ?? false
+            );
+        }).ToList();
+
+        var lanesEnabled = (await db.ClubSettings
+            .FirstOrDefaultAsync(s => s.Key == "attendance_lanes_enabled"))
+            ?.Value == "true";
+        var lanesLabel = (await db.ClubSettings
+            .FirstOrDefaultAsync(s => s.Key == "attendance_lanes_label"))
+            ?.Value ?? "Lanes";
+
+        var coachName = session.Coach != null
+            ? $"{session.Coach.FirstName} {session.Coach.LastName}"
+            : null;
+
+        await _email.SendAttendanceReportAsync(
+            recipientEmail: req.Email,
+            clubName: _clubContext.DisplayName,
+            clubSlug: _clubContext.Slug,
+            sessionTitle: session.Title,
+            startTime: session.StartTime,
+            endTime: session.EndTime,
+            locationName: session.Location?.Name,
+            coachName: coachName,
+            coachNoShow: session.CoachNoShow,
+            lanesCount: session.LanesCount,
+            lanesEnabled: lanesEnabled,
+            lanesLabel: lanesLabel,
+            members: members,
+            logoUrl: _clubContext.LogoUrl,
+            primaryColor: _clubContext.PrimaryColor
+        );
+
+        return Ok(new { success = true });
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

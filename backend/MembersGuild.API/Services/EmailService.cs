@@ -1,4 +1,5 @@
 using Resend;
+using MembersGuild.API.DTOs.Attendance;
 
 namespace MembersGuild.API.Services;
 
@@ -324,4 +325,148 @@ public class EmailService
     message.To.Add("support@membersguild.com.au");
     await _resend.EmailSendAsync(message);
   }
+
+  public async Task SendAttendanceReportAsync(
+    string recipientEmail,
+    string clubName,
+    string clubSlug,
+    string sessionTitle,
+    DateTime startTime,
+    DateTime endTime,
+    string? locationName,
+    string? coachName,
+    bool coachNoShow,
+    int? lanesCount,
+    bool lanesEnabled,
+    string lanesLabel,
+    IEnumerable<AttendanceReportMember> members,
+    string? logoUrl = null,
+    string primaryColor = "#1a2744")
+  {
+    var date = startTime.ToString("dddd d MMMM yyyy");
+    var time = $"{startTime:HH:mm}–{endTime:HH:mm}";
+
+    var attended = members.Count(m => m.Status == "attended");
+    var late = members.Count(m => m.Status == "late");
+    var nsba = members.Count(m => m.Status == "nsba");
+    var absent = members.Count(m => m.Status == "absent");
+    var unmarked = members.Count(m => m.Status == null);
+    var total = members.Count();
+
+    var coachDisplay = coachNoShow
+        ? "⚠ Coach No Show"
+        : coachName ?? "Unassigned";
+
+    var lanesRow = lanesEnabled && lanesCount.HasValue
+        ? $"<tr><td style='padding:8px 12px;color:#6b7280;'>{lanesLabel}</td>" +
+          $"<td style='padding:8px 12px;font-weight:600;'>{lanesCount}</td></tr>"
+        : "";
+
+    static string StatusBadge(string? status) => status switch
+    {
+      "attended" => "<span style='color:#16a34a;font-weight:600;'>✓ Attended</span>",
+      "late" => "<span style='color:#d97706;font-weight:600;'>◷ Late</span>",
+      "nsba" => "<span style='color:#2563eb;font-weight:600;'>↩ NSBA</span>",
+      "absent" => "<span style='color:#dc2626;font-weight:600;'>✕ Absent</span>",
+      _ => "<span style='color:#9ca3af;'>— Unmarked</span>",
+    };
+
+    var memberRows = string.Join("", members
+        .OrderBy(m => m.Status == null ? 1 : 0)
+        .ThenBy(m => m.FullName)
+        .Select((m, i) => $@"
+        <tr style='{(i % 2 == 0 ? "background:#f9fafb;" : "")}'>
+          <td style='padding:10px 12px;'>{m.FullName}</td>
+          <td style='padding:10px 12px;'>{StatusBadge(m.Status)}</td>
+          <td style='padding:10px 12px;text-align:center;'>
+            {(m.CreditRefunded ? "<span style='color:#2563eb;'>✓</span>" : "")}
+          </td>
+        </tr>"));
+
+    var content = $@"
+        <h2 style='color:#111827;margin-top:0;'>Attendance Report</h2>
+
+        <!-- Session details -->
+        <table style='width:100%;border-collapse:collapse;font-size:14px;margin-bottom:24px;'>
+          <tr style='background:#f9fafb;'>
+            <td style='padding:8px 12px;color:#6b7280;width:120px;'>Session</td>
+            <td style='padding:8px 12px;font-weight:600;'>{sessionTitle}</td>
+          </tr>
+          <tr>
+            <td style='padding:8px 12px;color:#6b7280;'>Date</td>
+            <td style='padding:8px 12px;'>{date}</td>
+          </tr>
+          <tr style='background:#f9fafb;'>
+            <td style='padding:8px 12px;color:#6b7280;'>Time</td>
+            <td style='padding:8px 12px;'>{time}</td>
+          </tr>
+          {(locationName != null ? $@"
+          <tr>
+            <td style='padding:8px 12px;color:#6b7280;'>Location</td>
+            <td style='padding:8px 12px;'>{locationName}</td>
+          </tr>" : "")}
+          <tr style='background:#f9fafb;'>
+            <td style='padding:8px 12px;color:#6b7280;'>Coach</td>
+            <td style='padding:8px 12px;'>{coachDisplay}</td>
+          </tr>
+          {lanesRow}
+        </table>
+
+        <!-- Summary stats -->
+        <table style='width:100%;border-collapse:collapse;text-align:center;
+                      margin-bottom:24px;background:#f9fafb;border-radius:8px;overflow:hidden;'>
+          <tr>
+            <td style='padding:16px 8px;'>
+              <div style='font-size:24px;font-weight:700;color:#16a34a;'>{attended}</div>
+              <div style='font-size:11px;color:#6b7280;text-transform:uppercase;
+                          letter-spacing:0.05em;margin-top:4px;'>Attended</div>
+            </td>
+            <td style='padding:16px 8px;border-left:1px solid #e5e7eb;'>
+              <div style='font-size:24px;font-weight:700;color:#d97706;'>{late}</div>
+              <div style='font-size:11px;color:#6b7280;text-transform:uppercase;
+                          letter-spacing:0.05em;margin-top:4px;'>Late</div>
+            </td>
+            <td style='padding:16px 8px;border-left:1px solid #e5e7eb;'>
+              <div style='font-size:24px;font-weight:700;color:#2563eb;'>{nsba}</div>
+              <div style='font-size:11px;color:#6b7280;text-transform:uppercase;
+                          letter-spacing:0.05em;margin-top:4px;'>NSBA</div>
+            </td>
+            <td style='padding:16px 8px;border-left:1px solid #e5e7eb;'>
+              <div style='font-size:24px;font-weight:700;color:#dc2626;'>{absent}</div>
+              <div style='font-size:11px;color:#6b7280;text-transform:uppercase;
+                          letter-spacing:0.05em;margin-top:4px;'>Absent</div>
+            </td>
+            <td style='padding:16px 8px;border-left:1px solid #e5e7eb;'>
+              <div style='font-size:24px;font-weight:700;color:#111827;'>{total}</div>
+              <div style='font-size:11px;color:#6b7280;text-transform:uppercase;
+                          letter-spacing:0.05em;margin-top:4px;'>Total</div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Member list -->
+        <table style='width:100%;border-collapse:collapse;font-size:14px;'>
+          <thead>
+            <tr style='background:{primaryColor};color:#ffffff;'>
+              <th style='padding:10px 12px;text-align:left;font-weight:600;'>Member</th>
+              <th style='padding:10px 12px;text-align:left;font-weight:600;'>Status</th>
+              <th style='padding:10px 12px;text-align:center;font-weight:600;'>Credit Refunded</th>
+            </tr>
+          </thead>
+          <tbody>{memberRows}</tbody>
+        </table>";
+
+    var html = BuildHtml(content, clubName, clubSlug, logoUrl, primaryColor);
+
+    var sessionDate = startTime.ToString("d MMM yyyy");
+    var message = new EmailMessage
+    {
+      From = $"{clubName} <{From}>",
+      Subject = $"Attendance Report — {sessionTitle} ({sessionDate})",
+      HtmlBody = html,
+    };
+    message.To.Add(recipientEmail);
+    await _resend.EmailSendAsync(message);
+  }
+
 }
