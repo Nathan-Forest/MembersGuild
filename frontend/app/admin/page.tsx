@@ -14,6 +14,14 @@ interface Club {
   sessionCount: number; createdAt: string
 }
 
+// ← add
+interface RevenueSummary {
+  totalMrr: number
+  activeClubs: number
+  freeClubs: number
+  byPackage: { packageName: string; clubCount: number; mrr: number }[]
+}
+
 const statusBadge = (s: string) => ({
   active: 'bg-green-100 text-green-700',
   suspended: 'bg-red-100 text-red-700',
@@ -21,34 +29,30 @@ const statusBadge = (s: string) => ({
 }[s] ?? 'bg-gray-100 text-gray-600')
 
 export default function AdminDashboard() {
-  const [health, setHealth] = useState<HealthData | null>(null)
-  const [clubs, setClubs] = useState<Club[]>([])
+  const [health,   setHealth]   = useState<HealthData | null>(null)
+  const [clubs,    setClubs]    = useState<Club[]>([])
+  const [revenue,  setRevenue]  = useState<RevenueSummary | null>(null)   // ← add
 
   useEffect(() => {
     fetch('/api/platform/health', { cache: 'no-store' })
-      .then(r => {
-        if (r.status === 401) { window.location.href = '/admin/login'; return null }
-        return r.json()
-      })
-      .then(d => d && setHealth(d))
-      .catch(() => { })
+      .then(r => { if (r.status === 401) { window.location.href = '/admin/login'; return null } return r.json() })
+      .then(d => d && setHealth(d)).catch(() => { })
 
     fetch('/api/platform/clubs', { cache: 'no-store' })
-      .then(r => {
-        if (r.status === 401) { window.location.href = '/admin/login'; return null }
-        return r.json()
-      })
-      .then(d => d && setClubs(d))
-      .catch(() => { })
+      .then(r => { if (r.status === 401) { window.location.href = '/admin/login'; return null } return r.json() })
+      .then(d => d && setClubs(d)).catch(() => { })
+
+    // ← add
+    fetch('/api/platform/revenue/summary', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => d && setRevenue(d)).catch(() => { })
   }, [])
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Platform Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Digital Guildhall operator view
-        </p>
+        <p className="text-sm text-gray-500 mt-1">Digital Guildhall operator view</p>
       </div>
 
       {/* Health cards */}
@@ -59,8 +63,8 @@ export default function AdminDashboard() {
             colour: health?.status === 'healthy' ? 'text-green-600' : 'text-red-600'
           },
           { label: 'DB Connections', value: health?.database.connectionCount ?? '—', colour: 'text-gray-900' },
-          { label: 'Database Size', value: health ? `${health.database.databaseSizeMb} MB` : '—', colour: 'text-gray-900' },
-          { label: 'Active Clubs', value: health?.clubs.active ?? '—', colour: 'text-gray-900' },
+          { label: 'Database Size',  value: health ? `${health.database.databaseSizeMb} MB` : '—', colour: 'text-gray-900' },
+          { label: 'Active Clubs',   value: health?.clubs.active ?? '—', colour: 'text-gray-900' },
         ].map(c => (
           <div key={c.label} className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">{c.label}</p>
@@ -69,12 +73,45 @@ export default function AdminDashboard() {
         ))}
       </div>
 
+      {/* ── Revenue Summary ── */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Monthly Revenue</p>
+          <p className="text-3xl font-bold mt-1 text-green-600">
+            ${revenue?.totalMrr.toFixed(2) ?? '—'}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">MRR across all active clubs</p>
+        </div>
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Paying Clubs</p>
+          <p className="text-3xl font-bold mt-1 text-gray-900">
+            {revenue ? revenue.activeClubs - revenue.freeClubs : '—'}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            {revenue?.freeClubs ?? '—'} on free plans
+          </p>
+        </div>
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">By Package</p>
+          <div className="mt-2 space-y-1.5">
+            {revenue?.byPackage.map(p => (
+              <div key={p.packageName} className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">{p.packageName}</span>
+                <span className="font-medium text-gray-900">
+                  {p.clubCount} club{p.clubCount !== 1 ? 's' : ''} · ${p.mrr.toFixed(0)}/mo
+                </span>
+              </div>
+            ))}
+            {!revenue && <p className="text-xs text-gray-400">Loading…</p>}
+          </div>
+        </div>
+      </div>
+
       {/* Club list */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900">Clubs</h2>
-          <a href="/admin/clubs"
-            className="text-sm text-[#1a2744] font-medium hover:underline">
+          <a href="/admin/clubs" className="text-sm text-[#1a2744] font-medium hover:underline">
             Manage →
           </a>
         </div>
@@ -91,8 +128,7 @@ export default function AdminDashboard() {
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge(club.status)}`}>
                   {club.status}
                 </span>
-                <a href={`/admin/clubs/${club.slug}`}
-                  className="text-[#1a2744] font-medium hover:underline">
+                <a href={`/admin/clubs/${club.slug}`} className="text-[#1a2744] font-medium hover:underline">
                   View
                 </a>
               </div>

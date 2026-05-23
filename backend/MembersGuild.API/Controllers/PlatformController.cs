@@ -720,37 +720,32 @@ public class PlatformController : ControllerBase
 
         var clubPackages = await _platformDb.ClubPackages
             .Include(cp => cp.Package)
-            .Where(cp => cp.EndDate == null && cp.Package != null)
+            .Where(cp => cp.Package != null)
             .ToListAsync();
 
         decimal totalMrr = 0;
         int freeClubs = 0;
-
         var packageGroups = new Dictionary<string, (int Count, decimal Mrr)>();
 
         foreach (var club in clubs)
         {
-            var myPackages = clubPackages
-                .Where(cp => cp.ClubId == club.Id)
-                .ToList();
-
+            var myPackages = clubPackages.Where(cp => cp.ClubId == club.Id).ToList();
             var gross = myPackages.Sum(cp => cp.Package!.Price);
             var net = club.DiscountType == "free_forever" ? 0 :
-                        club.DiscountType == "percentage" ? gross * (1 - club.DiscountValue / 100) :
-                        gross;
+                             club.DiscountType == "percentage"
+                                 ? gross * (1 - club.DiscountValue / 100)
+                                 : gross;
 
             totalMrr += net;
             if (net == 0) freeClubs++;
 
             foreach (var cp in myPackages)
             {
-                var key = cp.Package!.Name;
-                if (!packageGroups.ContainsKey(key))
-                    packageGroups[key] = (0, 0);
-                packageGroups[key] = (
-                    packageGroups[key].Count + 1,
-                    packageGroups[key].Mrr + (club.DiscountType == "free_forever" ? 0 : cp.Package.Price)
-                );
+                var name = cp.Package!.Name;
+                if (!packageGroups.ContainsKey(name))
+                    packageGroups[name] = (0, 0);
+                var pkgNet = club.DiscountType == "free_forever" ? 0 : cp.Package.Price;
+                packageGroups[name] = (packageGroups[name].Count + 1, packageGroups[name].Mrr + pkgNet);
             }
         }
 
