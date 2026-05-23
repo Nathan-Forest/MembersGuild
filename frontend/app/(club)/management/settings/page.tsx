@@ -201,6 +201,7 @@ export default function SettingsPage() {
       )}
 
       {/* ── Club Identity ───────────────────────────────────────────────── */}
+      <SectionHeading title="General" />
       <SettingsCard title="Club Identity" icon="🏛">
         <div className="space-y-5">
           <Field label="Display Name" hint="Shown in the nav bar and throughout the portal">
@@ -256,7 +257,21 @@ export default function SettingsPage() {
         </div>
       </SettingsCard>
 
+          {/* ── Regional ────────────────────────────────────────────────────── */}
+      <SettingsCard title="Regional" icon="🌏">
+        <Field label="Club Timezone"
+          hint="Used for reports and day-of-week calculations. Select the timezone your club operates in.">
+          <select className="input" value={form.clubTimezone}
+            onChange={e => update('clubTimezone', e.target.value)}>
+            {TIMEZONES.map(tz => (
+              <option key={tz.value} value={tz.value}>{tz.label}</option>
+            ))}
+          </select>
+        </Field>
+      </SettingsCard>
+
       {/* ── Membership ──────────────────────────────────────────────────── */}
+      <SectionHeading title="CATS & Membership" />
       <SettingsCard title="Membership" icon="👥">
         <div className="space-y-5">
           <Field label="Association Number Label"
@@ -404,6 +419,7 @@ export default function SettingsPage() {
       </SettingsCard>
 
       {/* ── Attendance ──────────────────────────────────────────────────── */}
+      <SectionHeading title="Attendance" />
       <SettingsCard title="Attendance" icon="✓">
         <div className="space-y-5">
           <div className="flex items-center justify-between">
@@ -433,21 +449,9 @@ export default function SettingsPage() {
         </div>
       </SettingsCard>
 
-      {/* ── Regional ────────────────────────────────────────────────────── */}
-      <SettingsCard title="Regional" icon="🌏">
-        <Field label="Club Timezone"
-          hint="Used for reports and day-of-week calculations. Select the timezone your club operates in.">
-          <select className="input" value={form.clubTimezone}
-            onChange={e => update('clubTimezone', e.target.value)}>
-            {TIMEZONES.map(tz => (
-              <option key={tz.value} value={tz.value}>{tz.label}</option>
-            ))}
-          </select>
-        </Field>
-      </SettingsCard>
-
       {/* ── Features ────────────────────────────────────────────────── */}
-      <SettingsCard title="Features" icon="🌏">
+      <SectionHeading title="Features" />
+      <SettingsCard title="Features" icon="⚙️">
         {features.map(f => (
           <div key={f.key}>
             <div className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
@@ -502,6 +506,7 @@ export default function SettingsPage() {
       </SettingsCard>
 
       {/* ── Welcome Email ────────────────────────────────────────────────── */}
+      <SectionHeading title="Email & Notifications" />
       <SettingsCard title="Welcome Email" icon="✉️">
         <div className="space-y-5">
           <Field label="Subject Line">
@@ -567,6 +572,17 @@ function Field({ label, hint, children }: {
       <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
       {hint && <p className="text-xs text-gray-400 mb-2">{hint}</p>}
       {children}
+    </div>
+  )
+}
+
+function SectionHeading({ title }: { title: string }) {
+  return (
+    <div className="flex items-center gap-3 pt-2">
+      <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest whitespace-nowrap">
+        {title}
+      </h2>
+      <div className="flex-1 h-px bg-gray-100" />
     </div>
   )
 }
