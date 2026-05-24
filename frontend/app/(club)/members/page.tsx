@@ -29,7 +29,16 @@ interface ImportResult {
   errors: string[]
 }
 
-type ModalTab = 'details' | 'emergency' | 'credits' | 'role'
+interface UpcomingSession {
+  id: number
+  title: string
+  locationName: string | null
+  startTime: string
+  endTime: string
+  creditCost: number
+}
+
+type ModalTab = 'details' | 'emergency' | 'credits' | 'role' | 'sessions'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -48,6 +57,7 @@ function getVisibleTabs(role: UserRole | null): { key: ModalTab; label: string }
     { key: 'emergency', label: 'Emergency Contact' },
     { key: 'credits', label: 'Credits' },
     { key: 'role', label: 'Role & Access' },
+    { key: 'sessions', label: 'Upcoming Sessions' },
   ]
   if (role === 'webmaster') return all
   if (role === 'finance') return all.filter(t => t.key !== 'role')
@@ -166,6 +176,11 @@ export default function MembersPage() {
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState('')
 
+  // State:
+  const [memberSessions, setMemberSessions] = useState<UpcomingSession[]>([])
+  const [loadingSessions, setLoadingSessions] = useState(false)
+
+
   // ── Init ───────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -228,11 +243,20 @@ export default function MembersPage() {
       setSelected(detail)
       setAssocNumberEdit(detail.associationNumber ?? '')
       setJoinedAtEdit(detail.joinedAt ? new Date(detail.joinedAt).toISOString().split('T')[0] : '')
-      setDobEdit(detail.dateOfBirth   // ← add
+      setDobEdit(detail.dateOfBirth
         ? new Date(detail.dateOfBirth as unknown as string).toISOString().split('T')[0]
         : '')
       setModalTab('details')
       setModalOpen(true)
+
+      // ── Load upcoming sessions ─────────────────────────────
+      setLoadingSessions(true)
+      setMemberSessions([])
+      api.get<UpcomingSession[]>(`/members/${id}/upcoming-sessions`)
+        .then(setMemberSessions)
+        .catch(() => { })
+        .finally(() => setLoadingSessions(false))
+      // ──────────────────────────────────────────────────────
     } catch { }
   }
 
@@ -765,6 +789,60 @@ export default function MembersPage() {
                         Ask {selected.firstName} to update their profile
                       </p>
                     </div>
+                  )}
+                </div>
+              )}
+
+              {/* Upcoming Sessions tab */}
+              {modalTab === 'sessions' && (
+                <div className="space-y-3">
+                  {loadingSessions ? (
+                    <div className="space-y-2">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="h-16 rounded-xl bg-gray-100 animate-pulse" />
+                      ))}
+                    </div>
+                  ) : memberSessions.length === 0 ? (
+                    <div className="rounded-xl bg-gray-50 border border-gray-100 p-6 text-center">
+                      <p className="text-2xl mb-2">📅</p>
+                      <p className="text-sm font-medium text-gray-600">No upcoming sessions</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {selected?.firstName} has no sessions booked
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-xs text-gray-400">
+                        {memberSessions.length} session{memberSessions.length !== 1 ? 's' : ''} booked
+                      </p>
+                      <div className="space-y-2">
+                        {memberSessions.map(s => {
+                          const start = new Date(s.startTime)
+                          const end = new Date(s.endTime)
+                          return (
+                            <div key={s.id}
+                              className="flex items-center justify-between rounded-xl border border-gray-100 px-4 py-3">
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{s.title}</p>
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                  {start.toLocaleDateString('en-AU', {
+                                    weekday: 'short', day: 'numeric', month: 'short'
+                                  })}
+                                  {' · '}
+                                  {start.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}
+                                  {' – '}
+                                  {end.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}
+                                  {s.locationName && ` · ${s.locationName}`}
+                                </p>
+                              </div>
+                              <span className="text-xs font-semibold text-gray-500 flex-shrink-0 ml-3">
+                                {s.creditCost} cr
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </>
                   )}
                 </div>
               )}

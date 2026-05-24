@@ -21,7 +21,7 @@ public class MembersController : ControllerBase
     private readonly IMemberService _members;
     private readonly ClubDbContextFactory _dbFactory;
     private readonly ClubContext _clubContext;
-    private readonly PlatformDbContext _platformDb;    
+    private readonly PlatformDbContext _platformDb;
     private readonly PlatformService _platformSvc;
 
     public MembersController(
@@ -232,6 +232,33 @@ public class MembersController : ControllerBase
         }
 
         return Ok(new { success = true, sent = users.Count });
+    }
+
+    // GET /api/members/{id}/upcoming-sessions
+    [HttpGet("{id}/upcoming-sessions")]
+    public async Task<IActionResult> GetUpcomingSessions(int id)
+    {
+        if (!CanManageMembers()) return Forbid();
+        await using var db = _dbFactory.CreateForCurrentClub();
+
+        var now = DateTime.UtcNow;
+        var sessions = await db.SessionBookings
+            .Include(b => b.Session).ThenInclude(s => s.Location)
+            .Where(b => b.Session != null
+         && b.Session.StartTime >= now
+         && !b.Session.IsCancelled)
+            .OrderBy(b => b.Session.StartTime)
+            .Select(b => new UpcomingSessionResponse(
+                b.Session.Id,
+                b.Session.Title,
+                b.Session.Location != null ? b.Session.Location.Name : null,
+                b.Session.StartTime,
+                b.Session.EndTime,
+                b.Session.CreditCost
+            ))
+            .ToListAsync();
+
+        return Ok(sessions);
     }
 
     private bool HasRole(params string[] roles) =>

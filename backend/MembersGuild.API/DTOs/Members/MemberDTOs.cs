@@ -102,3 +102,12 @@ public record ImportResult(
 );
 
 public record ResendWelcomeRequest(List<int> UserIds);
+
+public record UpcomingSessionResponse(
+    int Id,
+    string Title,
+    string? LocationName,
+    DateTime StartTime,
+    DateTime EndTime,
+    int CreditCost
+);
