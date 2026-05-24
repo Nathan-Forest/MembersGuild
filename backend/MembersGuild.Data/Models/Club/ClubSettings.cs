@@ -10,15 +10,18 @@ public class ClubSetting
     public string Value { get; set; } = string.Empty;
     public int? UpdatedBy { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public bool CreditAlertsEnabled { get; set; } = false;
+    public bool CreditAlertCooldownEnabled { get; set; } = false;
+    public int CreditAlertCooldownDays { get; set; } = 7;
 }
 
 public static class ClubSettingKeys
 {
-    public const string CatsInitialCredits  = "cats_initial_credits";    // default: "3"
-    public const string CatsSessionLimit    = "cats_session_limit";      // default: "3"
-    public const string LowCreditThreshold  = "low_credit_threshold";   // default: "2"
-    public const string SessionDefaultCap   = "session_default_cap";    // default: "25"
-    public const string CatsWelcomeEmail    = "cats_welcome_email";     // email template
+    public const string CatsInitialCredits = "cats_initial_credits";    // default: "3"
+    public const string CatsSessionLimit = "cats_session_limit";      // default: "3"
+    public const string LowCreditThreshold = "low_credit_threshold";   // default: "2"
+    public const string SessionDefaultCap = "session_default_cap";    // default: "25"
+    public const string CatsWelcomeEmail = "cats_welcome_email";     // email template
 }
 
 /// <summary>

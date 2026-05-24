@@ -1,7 +1,6 @@
 using MembersGuild.API.Extensions;
 using MembersGuild.Data.Models.Club;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;
 
 namespace MembersGuild.API.Services;
 

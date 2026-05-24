@@ -137,6 +137,10 @@ export default function MembersPage() {
   const [resending, setResending] = useState(false)
   const [resendMsg, setResendMsg] = useState('')
 
+  // Low Credit Email
+  const [sendingLowCredit, setSendingLowCredit] = useState(false)
+  const [lowCreditMsg, setLowCreditMsg] = useState('')
+
   // Member detail modal
   const [selected, setSelected] = useState<MemberDetailResponse | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
@@ -254,6 +258,24 @@ export default function MembersPage() {
       setResendMsg('Failed to send — please try again')
     } finally {
       setResending(false)
+    }
+  }
+
+  async function handleSendLowCreditEmail() {
+    if (checkedIds.length === 0) return
+    setSendingLowCredit(true); setLowCreditMsg('')
+    try {
+      const res = await api.post<{ sent: number }>(
+        '/settings/email-alerts/send-low-credit-bulk',
+        { userIds: checkedIds }
+      )
+      setLowCreditMsg(`Low credit email sent to ${res.sent} member${res.sent !== 1 ? 's' : ''}`)
+      setCheckedIds([])
+      setTimeout(() => setLowCreditMsg(''), 5000)
+    } catch {
+      setLowCreditMsg('Failed to send — please try again')
+    } finally {
+      setSendingLowCredit(false)
     }
   }
 
@@ -385,7 +407,7 @@ export default function MembersPage() {
         email: r.email,
         phone: r.phone || null,
         joinDate: r.joinDate || null,
-        dateOfBirth:       r.dateOfBirth || null, 
+        dateOfBirth: r.dateOfBirth || null,
         associationNumber: r.associationNumber || null,
         startingCredits: r.startingCredits,
         role: r.role,
@@ -472,6 +494,13 @@ export default function MembersPage() {
               style={{ color: 'var(--color-primary)' }}>
               {resending ? 'Sending…' : '✉ Resend Welcome Email'}
             </button>
+            <button
+              onClick={handleSendLowCreditEmail}
+              disabled={sendingLowCredit}
+              className="bg-white text-sm font-semibold px-4 py-1.5 rounded-lg hover:bg-white/90 disabled:opacity-50 transition-opacity"
+              style={{ color: 'var(--color-primary)' }}>
+              {sendingLowCredit ? 'Sending…' : '🔔 Send Low Credit Email'}
+            </button>
             <button onClick={() => setCheckedIds([])}
               className="text-white/70 hover:text-white text-sm">
               Cancel
@@ -484,6 +513,11 @@ export default function MembersPage() {
       {resendMsg && (
         <div className="rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3">
           ✓ {resendMsg}
+        </div>
+      )}
+      {lowCreditMsg && (
+        <div className="rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3">
+          ✓ {lowCreditMsg}
         </div>
       )}
 

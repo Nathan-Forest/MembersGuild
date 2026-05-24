@@ -20,10 +20,12 @@ public interface ISessionService
 public class SessionService : ISessionService
 {
     private readonly ClubDbContextFactory _dbFactory;
+    private readonly CreditAlertService _creditAlerts;
 
-    public SessionService(ClubDbContextFactory dbFactory)
+    public SessionService(ClubDbContextFactory dbFactory, CreditAlertService creditAlerts)
     {
         _dbFactory = dbFactory;
+        _creditAlerts = creditAlerts;
     }
 
     public async Task<List<SessionResponse>> GetSessionsAsync(int currentUserId, DateTime? from, DateTime? to)
@@ -37,7 +39,7 @@ public class SessionService : ISessionService
             .AsQueryable();
 
         if (from.HasValue) query = query.Where(s => s.StartTime >= from.Value);
-        if (to.HasValue)   query = query.Where(s => s.StartTime <= to.Value);
+        if (to.HasValue) query = query.Where(s => s.StartTime <= to.Value);
 
         var sessions = await query
             .OrderBy(s => s.StartTime)
@@ -64,16 +66,16 @@ public class SessionService : ISessionService
 
         var session = new Session
         {
-            Title                   = request.Title.Trim(),
-            Description             = request.Description?.Trim(),
-            LocationId              = request.LocationId,
-            CoachId                 = request.CoachId,
-            StartTime               = request.StartTime.ToUniversalTime(),
-            EndTime                 = request.EndTime.ToUniversalTime(),
-            Capacity                = request.Capacity,
-            CreditCost              = request.CreditCost,
+            Title = request.Title.Trim(),
+            Description = request.Description?.Trim(),
+            LocationId = request.LocationId,
+            CoachId = request.CoachId,
+            StartTime = request.StartTime.ToUniversalTime(),
+            EndTime = request.EndTime.ToUniversalTime(),
+            Capacity = request.Capacity,
+            CreditCost = request.CreditCost,
             RegistrationCutoffHours = request.RegistrationCutoffHours,
-            CreatedBy               = createdBy,
+            CreatedBy = createdBy,
         };
 
         db.Sessions.Add(session);
@@ -96,16 +98,16 @@ public class SessionService : ISessionService
 
         if (session is null) return null;
 
-        session.Title                   = request.Title.Trim();
-        session.Description             = request.Description?.Trim();
-        session.LocationId              = request.LocationId;
-        session.CoachId                 = request.CoachId;
-        session.StartTime               = request.StartTime.ToUniversalTime();
-        session.EndTime                 = request.EndTime.ToUniversalTime();
-        session.Capacity                = request.Capacity;
-        session.CreditCost              = request.CreditCost;
+        session.Title = request.Title.Trim();
+        session.Description = request.Description?.Trim();
+        session.LocationId = request.LocationId;
+        session.CoachId = request.CoachId;
+        session.StartTime = request.StartTime.ToUniversalTime();
+        session.EndTime = request.EndTime.ToUniversalTime();
+        session.Capacity = request.Capacity;
+        session.CreditCost = request.CreditCost;
         session.RegistrationCutoffHours = request.RegistrationCutoffHours;
-        session.UpdatedAt               = DateTime.UtcNow;
+        session.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
 
@@ -130,13 +132,13 @@ public class SessionService : ISessionService
             user.CreditBalance += session.CreditCost;
             db.CreditTransactions.Add(new CreditTransaction
             {
-                UserId          = booking.UserId,
-                Amount          = session.CreditCost,
-                BalanceAfter    = user.CreditBalance,
+                UserId = booking.UserId,
+                Amount = session.CreditCost,
+                BalanceAfter = user.CreditBalance,
                 TransactionType = TransactionTypes.SessionRefund,
-                ReferenceId     = session.Id,
-                ReferenceType   = "session",
-                Notes           = $"Session cancelled: {session.Title}",
+                ReferenceId = session.Id,
+                ReferenceType = "session",
+                Notes = $"Session cancelled: {session.Title}",
             });
         }
 
@@ -193,23 +195,30 @@ public class SessionService : ISessionService
             user.CreditBalance -= session.CreditCost;
             db.CreditTransactions.Add(new CreditTransaction
             {
-                UserId          = userId,
-                Amount          = -session.CreditCost,
-                BalanceAfter    = user.CreditBalance,
+                UserId = userId,
+                Amount = -session.CreditCost,
+                BalanceAfter = user.CreditBalance,
                 TransactionType = TransactionTypes.SessionBooking,
-                ReferenceId     = session.Id,
-                ReferenceType   = "session",
-                Notes           = $"Booked: {session.Title}",
+                ReferenceId = session.Id,
+                ReferenceType = "session",
+                Notes = $"Booked: {session.Title}",
             });
         }
 
         db.SessionBookings.Add(new SessionBooking
         {
             SessionId = sessionId,
-            UserId    = userId,
+            UserId = userId,
         });
 
         await db.SaveChangesAsync();
+
+        // ── Credit alert hook ─────────────────────────────────────
+        // Only fire when credits were actually deducted (not coaches)
+        if (role != Roles.Coach)
+            await _creditAlerts.CheckAndSendAsync(userId, user.CreditBalance);
+        // ─────────────────────────────────────────────────────────
+
         return MapSession(session, userId);
     }
 
@@ -241,13 +250,13 @@ public class SessionService : ISessionService
                 user.CreditBalance += session.CreditCost;
                 db.CreditTransactions.Add(new CreditTransaction
                 {
-                    UserId          = userId,
-                    Amount          = session.CreditCost,
-                    BalanceAfter    = user.CreditBalance,
+                    UserId = userId,
+                    Amount = session.CreditCost,
+                    BalanceAfter = user.CreditBalance,
                     TransactionType = TransactionTypes.SessionRefund,
-                    ReferenceId     = session.Id,
-                    ReferenceType   = "session",
-                    Notes           = $"Unregistered: {session.Title}",
+                    ReferenceId = session.Id,
+                    ReferenceType = "session",
+                    Notes = $"Unregistered: {session.Title}",
                 });
             }
         }
@@ -270,22 +279,22 @@ public class SessionService : ISessionService
             if (request.DaysOfWeek.Contains(current.DayOfWeek))
             {
                 var startDt = current.ToDateTime(request.StartTime).ToUniversalTime();
-                var endDt   = current.ToDateTime(request.EndTime).ToUniversalTime();
+                var endDt = current.ToDateTime(request.EndTime).ToUniversalTime();
 
                 sessions.Add(new Session
                 {
-                    Title                   = request.Title.Trim(),
-                    Description             = request.Description?.Trim(),
-                    LocationId              = request.LocationId,
-                    CoachId                 = request.CoachId,
-                    StartTime               = startDt,
-                    EndTime                 = endDt,
-                    Capacity                = request.Capacity,
-                    CreditCost              = request.CreditCost,
+                    Title = request.Title.Trim(),
+                    Description = request.Description?.Trim(),
+                    LocationId = request.LocationId,
+                    CoachId = request.CoachId,
+                    StartTime = startDt,
+                    EndTime = endDt,
+                    Capacity = request.Capacity,
+                    CreditCost = request.CreditCost,
                     RegistrationCutoffHours = request.RegistrationCutoffHours,
-                    IsRecurring             = true,
-                    RecurringGroupId        = groupId,
-                    CreatedBy               = createdBy,
+                    IsRecurring = true,
+                    RecurringGroupId = groupId,
+                    CreatedBy = createdBy,
                 });
             }
             current = current.AddDays(1);

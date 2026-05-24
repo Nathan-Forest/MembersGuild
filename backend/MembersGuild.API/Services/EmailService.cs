@@ -468,5 +468,30 @@ public class EmailService
     message.To.Add(recipientEmail);
     await _resend.EmailSendAsync(message);
   }
+  public async Task SendGenericAsync(
+      string to,
+      string subject,
+      string body,
+      string clubName = "",
+      string clubSlug = "",
+      string? logoUrl = null,
+      string primaryColor = "#1a2744")
+  {
+    var html = BuildHtml(
+        content: $"<p style=\"color:#374151;font-size:15px;line-height:1.6;\">{body.Replace("\n", "<br/>")}</p>",
+        clubName: clubName,
+        clubSlug: clubSlug,
+        logoUrl: logoUrl,
+        primaryColor: primaryColor
+    );
 
+    var message = new EmailMessage
+    {
+      From = $"{clubName} <{From}>",
+      Subject = subject,
+      HtmlBody = html,
+    };
+    message.To.Add(to);
+    await _resend.EmailSendAsync(message);
+  }
 }

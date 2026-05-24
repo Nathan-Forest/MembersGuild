@@ -17,6 +17,7 @@ public interface ICreditService
 public class CreditService : ICreditService
 {
     private readonly ClubDbContextFactory _dbFactory;
+    private readonly CreditAlertService _creditAlerts;  // ← NEW
 
     private static readonly Dictionary<string, string> TypeLabels = new()
     {
@@ -31,9 +32,10 @@ public class CreditService : ICreditService
         ["payment_confirmed"] = "Payment confirmed",
     };
 
-    public CreditService(ClubDbContextFactory dbFactory)
+    public CreditService(ClubDbContextFactory dbFactory, CreditAlertService creditAlerts)  // ← updated
     {
         _dbFactory = dbFactory;
+        _creditAlerts = creditAlerts;
     }
 
     public async Task<MyAccountResponse> GetMyAccountAsync(int userId)
@@ -43,7 +45,6 @@ public class CreditService : ICreditService
         var user = await db.Users.FindAsync(userId)
             ?? throw new InvalidOperationException("User not found");
 
-        // Pending credits = sum of credits in unconfirmed shop orders
         var pendingCredits = await db.ShopOrders
             .Where(o => o.UserId == userId && o.Status == OrderStatus.Pending)
             .SumAsync(o => o.TotalCredits);
@@ -125,6 +126,12 @@ public class CreditService : ICreditService
 
         db.CreditTransactions.Add(transaction);
         await db.SaveChangesAsync();
+
+        // ── Credit alert hook ─────────────────────────────────────
+        // Only check on deductions (negative amount)
+        if (request.Amount < 0)
+            await _creditAlerts.CheckAndSendAsync(user.Id, newBalance);
+        // ─────────────────────────────────────────────────────────
 
         return MapTransaction(transaction, user.FullName);
     }
