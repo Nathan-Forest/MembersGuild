@@ -238,7 +238,7 @@ public class MembersController : ControllerBase
     [HttpGet("{id}/upcoming-sessions")]
     public async Task<IActionResult> GetUpcomingSessions(int id)
     {
-        if (!CanManageMembers()) return Forbid();
+        if (!CanManageMembers() && !HasRole("coach", "committee")) return Forbid();
         await using var db = _dbFactory.CreateForCurrentClub();
 
         var now = DateTime.UtcNow;

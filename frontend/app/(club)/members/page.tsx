@@ -53,15 +53,17 @@ const CREDIT_FILTERS = [
 
 function getVisibleTabs(role: UserRole | null): { key: ModalTab; label: string }[] {
   const all: { key: ModalTab; label: string }[] = [
-    { key: 'details', label: 'Details' },
+    { key: 'details',   label: 'Details' },
     { key: 'emergency', label: 'Emergency Contact' },
-    { key: 'credits', label: 'Credits' },
-    { key: 'role', label: 'Role & Access' },
-    { key: 'sessions', label: 'Upcoming Sessions' },
+    { key: 'credits',   label: 'Credits' },
+    { key: 'role',      label: 'Role & Access' },
+    { key: 'sessions',  label: 'Upcoming Sessions' },
   ]
-  if (role === 'webmaster') return all
-  if (role === 'finance') return all.filter(t => t.key !== 'role')
-  if (role === 'membership') return all.filter(t => t.key !== 'credits')
+  if (role === 'webmaster')  return all
+  if (role === 'finance')    return all.filter(t => t.key !== 'role')
+  if (role === 'membership') return all.filter(t => t.key !== 'credits' && t.key !== 'sessions')
+  if (role === 'coach' || role === 'committee')
+    return all.filter(t => t.key === 'details' || t.key === 'emergency' || t.key === 'sessions')
   return all.filter(t => t.key === 'details' || t.key === 'emergency')
 }
 
