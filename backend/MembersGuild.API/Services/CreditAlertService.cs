@@ -23,8 +23,13 @@ public class CreditAlertService
     {
         await using var db = _dbFactory.CreateForCurrentClub();
 
-        var settings = await db.ClubSettings.FirstOrDefaultAsync();
-        if (settings == null || !settings.CreditAlertsEnabled) return;
+        var enabledSetting = await db.ClubSettings.FindAsync("credit_alerts_enabled");
+        if (enabledSetting?.Value != "true") return;
+
+        var cooldownOn = await db.ClubSettings.FindAsync("credit_alert_cooldown_enabled");
+        var cooldownDays = await db.ClubSettings.FindAsync("credit_alert_cooldown_days");
+        var cooldownEnabled = cooldownOn?.Value == "true";
+        var cooldownDaysVal = int.TryParse(cooldownDays?.Value, out var d) ? d : 7;
 
         var member = await db.Users.FindAsync(memberId);
         if (member == null || !member.IsActive) return;
@@ -38,9 +43,9 @@ public class CreditAlertService
 
         foreach (var rule in rules)
         {
-            if (settings.CreditAlertCooldownEnabled)
+            if (cooldownEnabled)
             {
-                var cutoff = DateTime.UtcNow.AddDays(-settings.CreditAlertCooldownDays);
+                var cutoff = DateTime.UtcNow.AddDays(-cooldownDaysVal);
                 var recentlySent = await db.CreditAlertLog
                     .AnyAsync(l => l.MemberId == memberId
                                && l.RuleId == rule.Id

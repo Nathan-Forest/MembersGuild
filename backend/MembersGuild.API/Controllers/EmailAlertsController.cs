@@ -27,13 +27,14 @@ public class EmailAlertsController : ControllerBase
     public async Task<IActionResult> GetAlertSettings()
     {
         await using var db = _dbFactory.CreateForCurrentClub();
-        var s = await db.ClubSettings.FirstOrDefaultAsync();
-        if (s == null) return NotFound();
+        var enabled = await db.ClubSettings.FindAsync("credit_alerts_enabled");
+        var cooldownOn = await db.ClubSettings.FindAsync("credit_alert_cooldown_enabled");
+        var cooldownDays = await db.ClubSettings.FindAsync("credit_alert_cooldown_days");
         return Ok(new
         {
-            creditAlertsEnabled        = s.CreditAlertsEnabled,
-            creditAlertCooldownEnabled = s.CreditAlertCooldownEnabled,
-            creditAlertCooldownDays    = s.CreditAlertCooldownDays,
+            creditAlertsEnabled = enabled?.Value == "true",
+            creditAlertCooldownEnabled = cooldownOn?.Value == "true",
+            creditAlertCooldownDays = int.TryParse(cooldownDays?.Value, out var d) ? d : 7,
         });
     }
 
@@ -41,13 +42,18 @@ public class EmailAlertsController : ControllerBase
     public async Task<IActionResult> UpdateAlertSettings([FromBody] AlertSettingsRequest req)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
-        var s = await db.ClubSettings.FirstOrDefaultAsync();
-        if (s == null) return NotFound();
-        s.CreditAlertsEnabled        = req.CreditAlertsEnabled;
-        s.CreditAlertCooldownEnabled = req.CreditAlertCooldownEnabled;
-        s.CreditAlertCooldownDays    = req.CreditAlertCooldownDays;
+        await Upsert(db, "credit_alerts_enabled", req.CreditAlertsEnabled ? "true" : "false");
+        await Upsert(db, "credit_alert_cooldown_enabled", req.CreditAlertCooldownEnabled ? "true" : "false");
+        await Upsert(db, "credit_alert_cooldown_days", req.CreditAlertCooldownDays.ToString());
         await db.SaveChangesAsync();
         return Ok(new { success = true });
+    }
+
+    private static async Task Upsert(MembersGuild.Data.Contexts.ClubDbContext db, string key, string value)
+    {
+        var s = await db.ClubSettings.FindAsync(key);
+        if (s == null) db.ClubSettings.Add(new ClubSetting { Key = key, Value = value, UpdatedAt = DateTime.UtcNow });
+        else { s.Value = value; s.UpdatedAt = DateTime.UtcNow; }
     }
 
     // ── Templates ──────────────────────────────────────────────────────────
@@ -71,9 +77,9 @@ public class EmailAlertsController : ControllerBase
 
         var t = new EmailTemplate
         {
-            Name      = req.Name,
-            Subject   = req.Subject,
-            Body      = req.Body,
+            Name = req.Name,
+            Subject = req.Subject,
+            Body = req.Body,
             IsDefault = req.IsDefault,
         };
         db.EmailTemplates.Add(t);
@@ -90,9 +96,9 @@ public class EmailAlertsController : ControllerBase
 
         if (req.IsDefault) await ClearDefaultTemplates(db);
 
-        t.Name      = req.Name;
-        t.Subject   = req.Subject;
-        t.Body      = req.Body;
+        t.Name = req.Name;
+        t.Subject = req.Subject;
+        t.Body = req.Body;
         t.IsDefault = req.IsDefault;
         await db.SaveChangesAsync();
         return Ok(t);
@@ -135,8 +141,8 @@ public class EmailAlertsController : ControllerBase
         var rule = new CreditAlertRule
         {
             ThresholdCredits = req.ThresholdCredits,
-            EmailTemplateId  = req.EmailTemplateId,
-            IsEnabled        = true,
+            EmailTemplateId = req.EmailTemplateId,
+            IsEnabled = true,
         };
         db.CreditAlertRules.Add(rule);
         await db.SaveChangesAsync();
@@ -152,8 +158,8 @@ public class EmailAlertsController : ControllerBase
         var rule = await db.CreditAlertRules.FindAsync(id);
         if (rule == null) return NotFound();
         rule.ThresholdCredits = req.ThresholdCredits;
-        rule.EmailTemplateId  = req.EmailTemplateId;
-        rule.IsEnabled        = req.IsEnabled;
+        rule.EmailTemplateId = req.EmailTemplateId;
+        rule.IsEnabled = req.IsEnabled;
         await db.SaveChangesAsync();
         return Ok(new { success = true });
     }

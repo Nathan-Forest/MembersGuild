@@ -10,9 +10,6 @@ public class ClubSetting
     public string Value { get; set; } = string.Empty;
     public int? UpdatedBy { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-    public bool CreditAlertsEnabled { get; set; } = false;
-    public bool CreditAlertCooldownEnabled { get; set; } = false;
-    public int CreditAlertCooldownDays { get; set; } = 7;
 }
 
 public static class ClubSettingKeys
