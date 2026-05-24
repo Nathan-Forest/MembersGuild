@@ -22,17 +22,20 @@ public class AttendanceController : ControllerBase
 
     private readonly EmailService _email;
     private readonly ClubContext _clubContext;
+    private readonly CreditAlertService _creditAlerts;
 
     public AttendanceController(
     ClubDbContextFactory dbFactory,
     IConfiguration config,
     EmailService email,
-    ClubContext clubContext)
+    ClubContext clubContext,
+    CreditAlertService creditAlerts)
     {
         _dbFactory = dbFactory;
         _config = config;
         _email = email;
         _clubContext = clubContext;
+        _creditAlerts = creditAlerts;
     }
     private int CurrentUserId => int.Parse(
         User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
@@ -322,7 +325,15 @@ public class AttendanceController : ControllerBase
             existing.UpdatedAt = DateTime.UtcNow;
         }
 
-        await db.SaveChangesAsync();
+        // ── Credit alert hook ─────────────────────────────────────
+        if (!isBooked && session.CreditCost > 0)
+        {
+            var walkinUser = await db.Users.FindAsync(userId);
+            if (walkinUser is not null)
+                await _creditAlerts.CheckAndSendAsync(userId, walkinUser.CreditBalance);
+        }
+        // ─────────────────────────────────────────────────────────
+
         return Ok(new { success = true });
     }
 
@@ -453,7 +464,11 @@ public class AttendanceController : ControllerBase
                 existing.UpdatedAt = DateTime.UtcNow;
             }
 
-            await db.SaveChangesAsync();
+            // ── Credit alert hook ─────────────────────────────────────
+            var checkinUser = await db.Users.FindAsync(userId);
+            if (checkinUser is not null && session.CreditCost > 0)
+                await _creditAlerts.CheckAndSendAsync(userId, checkinUser.CreditBalance);
+            // ─────────────────────────────────────────────────────────
 
             return Ok(new
             {
