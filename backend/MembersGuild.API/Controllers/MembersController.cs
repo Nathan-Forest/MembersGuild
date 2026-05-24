@@ -244,7 +244,8 @@ public class MembersController : ControllerBase
         var now = DateTime.UtcNow;
         var sessions = await db.SessionBookings
             .Include(b => b.Session).ThenInclude(s => s.Location)
-            .Where(b => b.Session != null
+            .Where(b => b.UserId == id
+         && b.Session != null
          && b.Session.StartTime >= now
          && !b.Session.IsCancelled)
             .OrderBy(b => b.Session.StartTime)
