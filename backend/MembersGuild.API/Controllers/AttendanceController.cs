@@ -325,6 +325,8 @@ public class AttendanceController : ControllerBase
             existing.UpdatedAt = DateTime.UtcNow;
         }
 
+        await db.SaveChangesAsync();
+
         // ── Credit alert hook ─────────────────────────────────────
         if (!isBooked && session.CreditCost > 0)
         {
@@ -463,6 +465,8 @@ public class AttendanceController : ControllerBase
                 existing.Status = "attended";
                 existing.UpdatedAt = DateTime.UtcNow;
             }
+
+            await db.SaveChangesAsync();
 
             // ── Credit alert hook ─────────────────────────────────────
             var checkinUser = await db.Users.FindAsync(userId);
