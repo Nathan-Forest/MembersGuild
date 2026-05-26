@@ -51,6 +51,8 @@ services:
       dockerfile: Dockerfile
       args:
         BACKEND_URL: http://membersguild-backend:5015
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
     container_name: membersguild-frontend
     restart: unless-stopped
     ports:

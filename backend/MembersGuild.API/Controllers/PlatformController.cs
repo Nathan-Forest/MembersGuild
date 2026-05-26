@@ -17,17 +17,20 @@ public class PlatformController : ControllerBase
     private readonly PlatformService _platform;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IConfiguration _config;
+    private readonly EmailService _email;  // ← ADD
 
     public PlatformController(
         PlatformDbContext platformDb,
         PlatformService platform,
         IServiceScopeFactory scopeFactory,
-        IConfiguration config)
+        IConfiguration config,
+        EmailService email)  // ← ADD
     {
         _platformDb = platformDb;
         _platform = platform;
         _scopeFactory = scopeFactory;
         _config = config;
+        _email = email;  // ← ADD
     }
 
     // GET /platform/clubs
@@ -367,7 +370,6 @@ public class PlatformController : ControllerBase
         }
     }
 
-    // POST /platform/stripe/webhook
     [HttpPost("stripe/webhook")]
     public async Task<IActionResult> StripeWebhook()
     {
@@ -380,11 +382,14 @@ public class PlatformController : ControllerBase
             var stripeEvent = EventUtility.ConstructEvent(
                 json,
                 Request.Headers["Stripe-Signature"],
-                _config["Stripe:WebhookSecret"]
+                _config["Stripe__WebhookSecret"]
             );
 
             switch (stripeEvent.Type)
             {
+                case "payment_intent.succeeded":
+                    await HandleSetupFeeSucceeded(stripeEvent);
+                    break;
                 case "customer.subscription.updated":
                     await HandleSubscriptionUpdated(stripeEvent);
                     break;
@@ -395,12 +400,60 @@ public class PlatformController : ControllerBase
                     await HandlePaymentFailed(stripeEvent);
                     break;
             }
-            return Ok();
+
+            return Ok();  // ← INSIDE the try block
         }
-        catch (StripeException ex)
+        catch (StripeException ex)  // ← PART OF the try-catch
         {
             return BadRequest(new { error = ex.Message });
         }
+    }
+
+    private async Task HandleSetupFeeSucceeded(Event stripeEvent)
+    {
+        var pi = stripeEvent.Data.Object as PaymentIntent;
+        if (pi is null) return;
+
+        // Only handle club registration intents
+        if (pi.Metadata.GetValueOrDefault("application_type") != "club_registration") return;
+
+        var application = await _platformDb.ClubApplications
+            .FirstOrDefaultAsync(a => a.StripePaymentIntentId == pi.Id);
+        if (application is null) return;
+
+        application.Status = "pending_onboard";
+        application.SetupFeePaidAt = DateTime.UtcNow;
+        application.UpdatedAt = DateTime.UtcNow;
+
+        _platformDb.PaymentEvents.Add(new PaymentEvent
+        {
+            EventType = "setup_paid",
+            AmountAud = pi.Amount / 100m,
+            StripeEventId = stripeEvent.Id,
+            Notes = $"Setup fee paid — {application.ClubName}",
+        });
+
+        await _platformDb.SaveChangesAsync();
+
+        // Email webmaster
+        await _email.SendGenericAsync(
+            to: application.ContactEmail,
+            subject: "Payment confirmed — MembersGuild onboarding within 24 hours",
+            body: $"Hi {application.ContactName},\n\nYour payment of $199 has been confirmed.\n\nWe'll have {application.DisplayName}'s portal live within 24 hours. You'll receive your login details by email.\n\nKind regards,\nThe MembersGuild Team",
+            clubName: "MembersGuild",
+            clubSlug: "membersguild",
+            primaryColor: "#1a56db"
+        );
+
+        // Email Nathan
+        await _email.SendGenericAsync(
+            to: "hello@membersguild.com.au",
+            subject: $"🎉 New club registration — {application.ClubName}",
+            body: $"New paying customer!\n\nClub: {application.ClubName}\nContact: {application.ContactName} ({application.ContactEmail})\nPackage: ID {application.PackageId}\nPhone: {application.ContactPhone ?? "not provided"}\n\nReady to onboard in the admin panel.",
+            clubName: "MembersGuild",
+            clubSlug: "membersguild",
+            primaryColor: "#1a56db"
+        );
     }
 
     private async Task HandleSubscriptionUpdated(Event stripeEvent)
