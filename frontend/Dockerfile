@@ -16,6 +16,8 @@ COPY . .
 # Passed as a build arg from docker-compose so it can vary per environment.
 ARG BACKEND_URL=http://membersguild-backend:5015
 ENV BACKEND_URL=$BACKEND_URL
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 RUN npm run build
 
@@ -25,6 +27,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
+ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
