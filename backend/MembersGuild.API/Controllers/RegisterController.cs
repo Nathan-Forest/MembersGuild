@@ -23,7 +23,6 @@ public class RegisterController : ControllerBase
         _platformDb = platformDb;
         _config = config;
         _email = email;
-        StripeConfiguration.ApiKey = config["Stripe__SecretKey"];
     }
 
     // POST /api/register/create-intent
@@ -41,10 +40,10 @@ public class RegisterController : ControllerBase
         var customer = await customerService.CreateAsync(new CustomerCreateOptions
         {
             Email = req.ContactEmail,
-            Name  = req.ContactName,
+            Name = req.ContactName,
             Metadata = new Dictionary<string, string>
             {
-                ["club_name"]    = req.ClubName,
+                ["club_name"] = req.ClubName,
                 ["package_name"] = package.DisplayName ?? package.Name,
             }
         });
@@ -53,7 +52,7 @@ public class RegisterController : ControllerBase
         var piService = new PaymentIntentService();
         var pi = await piService.CreateAsync(new PaymentIntentCreateOptions
         {
-            Amount   = 19900, // $199.00 AUD in cents
+            Amount = 19900, // $199.00 AUD in cents
             Currency = "aud",
             Customer = customer.Id,
             AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
@@ -64,29 +63,29 @@ public class RegisterController : ControllerBase
             Metadata = new Dictionary<string, string>
             {
                 ["application_type"] = "club_registration",
-                ["club_name"]        = req.ClubName,
-                ["contact_email"]    = req.ContactEmail,
-                ["package_id"]       = req.PackageId.ToString(),
+                ["club_name"] = req.ClubName,
+                ["contact_email"] = req.ContactEmail,
+                ["package_id"] = req.PackageId.ToString(),
             }
         });
 
         // Save application
         var application = new ClubApplication
         {
-            Status            = "pending_payment",
-            ClubName          = req.ClubName,
-            DisplayName       = req.DisplayName,
-            SportType         = req.SportType,
-            EstimatedMembers  = req.EstimatedMembers,
-            Website           = req.Website,
-            ContactName       = req.ContactName,
-            ContactEmail      = req.ContactEmail,
-            ContactPhone      = req.ContactPhone,
-            PackageId         = req.PackageId,
-            StripeCustomerId  = customer.Id,
+            Status = "pending_payment",
+            ClubName = req.ClubName,
+            DisplayName = req.DisplayName,
+            SportType = req.SportType,
+            EstimatedMembers = req.EstimatedMembers,
+            Website = req.Website,
+            ContactName = req.ContactName,
+            ContactEmail = req.ContactEmail,
+            ContactPhone = req.ContactPhone,
+            PackageId = req.PackageId,
+            StripeCustomerId = customer.Id,
             StripePaymentIntentId = pi.Id,
-            SubmittedAt       = DateTime.UtcNow,
-            UpdatedAt         = DateTime.UtcNow,
+            SubmittedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
         };
 
         _platformDb.ClubApplications.Add(application);
@@ -94,11 +93,11 @@ public class RegisterController : ControllerBase
 
         return Ok(new
         {
-            clientSecret    = pi.ClientSecret,
-            applicationId   = application.Id,
-            amount          = 199.00,
-            packageName     = package.DisplayName ?? package.Name,
-            monthlyPrice    = package.Price,
+            clientSecret = pi.ClientSecret,
+            applicationId = application.Id,
+            amount = 199.00,
+            packageName = package.DisplayName ?? package.Name,
+            monthlyPrice = package.Price,
         });
     }
 
@@ -113,11 +112,11 @@ public class RegisterController : ControllerBase
             .OrderBy(p => p.SortOrder)
             .Select(p => new
             {
-                id           = p.Id,
-                name         = p.DisplayName ?? p.Name,
-                price        = p.Price,
-                memberCap    = p.MemberCap,
-                featureKeys  = p.Features.Select(f => f.FeatureKey).ToList(),
+                id = p.Id,
+                name = p.DisplayName ?? p.Name,
+                price = p.Price,
+                memberCap = p.MemberCap,
+                featureKeys = p.Features.Select(f => f.FeatureKey).ToList(),
             })
             .ToListAsync();
 
@@ -129,10 +128,10 @@ public record CreateApplicationRequest(
     string ClubName,
     string DisplayName,
     string SportType,
-    int?   EstimatedMembers,
+    int? EstimatedMembers,
     string? Website,
     string ContactName,
     string ContactEmail,
     string? ContactPhone,
-    int    PackageId
+    int PackageId
 );

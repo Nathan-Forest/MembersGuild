@@ -13,6 +13,8 @@ using Amazon;
 
 var builder = WebApplication.CreateBuilder(args);
 
+StripeConfiguration.ApiKey = builder.Configuration["Stripe__SecretKey"];
+
 // ── Database ──────────────────────────────────────────────────────────────────
 
 var connectionString = builder.Configuration.GetConnectionString("Default")
