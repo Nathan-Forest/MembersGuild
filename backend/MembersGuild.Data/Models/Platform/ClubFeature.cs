@@ -17,11 +17,12 @@ public class ClubFeature
 /// </summary>
 public static class FeatureKeys
 {
-    public const string Calendar   = "calendar";
+    public const string Calendar = "calendar";
     public const string MySessions = "my_sessions";
     public const string Attendance = "attendance";
-    public const string Training   = "training";
-    public const string Shop       = "shop";
-    public const string MyAccount  = "my_account";
-    public const string News       = "news";  
+    public const string Training = "training";
+    public const string Shop = "shop";
+    public const string MyAccount = "my_account";
+    public const string Reports = "reports";
+    public const string News = "news";
 }

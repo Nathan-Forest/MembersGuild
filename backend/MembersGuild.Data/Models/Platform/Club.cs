@@ -29,4 +29,24 @@ public class Club
     public string DiscountType { get; set; } = "none";
     public decimal DiscountValue { get; set; }
     public string? DiscountNote { get; set; }
+    public int? ApplicationId { get; set; }
+    public string SportType { get; set; } = "general";
+    public string? Website { get; set; }
+    public string? Phone { get; set; }
+    public string? Address { get; set; }
+    public string? WebmasterName { get; set; }
+    public string? WebmasterEmail { get; set; }
+    public string? WebmasterPhone { get; set; }
+    public string PaymentStatus { get; set; } = "green"; // green | yellow | red
+    public DateTime? PaymentFailedAt { get; set; }
+    public DateTime? GracePeriodEnds { get; set; }
+    public int? GraceExtendedBy { get; set; }
+    public DateTime? GraceExtendedAt { get; set; }
+    public string? GraceExtensionNote { get; set; }
+    public DateTime? LastPaymentAt { get; set; }
+    public DateTime? NextPaymentAt { get; set; }
+    public bool IsFreeForever { get; set; } = false;
+    public string? StripePriceId { get; set; }
+    public DateTime? OnboardedAt { get; set; }
+    public int? OnboardedBy { get; set; }
 }

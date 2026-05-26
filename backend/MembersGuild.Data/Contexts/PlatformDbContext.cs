@@ -19,6 +19,13 @@ public class PlatformDbContext : DbContext
     public DbSet<PackageFeature> PackageFeatures { get; set; }
     public DbSet<ClubPackage> ClubPackages { get; set; }
     public DbSet<SupportRequest> SupportRequests { get; set; }
+    public DbSet<Addon> Addons => Set<Addon>();
+    public DbSet<ClubApplication> ClubApplications => Set<ClubApplication>();
+    public DbSet<ClubAddon> ClubAddons => Set<ClubAddon>();
+    public DbSet<PaymentEvent> PaymentEvents => Set<PaymentEvent>();
+    public DbSet<DiscountCode> DiscountCodes => Set<DiscountCode>();
+    public DbSet<ClubDiscount> ClubDiscounts => Set<ClubDiscount>();
+    public DbSet<Expense> Expenses => Set<Expense>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -8,7 +8,13 @@ namespace MembersGuild.API.Services;
 
 public interface IClubProvisioningService
 {
-    Task<Club> ProvisionClubAsync(string slug, string name, string displayName, string sport = "general");
+    Task<Club> ProvisionClubAsync(
+        string slug,
+        string name,
+        string displayName,
+        string sport = "general",
+        int? packageId = null,
+        int? applicationId = null);
     Task SeedSwimmingTemplateAsync(string schemaName);
     Task ResetDemoClubAsync(string slug);
 }
@@ -30,18 +36,43 @@ public class ClubProvisioningService : IClubProvisioningService
     }
 
     public async Task<Club> ProvisionClubAsync(
-        string slug, string name, string displayName, string sport = "general")
+        string slug,
+        string name,
+        string displayName,
+        string sport = "general",
+        int? packageId = null,
+        int? applicationId = null)
     {
         var schemaName = $"club_{slug.ToLower().Replace("-", "_")}";
 
-        // 1. Create schema and all tables FIRST
-        // If this fails, no platform record is written and the seed will retry cleanly
+        // 1. Create schema and all tables
         await RunClubMigrationsAsync(schemaName);
 
-        // 2. Seed default settings into the new schema
+        // 2. Seed default settings
         await SeedDefaultSettingsAsync(schemaName);
 
-        // 3. Only write the platform record once schema + tables exist
+        // 3. Resolve features — from package if provided, else default set
+        List<string> featureKeys;
+
+        if (packageId.HasValue)
+        {
+            featureKeys = await _platformDb.PackageFeatures
+                .Where(pf => pf.PackageId == packageId.Value)
+                .Select(pf => pf.FeatureKey)
+                .ToListAsync();
+        }
+        else
+        {
+            // Fallback for manual provisioning (BSM, demo clubs etc.)
+            featureKeys = new List<string>
+        {
+            FeatureKeys.Calendar, FeatureKeys.MySessions, FeatureKeys.Attendance,
+            FeatureKeys.Training, FeatureKeys.Shop, FeatureKeys.MyAccount,
+            FeatureKeys.Reports, FeatureKeys.News
+        };
+        }
+
+        // 4. Write platform record
         var club = new Club
         {
             Slug = slug.ToLower(),
@@ -50,19 +81,16 @@ public class ClubProvisioningService : IClubProvisioningService
             SchemaName = schemaName,
             SubscriptionTier = "standard",
             SubscriptionStatus = "active",
+            SportType = sport,
+            ApplicationId = applicationId,
+            OnboardedAt = DateTime.UtcNow,
         };
 
         _platformDb.Clubs.Add(club);
         await _platformDb.SaveChangesAsync();
 
-        // 4. Enable all standard features
-        var features = new[]
-        {
-            FeatureKeys.Calendar, FeatureKeys.MySessions, FeatureKeys.Attendance,
-            FeatureKeys.Training, FeatureKeys.Shop, FeatureKeys.MyAccount
-        };
-
-        foreach (var key in features)
+        // 5. Enable features from package
+        foreach (var key in featureKeys)
         {
             _platformDb.ClubFeatures.Add(new ClubFeature
             {
@@ -74,15 +102,28 @@ public class ClubProvisioningService : IClubProvisioningService
         }
         await _platformDb.SaveChangesAsync();
 
-        // 5. Sport-specific template
+        // 6. Mark application as onboarded if applicable
+        if (applicationId.HasValue)
+        {
+            var application = await _platformDb.ClubApplications.FindAsync(applicationId.Value);
+            if (application != null)
+            {
+                application.Status = "onboarded";
+                application.ReviewedAt = DateTime.UtcNow;
+                await _platformDb.SaveChangesAsync();
+            }
+        }
+
+        // 7. Sport-specific template
         if (sport == "swimming")
             await SeedSwimmingTemplateAsync(schemaName);
 
-        _logger.LogInformation("Provisioned club: {Slug} → schema: {Schema}", slug, schemaName);
+        _logger.LogInformation(
+            "Provisioned club: {Slug} → schema: {Schema} | package: {PackageId}",
+            slug, schemaName, packageId);
 
         return club;
     }
-
     private async Task RunClubMigrationsAsync(string schemaName)
     {
         var connectionString = _config.GetConnectionString("Default")
