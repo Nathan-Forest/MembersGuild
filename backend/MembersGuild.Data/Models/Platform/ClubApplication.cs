@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace MembersGuild.Data.Models.Platform;
 
 public class ClubApplication
@@ -21,7 +23,8 @@ public class ClubApplication
     // Package
     public int? PackageId { get; set; }
     public Package? Package { get; set; }
-    public string SelectedAddons { get; set; } = "[]"; // JSON array of addon IDs
+    [Column(TypeName = "jsonb")]
+    public string SelectedAddons { get; set; } = "[]";
 
     // Stripe
     public string? StripeCustomerId { get; set; }
