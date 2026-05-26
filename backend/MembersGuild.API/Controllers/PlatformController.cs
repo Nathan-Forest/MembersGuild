@@ -382,7 +382,7 @@ public class PlatformController : ControllerBase
             var stripeEvent = EventUtility.ConstructEvent(
                 json,
                 Request.Headers["Stripe-Signature"],
-                _config["Stripe__WebhookSecret"]
+                _config["Stripe:WebhookSecret"]
             );
 
             switch (stripeEvent.Type)
