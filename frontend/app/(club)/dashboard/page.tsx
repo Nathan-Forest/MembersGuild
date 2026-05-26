@@ -29,6 +29,21 @@ interface ClubUpdate {
   createdAt: string
 }
 
+interface MySessionsResponse {
+  stats: {
+    upcomingBookings: number
+    thisMonthSessions: number
+    lifetimeSessions: number
+  }
+  upcoming: {
+    id: number
+    title: string
+    startTime: string
+    locationName: string | null
+    creditCost: number
+  }[]
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [firstName, setFirstName] = useState('')
@@ -49,16 +64,22 @@ export default function DashboardPage() {
     const noCredits = u.role === 'coach'
 
     Promise.all([
-      api.get<DashboardStats>('/sessions/my-sessions').catch(() => null),
+      api.get<MySessionsResponse>('/sessions/my-sessions').catch(() => null),
       noCredits ? Promise.resolve(null) : api.get<{ creditBalance: number }>('/credits/my-account').catch(() => null),
       api.get<ClubUpdate[]>('/updates').catch(() => []),
     ]).then(([sessionData, creditData, clubUpdates]) => {
       setStats({
         creditBalance: creditData?.creditBalance,
-        sessionsThisMonth: sessionData?.sessionsThisMonth ?? 0,
-        upcomingBookings: sessionData?.upcomingBookings ?? 0,
-        lifetimeSessions: sessionData?.lifetimeSessions ?? 0,
-        upcomingSessions: sessionData?.upcomingSessions ?? [],
+        sessionsThisMonth: sessionData?.stats?.thisMonthSessions ?? 0,
+        upcomingBookings: sessionData?.stats?.upcomingBookings ?? 0,
+        lifetimeSessions: sessionData?.stats?.lifetimeSessions ?? 0,
+        upcomingSessions: sessionData?.upcoming?.map(s => ({
+          id: s.id,
+          title: s.title,
+          startTime: s.startTime,
+          location: s.locationName ?? undefined,
+          creditCost: s.creditCost,
+        })) ?? [],
       })
       setUpdates(clubUpdates as ClubUpdate[])
     }).finally(() => setLoading(false))
