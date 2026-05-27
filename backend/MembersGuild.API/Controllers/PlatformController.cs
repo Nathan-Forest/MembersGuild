@@ -94,7 +94,7 @@ public class PlatformController : ControllerBase
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
             var provisioningService = scope.ServiceProvider
-                .GetRequiredService<ClubProvisioningService>();
+                .GetRequiredService<IClubProvisioningService>();
             var platformDb = scope.ServiceProvider
                 .GetRequiredService<PlatformDbContext>();
             var platformSvc = scope.ServiceProvider
@@ -870,7 +870,7 @@ public class PlatformController : ControllerBase
         _ = Task.Run(async () =>
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
-            var provisioningService = scope.ServiceProvider.GetRequiredService<ClubProvisioningService>();
+            var provisioningService = scope.ServiceProvider.GetRequiredService<IClubProvisioningService>();
             var platformDb = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
 
             try
