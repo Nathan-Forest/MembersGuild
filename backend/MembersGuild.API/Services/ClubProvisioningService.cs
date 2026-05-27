@@ -129,28 +129,38 @@ public class ClubProvisioningService : IClubProvisioningService
         var connectionString = _config.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Connection string 'Default' not configured");
 
-        // Build a temporary context just to generate the CREATE TABLE script
         var options = new DbContextOptionsBuilder<ClubDbContext>()
             .UseNpgsql(connectionString)
             .Options;
 
         await using var db = new ClubDbContext(options, schemaName);
-
-        // Generate the full DDL script from the EF model
         var script = db.Database.GenerateCreateScript();
 
-        // Execute it directly against the database
         await using var conn = new NpgsqlConnection(connectionString);
         await conn.OpenAsync();
 
-        // Create the schema first
+        // Create schema
         await using (var cmd = conn.CreateCommand())
         {
             cmd.CommandText = $"CREATE SCHEMA IF NOT EXISTS \"{schemaName}\"";
             await cmd.ExecuteNonQueryAsync();
         }
 
-        // Execute the full table creation script
+        // Check if tables already exist — skip DDL if so (idempotent)
+        int tableCount;
+        await using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = $"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '{schemaName}'";
+            tableCount = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+        }
+
+        if (tableCount > 0)
+        {
+            _logger.LogInformation("Schema {Schema} already has {Count} tables — skipping DDL", schemaName, tableCount);
+            return;
+        }
+
+        // Run full DDL
         await using (var cmd = conn.CreateCommand())
         {
             cmd.CommandText = script;
