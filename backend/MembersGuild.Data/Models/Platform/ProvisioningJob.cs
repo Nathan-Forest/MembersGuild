@@ -1,5 +1,8 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace MembersGuild.Data.Models.Platform;
 
+[Table("provisioning_jobs", Schema = "platform")]
 public class ProvisioningJob
 {
     public Guid   Id          { get; set; } = Guid.NewGuid();

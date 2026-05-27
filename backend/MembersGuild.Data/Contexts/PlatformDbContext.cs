@@ -77,5 +77,11 @@ public class PlatformDbContext : DbContext
             e.ToTable("support_requests", "platform");
             e.HasKey(x => x.Id);
         });
+
+        modelBuilder.Entity<ProvisioningJob>(entity =>
+{
+    entity.ToTable("provisioning_jobs");
+    entity.HasKey(e => e.Id);
+});
     }
 }
