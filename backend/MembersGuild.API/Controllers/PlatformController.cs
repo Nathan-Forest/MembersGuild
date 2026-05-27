@@ -863,35 +863,15 @@ public class PlatformController : ControllerBase
         if (application.Status == "onboarded")
             return BadRequest(new { error = "Already onboarded." });
 
-        // Validate slug is unique
         var slugExists = await _platformDb.Clubs.AnyAsync(c => c.Slug == req.Slug);
         if (slugExists)
             return BadRequest(new { error = $"Slug '{req.Slug}' is already taken." });
 
-        // Create provisioning job
-        var job = new ProvisioningJob
-        {
-            Id = Guid.NewGuid(),
-            Type = "provision_club",
-            TargetSlug = req.Slug,
-            Status = "pending",
-            StartedAt = DateTime.UtcNow
-        };
-        _platformDb.ProvisioningJobs.Add(job);
-        await _platformDb.SaveChangesAsync();
-
-        // Fire provisioning in background
         _ = Task.Run(async () =>
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
             var provisioningService = scope.ServiceProvider.GetRequiredService<ClubProvisioningService>();
             var platformDb = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
-            var platformSvc = scope.ServiceProvider.GetRequiredService<PlatformService>();
-
-            var jobToUpdate = await platformDb.ProvisioningJobs.FindAsync(job.Id);
-            if (jobToUpdate is null) return;
-            jobToUpdate.Status = "running";
-            await platformDb.SaveChangesAsync();
 
             try
             {
@@ -904,10 +884,7 @@ public class PlatformController : ControllerBase
                     applicationId: application.Id
                 );
 
-                // Update club with webmaster + application details
-                var club = await platformDb.Clubs
-                    .FirstOrDefaultAsync(c => c.Slug == req.Slug);
-
+                var club = await platformDb.Clubs.FirstOrDefaultAsync(c => c.Slug == req.Slug);
                 if (club != null)
                 {
                     club.WebmasterName = application.ContactName;
@@ -915,40 +892,30 @@ public class PlatformController : ControllerBase
                     club.WebmasterPhone = application.ContactPhone;
                     club.SportType = application.SportType;
                     club.OnboardedAt = DateTime.UtcNow;
-                    club.IsFreeForever = false;
                     await platformDb.SaveChangesAsync();
                 }
 
-                // Mark application onboarded
-                application.Status = "onboarded";
-                application.ReviewedAt = DateTime.UtcNow;
-                application.Notes = req.Notes;
-                await platformDb.SaveChangesAsync();
-
-                jobToUpdate.Status = "completed";
-                jobToUpdate.CompletedAt = DateTime.UtcNow;
-                await platformDb.SaveChangesAsync();
-
-                await platformSvc.AuditAsync(
-                    action: "application.onboarded", actor: "platform_admin",
-                    clubSlug: req.Slug,
-                    metadata: new { applicationId = id, req.Slug });
+                var app = await platformDb.ClubApplications.FindAsync(id);
+                if (app != null)
+                {
+                    app.Status = "onboarded";
+                    app.ReviewedAt = DateTime.UtcNow;
+                    app.Notes = req.Notes;
+                    await platformDb.SaveChangesAsync();
+                }
             }
             catch (Exception ex)
             {
-                jobToUpdate.Status = "failed";
-                jobToUpdate.Error = ex.Message;
-                jobToUpdate.CompletedAt = DateTime.UtcNow;
-                await platformDb.SaveChangesAsync();
+                var app = await platformDb.ClubApplications.FindAsync(id);
+                if (app != null)
+                {
+                    app.Notes = $"Provisioning failed: {ex.Message}";
+                    await platformDb.SaveChangesAsync();
+                }
             }
         });
 
-        return Accepted(new
-        {
-            slug = req.Slug,
-            status = "provisioning",
-            provisioningJobId = job.Id.ToString()
-        });
+        return Accepted(new { slug = req.Slug, status = "provisioning" });
     }
 
     // POST /platform/applications/{id}/reject

@@ -22,25 +22,25 @@ interface Application {
 }
 
 const STATUS_TABS = [
-  { value: '',                label: 'All' },
+  { value: '', label: 'All' },
   { value: 'pending_payment', label: 'Pending Payment' },
   { value: 'pending_onboard', label: 'Ready to Onboard' },
-  { value: 'onboarded',       label: 'Onboarded' },
-  { value: 'rejected',        label: 'Rejected' },
+  { value: 'onboarded', label: 'Onboarded' },
+  { value: 'rejected', label: 'Rejected' },
 ]
 
 const statusBadge = (s: string) => ({
   pending_payment: 'bg-yellow-100 text-yellow-700',
   pending_onboard: 'bg-blue-100 text-blue-700',
-  onboarded:       'bg-green-100 text-green-700',
-  rejected:        'bg-red-100 text-red-700',
+  onboarded: 'bg-green-100 text-green-700',
+  rejected: 'bg-red-100 text-red-700',
 }[s] ?? 'bg-gray-100 text-gray-600')
 
 const statusLabel = (s: string) => ({
   pending_payment: 'Pending Payment',
   pending_onboard: 'Ready to Onboard',
-  onboarded:       'Onboarded',
-  rejected:        'Rejected',
+  onboarded: 'Onboarded',
+  rejected: 'Rejected',
 }[s] ?? s)
 
 function generateSlug(displayName: string): string {
@@ -55,21 +55,21 @@ function generateSlug(displayName: string): string {
 export default function ApplicationsPage() {
   const router = useRouter()
   const [applications, setApplications] = useState<Application[]>([])
-  const [loading, setLoading]           = useState(true)
-  const [tab, setTab]                   = useState('')
-  const [error, setError]               = useState('')
+  const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState('')
+  const [error, setError] = useState('')
 
   // Onboard modal
-  const [onboarding, setOnboarding]         = useState<Application | null>(null)
-  const [slug, setSlug]                     = useState('')
-  const [onboardNotes, setOnboardNotes]     = useState('')
+  const [onboarding, setOnboarding] = useState<Application | null>(null)
+  const [slug, setSlug] = useState('')
+  const [onboardNotes, setOnboardNotes] = useState('')
   const [onboardLoading, setOnboardLoading] = useState(false)
-  const [onboardError, setOnboardError]     = useState('')
-  const [jobId, setJobId]                   = useState<string | null>(null)
+  const [onboardError, setOnboardError] = useState('')
+  const [jobId, setJobId] = useState<string | null>(null)
 
   // Reject
-  const [rejecting, setRejecting]       = useState<Application | null>(null)
-  const [rejectNotes, setRejectNotes]   = useState('')
+  const [rejecting, setRejecting] = useState<Application | null>(null)
+  const [rejectNotes, setRejectNotes] = useState('')
   const [rejectLoading, setRejectLoading] = useState(false)
 
   useEffect(() => { loadApplications() }, [tab])
@@ -108,7 +108,7 @@ export default function ApplicationsPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to onboard')
-      setJobId(data.provisioningJobId)
+      setJobId('started')  // ← just needs to be truthy to show success state
       await loadApplications()
     } catch (err) {
       setOnboardError(err instanceof Error ? err.message : 'Failed to onboard')
@@ -161,11 +161,10 @@ export default function ApplicationsPage() {
       <div className="flex gap-1 border-b border-gray-200">
         {STATUS_TABS.map(t => (
           <button key={t.value} onClick={() => setTab(t.value)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab === t.value
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t.value
                 ? 'border-[#1a2744] text-[#1a2744]'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}>
+              }`}>
             {t.label}
             {t.value === 'pending_onboard' && pendingCount > 0 && (
               <span className="ml-2 bg-blue-100 text-blue-700 text-xs px-1.5 py-0.5 rounded-full">
