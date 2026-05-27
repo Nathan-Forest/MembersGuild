@@ -14,7 +14,9 @@ public interface IClubProvisioningService
         string displayName,
         string sport = "general",
         int? packageId = null,
-        int? applicationId = null);
+        int? applicationId = null,
+        string? webmasterName = null,
+        string? webmasterEmail = null);
     Task SeedSwimmingTemplateAsync(string schemaName);
     Task ResetDemoClubAsync(string slug);
 }
@@ -41,7 +43,9 @@ public class ClubProvisioningService : IClubProvisioningService
         string displayName,
         string sport = "general",
         int? packageId = null,
-        int? applicationId = null)
+        int? applicationId = null,
+        string? webmasterName = null,    // ← ADD
+        string? webmasterEmail = null)   // ← ADD
     {
         var schemaName = $"club_{slug.ToLower().Replace("-", "_")}";
 
@@ -122,8 +126,68 @@ public class ClubProvisioningService : IClubProvisioningService
             "Provisioned club: {Slug} → schema: {Schema} | package: {PackageId}",
             slug, schemaName, packageId);
 
+        // At end of ProvisionClubAsync, before return:
+        if (!string.IsNullOrEmpty(webmasterEmail))
+        {
+            var tempPassword = await CreateWebmasterAccountAsync(
+                schemaName, webmasterName ?? displayName, webmasterEmail);
+
+            _logger.LogInformation(
+                "Webmaster credentials — Email: {Email} TempPass: {Pass}",
+                webmasterEmail, tempPassword);
+        }
+
         return club;
     }
+
+    private async Task<string> CreateWebmasterAccountAsync(
+    string schemaName, string name, string email)
+    {
+        var connectionString = _config.GetConnectionString("Default")!;
+        var builder = new NpgsqlConnectionStringBuilder(connectionString)
+        { SearchPath = schemaName };
+        var options = new DbContextOptionsBuilder<ClubDbContext>()
+            .UseNpgsql(builder.ToString()).Options;
+        await using var db = new ClubDbContext(options, schemaName);
+
+        // Generate temporary password
+        var tempPassword = GenerateTempPassword();
+        var hash = BCrypt.Net.BCrypt.HashPassword(tempPassword);
+
+        // Split name
+        var parts = name.Trim().Split(' ', 2);
+        var firstName = parts[0];
+        var lastName = parts.Length > 1 ? parts[1] : "";
+
+        var user = new User
+        {
+            FirstName = firstName,
+            LastName = lastName,
+            Email = email.ToLower().Trim(),
+            Phone = "",
+            Role = "webmaster",
+            PasswordHash = hash,
+            IsActive = true,
+            JoinedAt = DateTime.UtcNow,
+        };
+
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Created webmaster account for {Email} in {Schema}", email, schemaName);
+
+        return tempPassword;
+    }
+
+    private static string GenerateTempPassword()
+    {
+        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+        var random = new Random();
+        return new string(Enumerable.Repeat(chars, 12)
+            .Select(s => s[random.Next(s.Length)]).ToArray());
+    }
+
     private async Task RunClubMigrationsAsync(string schemaName)
     {
         var connectionString = _config.GetConnectionString("Default")
