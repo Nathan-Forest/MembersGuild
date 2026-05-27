@@ -139,14 +139,14 @@ public class PlatformController : ControllerBase
             {
                 jobToUpdate.Status = "failed";
                 jobToUpdate.CompletedAt = DateTime.UtcNow;
-                jobToUpdate.Error = ex.Message;
+                // Drill into inner exceptions to get the real Postgres error
+                jobToUpdate.Error = ex.InnerException?.InnerException?.Message
+                    ?? ex.InnerException?.Message
+                    ?? ex.Message;
                 await platformDb.SaveChangesAsync();
 
-                await platformSvc.AuditAsync(
-                    action: "club.provision_failed",
-                    actor: "system",
-                    clubSlug: req.Slug,
-                    metadata: new { error = ex.Message });
+                // Also log it so we can see it in docker logs
+                Console.WriteLine($"[PROVISION FAILED] {ex}");
             }
         });
 
