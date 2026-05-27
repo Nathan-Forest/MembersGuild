@@ -811,4 +811,162 @@ public class PlatformController : ControllerBase
         return Ok(new RevenueSummaryResponse(
             totalMrr, clubs.Count, freeClubs, breakdown));
     }
+
+    // ── Applications ──────────────────────────────────────────────────────────────
+
+    // GET /platform/applications
+    [HttpGet("applications")]
+    public async Task<IActionResult> GetApplications([FromQuery] string? status = null)
+    {
+        var query = _platformDb.ClubApplications
+            .Include(a => a.Package)
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(status))
+            query = query.Where(a => a.Status == status);
+
+        var applications = await query
+            .OrderByDescending(a => a.SubmittedAt)
+            .Select(a => new
+            {
+                id = a.Id,
+                status = a.Status,
+                clubName = a.ClubName,
+                displayName = a.DisplayName,
+                sportType = a.SportType,
+                contactName = a.ContactName,
+                contactEmail = a.ContactEmail,
+                contactPhone = a.ContactPhone,
+                estimatedMembers = a.EstimatedMembers,
+                packageId = a.PackageId,
+                packageName = a.Package != null ? a.Package.DisplayName ?? a.Package.Name : null,
+                packagePrice = a.Package != null ? a.Package.Price : (decimal?)null,
+                setupFeePaidAt = a.SetupFeePaidAt,
+                submittedAt = a.SubmittedAt,
+                notes = a.Notes,
+            })
+            .ToListAsync();
+
+        return Ok(applications);
+    }
+
+    // POST /platform/applications/{id}/onboard
+    [HttpPost("applications/{id}/onboard")]
+    public async Task<IActionResult> OnboardApplication(
+        int id, [FromBody] OnboardApplicationRequest req)
+    {
+        var application = await _platformDb.ClubApplications
+            .Include(a => a.Package)
+            .FirstOrDefaultAsync(a => a.Id == id);
+
+        if (application is null) return NotFound();
+        if (application.Status == "onboarded")
+            return BadRequest(new { error = "Already onboarded." });
+
+        // Validate slug is unique
+        var slugExists = await _platformDb.Clubs.AnyAsync(c => c.Slug == req.Slug);
+        if (slugExists)
+            return BadRequest(new { error = $"Slug '{req.Slug}' is already taken." });
+
+        // Create provisioning job
+        var job = new ProvisioningJob
+        {
+            Id = Guid.NewGuid(),
+            Type = "provision_club",
+            TargetSlug = req.Slug,
+            Status = "pending",
+            StartedAt = DateTime.UtcNow
+        };
+        _platformDb.ProvisioningJobs.Add(job);
+        await _platformDb.SaveChangesAsync();
+
+        // Fire provisioning in background
+        _ = Task.Run(async () =>
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var provisioningService = scope.ServiceProvider.GetRequiredService<ClubProvisioningService>();
+            var platformDb = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
+            var platformSvc = scope.ServiceProvider.GetRequiredService<PlatformService>();
+
+            var jobToUpdate = await platformDb.ProvisioningJobs.FindAsync(job.Id);
+            if (jobToUpdate is null) return;
+            jobToUpdate.Status = "running";
+            await platformDb.SaveChangesAsync();
+
+            try
+            {
+                await provisioningService.ProvisionClubAsync(
+                    slug: req.Slug,
+                    name: application.ClubName,
+                    displayName: application.DisplayName,
+                    sport: application.SportType,
+                    packageId: application.PackageId,
+                    applicationId: application.Id
+                );
+
+                // Update club with webmaster + application details
+                var club = await platformDb.Clubs
+                    .FirstOrDefaultAsync(c => c.Slug == req.Slug);
+
+                if (club != null)
+                {
+                    club.WebmasterName = application.ContactName;
+                    club.WebmasterEmail = application.ContactEmail;
+                    club.WebmasterPhone = application.ContactPhone;
+                    club.SportType = application.SportType;
+                    club.OnboardedAt = DateTime.UtcNow;
+                    club.IsFreeForever = false;
+                    await platformDb.SaveChangesAsync();
+                }
+
+                // Mark application onboarded
+                application.Status = "onboarded";
+                application.ReviewedAt = DateTime.UtcNow;
+                application.Notes = req.Notes;
+                await platformDb.SaveChangesAsync();
+
+                jobToUpdate.Status = "completed";
+                jobToUpdate.CompletedAt = DateTime.UtcNow;
+                await platformDb.SaveChangesAsync();
+
+                await platformSvc.AuditAsync(
+                    action: "application.onboarded", actor: "platform_admin",
+                    clubSlug: req.Slug,
+                    metadata: new { applicationId = id, req.Slug });
+            }
+            catch (Exception ex)
+            {
+                jobToUpdate.Status = "failed";
+                jobToUpdate.Error = ex.Message;
+                jobToUpdate.CompletedAt = DateTime.UtcNow;
+                await platformDb.SaveChangesAsync();
+            }
+        });
+
+        return Accepted(new
+        {
+            slug = req.Slug,
+            status = "provisioning",
+            provisioningJobId = job.Id.ToString()
+        });
+    }
+
+    // POST /platform/applications/{id}/reject
+    [HttpPost("applications/{id}/reject")]
+    public async Task<IActionResult> RejectApplication(
+        int id, [FromBody] RejectApplicationRequest req)
+    {
+        var application = await _platformDb.ClubApplications.FindAsync(id);
+        if (application is null) return NotFound();
+
+        application.Status = "rejected";
+        application.Notes = req.Notes;
+        application.ReviewedAt = DateTime.UtcNow;
+        await _platformDb.SaveChangesAsync();
+
+        await _platform.AuditAsync("application.rejected", "platform_admin",
+            metadata: new { applicationId = id, notes = req.Notes });
+
+        return Ok(new { success = true });
+    }
 }

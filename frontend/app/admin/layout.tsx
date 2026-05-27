@@ -13,6 +13,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="flex items-center gap-6 text-sm">
           <a href="/admin" className="hover:text-white/70 transition-colors">Dashboard</a>
           <a href="/admin/clubs" className="hover:text-white/70 transition-colors">Clubs</a>
+          <a href="/admin/applications" className="hover:text-white/70 transition-colors">Applications</a>
           <a href="/admin/health" className="hover:text-white/70 transition-colors">Health</a>
           <a href="/admin/packages" className="hover:text-white/70 transition-colors">Packages</a>
         </div>

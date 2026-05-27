@@ -50,3 +50,6 @@ public record UpdateClubTierRequest(
     string Tier,        // "small", "medium", "large"
     decimal MonthlyAmount
 );
+
+public record OnboardApplicationRequest(string Slug, string? Notes);
+public record RejectApplicationRequest(string? Notes);
