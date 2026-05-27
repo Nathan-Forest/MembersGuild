@@ -877,11 +877,13 @@ public class PlatformController : ControllerBase
             {
                 await provisioningService.ProvisionClubAsync(
                     slug: req.Slug,
-                    name: application.ClubName,
-                    displayName: application.DisplayName,
-                    sport: application.SportType,
-                    packageId: application.PackageId,
-                    applicationId: application.Id
+    name: application.ClubName,
+    displayName: application.DisplayName,
+    sport: application.SportType,
+    packageId: application.PackageId,
+    applicationId: application.Id,
+    webmasterName: application.ContactName,
+    webmasterEmail: application.ContactEmail
                 );
 
                 var club = await platformDb.Clubs.FirstOrDefaultAsync(c => c.Slug == req.Slug);

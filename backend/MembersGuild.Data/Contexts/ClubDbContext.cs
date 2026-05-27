@@ -18,6 +18,8 @@ public class ClubDbContext : DbContext
         _schemaName = schemaName;
     }
 
+    public string SchemaName => _schemaName;
+
     public DbSet<User> Users => Set<User>();
     public DbSet<CatsProfile> CatsProfiles => Set<CatsProfile>();
     public DbSet<Location> Locations => Set<Location>();

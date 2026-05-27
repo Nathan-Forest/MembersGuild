@@ -2,6 +2,7 @@ using MembersGuild.Data.Contexts;
 using MembersGuild.Data.Models.Club;
 using MembersGuild.Data.Models.Platform;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Npgsql;
 
 namespace MembersGuild.API.Services;
@@ -19,6 +20,14 @@ public interface IClubProvisioningService
         string? webmasterEmail = null);
     Task SeedSwimmingTemplateAsync(string schemaName);
     Task ResetDemoClubAsync(string slug);
+}
+
+public class DynamicSchemaModelCacheKeyFactory : IModelCacheKeyFactory
+{
+    public object Create(DbContext context, bool designTime) =>
+        context is ClubDbContext clubCtx
+            ? (context.GetType(), clubCtx.SchemaName, designTime)
+            : (object)(context.GetType(), designTime);
 }
 
 public class ClubProvisioningService : IClubProvisioningService
@@ -244,7 +253,9 @@ public class ClubProvisioningService : IClubProvisioningService
         };
 
         var options = new DbContextOptionsBuilder<ClubDbContext>()
-            .UseNpgsql(builder.ToString()).Options;
+    .UseNpgsql(builder.ToString())
+    .ReplaceService<IModelCacheKeyFactory, DynamicSchemaModelCacheKeyFactory>()
+    .Options;
         await using var db = new ClubDbContext(options, schemaName);
 
         db.ClubSettings.AddRange(
