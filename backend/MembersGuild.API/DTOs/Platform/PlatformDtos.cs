@@ -22,7 +22,9 @@ public record ProvisionClubRequest(
     string Sport,
     string PrimaryColor,
     string SecondaryColor,
-    string? LogoUrl
+    string? LogoUrl,
+    string? WebmasterName,
+    string? WebmasterEmail
 );
 
 public record ProvisionClubResponse(

@@ -21,7 +21,9 @@ export default function AdminClubsPage() {
   const [jobStatus, setJobStatus] = useState<string | null>(null)
   const [form, setForm] = useState({
     slug: '', name: '', displayName: '', tier: 'small',
-    sport: 'swimming', primaryColor: '#1a56db', secondaryColor: '#1e429f', logoUrl: ''
+    sport: 'swimming', primaryColor: '#1a56db', secondaryColor: '#1e429f', logoUrl: '',
+    webmasterName: '',   // ← ADD
+    webmasterEmail: '',
   })
 
   useEffect(() => {
@@ -81,8 +83,8 @@ export default function AdminClubsPage() {
       {/* Job status banner */}
       {jobId && (
         <div className={`rounded-xl px-5 py-3 text-sm font-medium ${jobStatus === 'completed' ? 'bg-green-50 text-green-700 border border-green-200' :
-            jobStatus === 'failed' ? 'bg-red-50 text-red-700 border border-red-200' :
-              'bg-blue-50 text-blue-700 border border-blue-200'
+          jobStatus === 'failed' ? 'bg-red-50 text-red-700 border border-red-200' :
+            'bg-blue-50 text-blue-700 border border-blue-200'
           }`}>
           {jobStatus === 'completed' ? '✓ Club provisioned successfully' :
             jobStatus === 'failed' ? '✗ Provisioning failed — check logs' :
@@ -156,6 +158,42 @@ export default function AdminClubsPage() {
                   />
                 </div>
               ))}
+
+              {/* Webmaster section */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">
+                  Webmaster Account
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      Webmaster Name
+                    </label>
+                    <input
+                      value={form.webmasterName}
+                      onChange={e => setForm(p => ({ ...p, webmasterName: e.target.value }))}
+                      placeholder="Alex Morgan"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a2744]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      Webmaster Email
+                    </label>
+                    <input
+                      type="email"
+                      value={form.webmasterEmail}
+                      onChange={e => setForm(p => ({ ...p, webmasterEmail: e.target.value }))}
+                      placeholder="alex@club.com.au"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a2744]"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      A webmaster account will be created. Credentials appear in server logs until email is wired up.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Tier</label>
