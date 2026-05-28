@@ -109,7 +109,9 @@ public class PlatformController : ControllerBase
             try
             {
                 await provisioningService.ProvisionClubAsync(
-    req.Slug, req.Name, req.DisplayName, req.Sport);
+    req.Slug, req.Name, req.DisplayName, req.Sport,
+    webmasterName: req.WebmasterName,
+    webmasterEmail: req.WebmasterEmail);
 
                 // Then update branding and tier on the club record
                 var club = await platformDb.Clubs

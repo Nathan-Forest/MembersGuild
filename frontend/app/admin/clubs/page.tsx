@@ -56,7 +56,12 @@ export default function AdminClubsPage() {
     const res = await fetch('/api/platform/clubs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, logoUrl: form.logoUrl || null })
+      body: JSON.stringify({
+        ...form,
+        logoUrl: form.logoUrl || null,
+        webmasterName: form.webmasterName || null,  // ← ADD
+        webmasterEmail: form.webmasterEmail || null,  // ← ADD
+      })
     })
     const data = await res.json()
     if (res.ok) {
