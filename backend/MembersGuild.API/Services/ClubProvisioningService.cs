@@ -212,63 +212,43 @@ public class ClubProvisioningService : IClubProvisioningService
     }
 
     private async Task RunClubMigrationsAsync(string schemaName)
+{
+    var connectionString = _config.GetConnectionString("Default")
+        ?? throw new InvalidOperationException("Connection string 'Default' not configured");
+
+    var options = new DbContextOptionsBuilder<ClubDbContext>()
+        .UseNpgsql(connectionString)
+        .ReplaceService<IModelCacheKeyFactory, DynamicSchemaModelCacheKeyFactory>()
+        .Options;
+
+    await using var db = new ClubDbContext(options, schemaName);
+
+    // Make DDL idempotent before executing
+    var script = db.Database.GenerateCreateScript()
+        .Replace("CREATE TABLE ",        "CREATE TABLE IF NOT EXISTS ")
+        .Replace("CREATE INDEX ",        "CREATE INDEX IF NOT EXISTS ")
+        .Replace("CREATE UNIQUE INDEX ", "CREATE UNIQUE INDEX IF NOT EXISTS ")
+        .Replace("CREATE SEQUENCE ",     "CREATE SEQUENCE IF NOT EXISTS ");
+
+    await using var conn = new NpgsqlConnection(connectionString);
+    await conn.OpenAsync();
+
+    // Create schema
+    await using (var cmd = conn.CreateCommand())
     {
-        var connectionString = _config.GetConnectionString("Default")
-            ?? throw new InvalidOperationException("Connection string 'Default' not configured");
-
-        var options = new DbContextOptionsBuilder<ClubDbContext>()
-            .UseNpgsql(connectionString)
-            .Options;
-
-        await using var db = new ClubDbContext(options, schemaName);
-        var script = db.Database.GenerateCreateScript();
-
-        await using var conn = new NpgsqlConnection(connectionString);
-        await conn.OpenAsync();
-
-        // Create schema
-        await using (var cmd = conn.CreateCommand())
-        {
-            cmd.CommandText = $"CREATE SCHEMA IF NOT EXISTS \"{schemaName}\"";
-            await cmd.ExecuteNonQueryAsync();
-        }
-
-        // Check if tables already exist — skip DDL if so (idempotent)
-        int tableCount;
-        await using (var cmd = conn.CreateCommand())
-        {
-            cmd.CommandText = $"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '{schemaName}'";
-            tableCount = Convert.ToInt32(await cmd.ExecuteScalarAsync());
-        }
-
-        if (tableCount > 0)
-        {
-            _logger.LogInformation("Schema {Schema} already has {Count} tables — skipping DDL", schemaName, tableCount);
-            return;
-        }
-
-        // Run full DDL
-        var statements = script
-    .Split(new[] { ";\r\n", ";\n", ";" }, StringSplitOptions.RemoveEmptyEntries)
-    .Select(s => s.Trim())
-    .Where(s => !string.IsNullOrWhiteSpace(s));
-
-        foreach (var statement in statements)
-        {
-            try
-            {
-                await using var cmd = conn.CreateCommand();
-                cmd.CommandText = statement;
-                await cmd.ExecuteNonQueryAsync();
-            }
-            catch (Npgsql.PostgresException ex) when (ex.SqlState == "42P07")
-            {
-                // Table/index already exists — skip and continue
-            }
-        }
-
-        _logger.LogInformation("Schema and tables created for: {Schema}", schemaName);
+        cmd.CommandText = $"CREATE SCHEMA IF NOT EXISTS \"{schemaName}\"";
+        await cmd.ExecuteNonQueryAsync();
     }
+
+    // Run full DDL — IF NOT EXISTS on every statement makes this safe to run multiple times
+    await using (var cmd = conn.CreateCommand())
+    {
+        cmd.CommandText = script;
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    _logger.LogInformation("Schema and tables created for: {Schema}", schemaName);
+}
 
     private async Task SeedDefaultSettingsAsync(string schemaName)
     {
