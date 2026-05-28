@@ -113,7 +113,7 @@ public class PlatformController : ControllerBase
             {
                 await provisioningService.ProvisionClubAsync(
     req.Slug, req.Name, req.DisplayName, req.Sport,
-    packageId:      package?.Id, 
+    packageId: package?.Id,
     webmasterName: req.WebmasterName,
     webmasterEmail: req.WebmasterEmail);
 
@@ -194,7 +194,7 @@ public class PlatformController : ControllerBase
         var memberCount = await _platform.GetMemberCountAsync(club.SchemaName);
         var sessionCount = await _platform.GetSessionCountAsync(club.SchemaName);
 
-        return Ok(new ClubSummaryResponse(
+        return Ok(new ClubDetailResponse(
             Id: club.Id,
             Slug: club.Slug,
             Name: club.Name,
@@ -204,6 +204,14 @@ public class PlatformController : ControllerBase
             MemberCount: memberCount,
             TierCap: await _platform.GetMemberCapAsync(club.Id),
             SessionCount: sessionCount,
+            SportType: club.SportType,
+            Website: club.Website,
+            Phone: club.Phone,
+            Address: club.Address,
+            WebmasterName: club.WebmasterName,
+            WebmasterEmail: club.WebmasterEmail,
+            WebmasterPhone: club.WebmasterPhone,
+            OnboardedAt: club.OnboardedAt,
             CreatedAt: club.CreatedAt,
             LastActivityAt: club.UpdatedAt
         ));

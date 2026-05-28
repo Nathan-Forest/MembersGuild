@@ -55,3 +55,11 @@ public record UpdateClubTierRequest(
 
 public record OnboardApplicationRequest(string Slug, string? Notes);
 public record RejectApplicationRequest(string? Notes);
+
+public record ClubDetailResponse(
+    int Id, string Slug, string Name, string DisplayName,
+    string Tier, string Status, int MemberCount, int TierCap, int SessionCount,
+    string? SportType, string? Website, string? Phone, string? Address,
+    string? WebmasterName, string? WebmasterEmail, string? WebmasterPhone,
+    DateTime? OnboardedAt, DateTime CreatedAt, DateTime? LastActivityAt
+);
