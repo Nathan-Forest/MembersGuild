@@ -115,6 +115,19 @@ public class ClubProvisioningService : IClubProvisioningService
         }
         await _platformDb.SaveChangesAsync();
 
+                // 5b. Link package to club in ClubPackages
+        if (packageId.HasValue)
+        {
+            _platformDb.ClubPackages.Add(new ClubPackage
+            {
+                ClubId = club.Id,
+                PackageId = packageId.Value,
+                StartDate = DateTime.UtcNow,
+            });
+            await _platformDb.SaveChangesAsync();
+        }
+
+
         // 6. Mark application as onboarded if applicable
         if (applicationId.HasValue)
         {
