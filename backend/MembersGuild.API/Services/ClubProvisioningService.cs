@@ -97,8 +97,9 @@ public class ClubProvisioningService : IClubProvisioningService
             SportType = sport,
             ApplicationId = applicationId,
             OnboardedAt = DateTime.UtcNow,
+            WebmasterName = webmasterName,   // ← ADD
+            WebmasterEmail = webmasterEmail,  // ← ADD
         };
-
         _platformDb.Clubs.Add(club);
         await _platformDb.SaveChangesAsync();
 
@@ -212,43 +213,43 @@ public class ClubProvisioningService : IClubProvisioningService
     }
 
     private async Task RunClubMigrationsAsync(string schemaName)
-{
-    var connectionString = _config.GetConnectionString("Default")
-        ?? throw new InvalidOperationException("Connection string 'Default' not configured");
-
-    var options = new DbContextOptionsBuilder<ClubDbContext>()
-        .UseNpgsql(connectionString)
-        .ReplaceService<IModelCacheKeyFactory, DynamicSchemaModelCacheKeyFactory>()
-        .Options;
-
-    await using var db = new ClubDbContext(options, schemaName);
-
-    // Make DDL idempotent before executing
-    var script = db.Database.GenerateCreateScript()
-        .Replace("CREATE TABLE ",        "CREATE TABLE IF NOT EXISTS ")
-        .Replace("CREATE INDEX ",        "CREATE INDEX IF NOT EXISTS ")
-        .Replace("CREATE UNIQUE INDEX ", "CREATE UNIQUE INDEX IF NOT EXISTS ")
-        .Replace("CREATE SEQUENCE ",     "CREATE SEQUENCE IF NOT EXISTS ");
-
-    await using var conn = new NpgsqlConnection(connectionString);
-    await conn.OpenAsync();
-
-    // Create schema
-    await using (var cmd = conn.CreateCommand())
     {
-        cmd.CommandText = $"CREATE SCHEMA IF NOT EXISTS \"{schemaName}\"";
-        await cmd.ExecuteNonQueryAsync();
-    }
+        var connectionString = _config.GetConnectionString("Default")
+            ?? throw new InvalidOperationException("Connection string 'Default' not configured");
 
-    // Run full DDL — IF NOT EXISTS on every statement makes this safe to run multiple times
-    await using (var cmd = conn.CreateCommand())
-    {
-        cmd.CommandText = script;
-        await cmd.ExecuteNonQueryAsync();
-    }
+        var options = new DbContextOptionsBuilder<ClubDbContext>()
+            .UseNpgsql(connectionString)
+            .ReplaceService<IModelCacheKeyFactory, DynamicSchemaModelCacheKeyFactory>()
+            .Options;
 
-    _logger.LogInformation("Schema and tables created for: {Schema}", schemaName);
-}
+        await using var db = new ClubDbContext(options, schemaName);
+
+        // Make DDL idempotent before executing
+        var script = db.Database.GenerateCreateScript()
+            .Replace("CREATE TABLE ", "CREATE TABLE IF NOT EXISTS ")
+            .Replace("CREATE INDEX ", "CREATE INDEX IF NOT EXISTS ")
+            .Replace("CREATE UNIQUE INDEX ", "CREATE UNIQUE INDEX IF NOT EXISTS ")
+            .Replace("CREATE SEQUENCE ", "CREATE SEQUENCE IF NOT EXISTS ");
+
+        await using var conn = new NpgsqlConnection(connectionString);
+        await conn.OpenAsync();
+
+        // Create schema
+        await using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = $"CREATE SCHEMA IF NOT EXISTS \"{schemaName}\"";
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        // Run full DDL — IF NOT EXISTS on every statement makes this safe to run multiple times
+        await using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = script;
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        _logger.LogInformation("Schema and tables created for: {Schema}", schemaName);
+    }
 
     private async Task SeedDefaultSettingsAsync(string schemaName)
     {
