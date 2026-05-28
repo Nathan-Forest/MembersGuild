@@ -116,7 +116,7 @@ public class ClubProvisioningService : IClubProvisioningService
         }
         await _platformDb.SaveChangesAsync();
 
-                // 5b. Link package to club in ClubPackages
+        // 5b. Link package to club in ClubPackages
         if (packageId.HasValue)
         {
             _platformDb.ClubPackages.Add(new ClubPackage
@@ -248,10 +248,23 @@ public class ClubProvisioningService : IClubProvisioningService
         }
 
         // Run full DDL
-        await using (var cmd = conn.CreateCommand())
+        var statements = script
+    .Split(new[] { ";\r\n", ";\n", ";" }, StringSplitOptions.RemoveEmptyEntries)
+    .Select(s => s.Trim())
+    .Where(s => !string.IsNullOrWhiteSpace(s));
+
+        foreach (var statement in statements)
         {
-            cmd.CommandText = script;
-            await cmd.ExecuteNonQueryAsync();
+            try
+            {
+                await using var cmd = conn.CreateCommand();
+                cmd.CommandText = statement;
+                await cmd.ExecuteNonQueryAsync();
+            }
+            catch (Npgsql.PostgresException ex) when (ex.SqlState == "42P07")
+            {
+                // Table/index already exists — skip and continue
+            }
         }
 
         _logger.LogInformation("Schema and tables created for: {Schema}", schemaName);
