@@ -89,6 +89,9 @@ public class PlatformController : ControllerBase
         _platformDb.ProvisioningJobs.Add(job);
         await _platformDb.SaveChangesAsync();
 
+        var package = await _platformDb.Packages
+            .FirstOrDefaultAsync(p => p.Name.ToLower() == req.Tier.ToLower() && p.IsActive);
+
         // Fire and forget — provisioning runs in background
         _ = Task.Run(async () =>
         {
@@ -110,6 +113,7 @@ public class PlatformController : ControllerBase
             {
                 await provisioningService.ProvisionClubAsync(
     req.Slug, req.Name, req.DisplayName, req.Sport,
+    packageId:      package?.Id, 
     webmasterName: req.WebmasterName,
     webmasterEmail: req.WebmasterEmail);
 
