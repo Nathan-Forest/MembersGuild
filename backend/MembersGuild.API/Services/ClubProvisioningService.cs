@@ -110,6 +110,7 @@ public class ClubProvisioningService : IClubProvisioningService
                 ClubId = club.Id,
                 FeatureKey = key,
                 IsEnabled = true,
+                PlatformGranted = true,
                 EnabledBy = "platform"
             });
         }
