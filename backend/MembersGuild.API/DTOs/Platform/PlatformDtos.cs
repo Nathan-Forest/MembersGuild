@@ -65,3 +65,4 @@ public record ClubDetailResponse(
 );
 
 public record SetWebmasterStatusRequest(bool IsActive);
+public record ExtendGracePeriodRequest(int Days, string? Note);

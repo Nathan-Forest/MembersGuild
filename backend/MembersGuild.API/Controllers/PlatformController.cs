@@ -279,6 +279,40 @@ public class PlatformController : ControllerBase
         return Ok(new { isActive });
     }
 
+    // PUT /platform/clubs/{slug}/grace
+    [HttpPut("clubs/{slug}/grace")]
+    public async Task<IActionResult> ExtendGracePeriod(string slug, [FromBody] ExtendGracePeriodRequest req)
+    {
+        if (req.Days < 1 || req.Days > 365)
+            return BadRequest(new { error = "Days must be between 1 and 365." });
+
+        var club = await _platformDb.Clubs
+            .FirstOrDefaultAsync(c => c.Slug == slug && c.IsActive);
+
+        if (club is null) return NotFound(new { error = $"Club '{slug}' not found" });
+
+        var now = DateTime.UtcNow;
+        var baseline = club.GracePeriodEnds.HasValue && club.GracePeriodEnds > now
+            ? club.GracePeriodEnds.Value
+            : now;
+
+        club.GracePeriodEnds = baseline.AddDays(req.Days);
+        club.GraceExtendedBy = req.Days;
+        club.GraceExtendedAt = now;
+        club.GraceExtensionNote = req.Note;
+        club.UpdatedAt = now;
+        await _platformDb.SaveChangesAsync();
+
+        await _platform.AuditAsync(
+            action: "club.grace_extended",
+            actor: "platform_admin",
+            clubSlug: slug,
+            clubId: club.Id,
+            metadata: new { days = req.Days, gracePeriodEnds = club.GracePeriodEnds, note = req.Note });
+
+        return Ok(new { gracePeriodEnds = club.GracePeriodEnds });
+    }
+
     // PUT /platform/clubs/{slug}/status
     [HttpPut("clubs/{slug}/status")]
     public async Task<IActionResult> UpdateClubStatus(string slug, [FromBody] UpdateClubStatusRequest req)
