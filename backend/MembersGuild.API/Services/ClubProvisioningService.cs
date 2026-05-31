@@ -244,57 +244,70 @@ public class ClubProvisioningService : IClubProvisioningService
 
     private async Task CreateStripeSubscriptionAsync(Club club, string? packageName)
     {
-        var secretKey = _config["Stripe:SecretKey"]
-            ?? throw new InvalidOperationException("Stripe secret key not configured.");
-
-        StripeConfiguration.ApiKey = secretKey;
-
-        var priceId = packageName?.ToLower() switch
+        try
         {
-            "medium" => _config["Stripe:PriceMedium"],
-            "large" => _config["Stripe:PriceLarge"],
-            _ => _config["Stripe:PriceSmall"],  // default to Small
-        } ?? throw new InvalidOperationException($"Stripe price ID not configured for package: {packageName}");
+            var secretKey = _config["Stripe:SecretKey"]
+                ?? throw new InvalidOperationException("Stripe secret key not configured.");
 
-        // 1. Create Stripe Customer
-        var customerService = new CustomerService();
-        var customer = await customerService.CreateAsync(new CustomerCreateOptions
-        {
-            Name = club.Name,
-            Email = club.WebmasterEmail,
-            Metadata = new Dictionary<string, string>
-        {
-            { "club_slug",   club.Slug },
-            { "club_schema", club.SchemaName },
+            _logger.LogInformation("Starting Stripe subscription for {Slug}, package: {Package}", club.Slug, packageName);
+
+            StripeConfiguration.ApiKey = secretKey;
+
+            var priceId = packageName?.ToLower() switch
+            {
+                "medium" => _config["Stripe:PriceMedium"],
+                "large" => _config["Stripe:PriceLarge"],
+                _ => _config["Stripe:PriceSmall"],
+            } ?? throw new InvalidOperationException($"Stripe price ID not configured for package: {packageName}");
+
+            _logger.LogInformation("Using price ID: {PriceId}", priceId);
+
+            var customerService = new CustomerService();
+            var customer = await customerService.CreateAsync(new CustomerCreateOptions
+            {
+                Name = club.Name,
+                Email = club.WebmasterEmail,
+                Metadata = new Dictionary<string, string>
+            {
+                { "club_slug",   club.Slug },
+                { "club_schema", club.SchemaName },
+            }
+            });
+
+            _logger.LogInformation("Stripe customer created: {CustomerId}", customer.Id);
+
+            var subscriptionService = new SubscriptionService();
+            var subscription = await subscriptionService.CreateAsync(new SubscriptionCreateOptions
+            {
+                Customer = customer.Id,
+                TrialPeriodDays = 30,
+                CollectionMethod = "charge_automatically",
+                Items = new List<SubscriptionItemOptions>
+            {
+                new SubscriptionItemOptions { Price = priceId }
+            },
+                Metadata = new Dictionary<string, string>
+            {
+                { "club_slug", club.Slug }
+            }
+            });
+
+            _logger.LogInformation("Stripe subscription created: {SubId}", subscription.Id);
+
+            club.StripeCustomerId = customer.Id;
+            club.StripeSubId = subscription.Id;
+            club.UpdatedAt = DateTime.UtcNow;
+            await _platformDb.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Stripe subscription complete for {Slug} — Customer: {CustomerId} Sub: {SubId}",
+                club.Slug, customer.Id, subscription.Id);
         }
-        });
-
-        // 2. Create Subscription with 30-day trial
-        var subscriptionService = new SubscriptionService();
-        var subscription = await subscriptionService.CreateAsync(new SubscriptionCreateOptions
+        catch (Exception ex)
         {
-            Customer = customer.Id,
-            TrialPeriodDays = 30,
-            CollectionMethod = "charge_automatically",
-            Items = new List<SubscriptionItemOptions>
-        {
-            new SubscriptionItemOptions { Price = priceId }
-        },
-            Metadata = new Dictionary<string, string>
-        {
-            { "club_slug", club.Slug }
+            _logger.LogError(ex, "Stripe subscription creation FAILED for {Slug}: {Message}", club.Slug, ex.Message);
+            throw;
         }
-        });
-
-        // 3. Write back to club record
-        club.StripeCustomerId = customer.Id;
-        club.StripeSubId = subscription.Id;
-        club.UpdatedAt = DateTime.UtcNow;
-        await _platformDb.SaveChangesAsync();
-
-        _logger.LogInformation(
-            "Created Stripe subscription for {Slug} — Customer: {CustomerId} Sub: {SubId}",
-            club.Slug, customer.Id, subscription.Id);
     }
 
     private async Task RunClubMigrationsAsync(string schemaName)
