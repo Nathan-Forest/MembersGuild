@@ -254,11 +254,11 @@ public class ClubProvisioningService : IClubProvisioningService
             StripeConfiguration.ApiKey = secretKey;
 
             var priceId = packageName?.ToLower() switch
-            {
-                "medium" => _config["Stripe:PriceMedium"],
-                "large" => _config["Stripe:PriceLarge"],
-                _ => _config["Stripe:PriceSmall"],
-            } ?? throw new InvalidOperationException($"Stripe price ID not configured for package: {packageName}");
+{
+    "medium" => _config["Stripe:PriceMedium"] ?? _config["Stripe__PriceMedium"],
+    "large"  => _config["Stripe:PriceLarge"]  ?? _config["Stripe__PriceLarge"],
+    _        => _config["Stripe:PriceSmall"]  ?? _config["Stripe__PriceSmall"],
+} ?? throw new InvalidOperationException($"Stripe price ID not configured for package: {packageName}");
 
             _logger.LogInformation("Using price ID: {PriceId}", priceId);
 
