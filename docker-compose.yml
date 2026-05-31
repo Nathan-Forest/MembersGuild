@@ -30,6 +30,9 @@ services:
       Resend__FromAddress: ${Resend__FromAddress}
       Stripe__SecretKey: ${Stripe__SecretKey}
       Stripe__WebhookSecret: ${Stripe__WebhookSecret}
+      Stripe__PriceSmall: ${Stripe__PriceSmall}
+      Stripe__PriceMedium: ${Stripe__PriceMedium}
+      Stripe__PriceLarge: ${Stripe__PriceLarge}
       Platform__ApiKey: ${Platform__ApiKey}
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Default: >-
