@@ -78,4 +78,23 @@ public class PlatformService
 
     return cap ?? 50; // default to Small cap if no packages assigned
 }
+
+public async Task<string> ResetWebmasterPasswordAsync(string schemaName, string webmasterEmail)
+{
+    // Generate a random 12-char alphanumeric temp password
+    const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+    var rng = new Random(Guid.NewGuid().GetHashCode());
+    var tempPassword = new string(Enumerable.Range(0, 12).Select(_ => chars[rng.Next(chars.Length)]).ToArray());
+
+    var hashedPassword = BCrypt.Net.BCrypt.HashPassword(tempPassword);
+
+    await using var db = _dbFactory.CreateForSchema(schemaName);
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Email == webmasterEmail);
+    if (user is null) throw new InvalidOperationException("Webmaster account not found.");
+
+    user.PasswordHash = hashedPassword;
+    await db.SaveChangesAsync();
+
+    return tempPassword;
+}
 }

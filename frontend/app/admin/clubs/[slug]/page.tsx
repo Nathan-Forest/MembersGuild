@@ -29,15 +29,20 @@ const statusColour = (s: string) => ({
 
 export default function ClubDetailPage() {
   const { slug } = useParams<{ slug: string }>()
-  const [club,         setClub]         = useState<Club | null>(null)
-  const [packages,     setPackages]     = useState<Package[]>([])
-  const [billing,      setBilling]      = useState<BillingData | null>(null)
-  const [selectedPkgs, setSelectedPkgs] = useState<number[]>([])
-  const [discount,     setDiscount]     = useState({ type: 'none', value: '0', note: '' })
-  const [saving,       setSaving]       = useState(false)
-  const [savingBilling,setSavingBilling]= useState(false)
-  const [message,      setMessage]      = useState('')
-  const [isError,      setIsError]      = useState(false)
+  const [club,          setClub]          = useState<Club | null>(null)
+  const [packages,      setPackages]      = useState<Package[]>([])
+  const [billing,       setBilling]       = useState<BillingData | null>(null)
+  const [selectedPkgs,  setSelectedPkgs]  = useState<number[]>([])
+  const [discount,      setDiscount]      = useState({ type: 'none', value: '0', note: '' })
+  const [saving,        setSaving]        = useState(false)
+  const [savingBilling, setSavingBilling] = useState(false)
+  const [message,       setMessage]       = useState('')
+  const [isError,       setIsError]       = useState(false)
+
+  // Reset password modal state
+  const [resetModal, setResetModal] = useState<{
+    open: boolean; loading: boolean; tempPassword: string | null
+  }>({ open: false, loading: false, tempPassword: null })
 
   useEffect(() => {
     if (!slug) return
@@ -82,6 +87,19 @@ export default function ClubDetailPage() {
     })
     const b: BillingData = await fetch(`/api/platform/clubs/${slug}/billing`, { cache: 'no-store' }).then(r => r.json())
     setBilling(b); setSavingBilling(false); flash('Billing saved')
+  }
+
+  async function handleResetPassword() {
+    setResetModal(prev => ({ ...prev, loading: true }))
+    try {
+      const res = await fetch(`/api/platform/clubs/${slug}/reset-webmaster-password`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Reset failed')
+      setResetModal({ open: true, loading: false, tempPassword: data.tempPassword })
+    } catch (err: unknown) {
+      setResetModal({ open: false, loading: false, tempPassword: null })
+      flash(err instanceof Error ? err.message : 'Password reset failed', true)
+    }
   }
 
   if (!club) return <div className="text-gray-400 text-sm p-8">Loading…</div>
@@ -197,15 +215,17 @@ export default function ClubDetailPage() {
             </div>
           </div>
 
-          {/* Webmaster controls — wired up next session */}
+          {/* Webmaster controls */}
           <div className="border-t border-gray-100 pt-4 space-y-2">
             <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">
               Account Controls
             </p>
-            <button disabled
-              className="w-full text-left px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-400 cursor-not-allowed flex items-center justify-between">
+            <button
+              onClick={() => setResetModal({ open: true, loading: false, tempPassword: null })}
+              disabled={resetModal.loading}
+              className="w-full text-left px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:border-[#1a2744] hover:text-[#1a2744] transition-colors flex items-center justify-between disabled:opacity-50">
               <span>🔑 Reset Password</span>
-              <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">Next session</span>
+              {resetModal.loading && <span className="text-xs text-gray-400">Resetting…</span>}
             </button>
             <button disabled
               className="w-full text-left px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-400 cursor-not-allowed flex items-center justify-between">
@@ -346,6 +366,57 @@ export default function ClubDetailPage() {
           Deactivate Club
         </button>
       </div>
+
+      {/* Reset Password Modal */}
+      {resetModal.open && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 space-y-4">
+            <h2 className="text-lg font-bold text-gray-900">Reset Webmaster Password</h2>
+
+            {resetModal.tempPassword ? (
+              <>
+                <p className="text-sm text-gray-600">
+                  A new temporary password has been generated for{' '}
+                  <span className="font-medium text-gray-900">{club.webmasterEmail}</span>.
+                  Share this with them securely — it won&apos;t be shown again.
+                </p>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 font-mono text-lg font-bold text-gray-900 tracking-widest text-center select-all">
+                  {resetModal.tempPassword}
+                </div>
+                <p className="text-xs text-gray-400 text-center">
+                  Click the password to select it, then copy.
+                </p>
+                <button
+                  onClick={() => setResetModal({ open: false, loading: false, tempPassword: null })}
+                  className="w-full bg-[#1a2744] text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-[#1e3460] transition-colors">
+                  Done
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600">
+                  This will generate a new temporary password for{' '}
+                  <span className="font-medium text-gray-900">{club.webmasterEmail}</span>.
+                  Their current password will be invalidated immediately.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setResetModal({ open: false, loading: false, tempPassword: null })}
+                    className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-lg text-sm font-semibold hover:border-gray-400 transition-colors">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleResetPassword}
+                    disabled={resetModal.loading}
+                    className="flex-1 bg-[#1a2744] text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-[#1e3460] disabled:opacity-50 transition-colors">
+                    {resetModal.loading ? 'Resetting…' : 'Reset Password'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   )

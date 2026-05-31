@@ -217,6 +217,29 @@ public class PlatformController : ControllerBase
         ));
     }
 
+    // POST /platform/clubs/{slug}/reset-webmaster-password
+    [HttpPost("clubs/{slug}/reset-webmaster-password")]
+    public async Task<IActionResult> ResetWebmasterPassword(string slug)
+    {
+        var club = await _platformDb.Clubs
+            .FirstOrDefaultAsync(c => c.Slug == slug && c.IsActive);
+
+        if (club is null) return NotFound(new { error = $"Club '{slug}' not found" });
+        if (string.IsNullOrEmpty(club.WebmasterEmail))
+            return BadRequest(new { error = "No webmaster email on record for this club." });
+
+        var tempPassword = await _platform.ResetWebmasterPasswordAsync(club.SchemaName, club.WebmasterEmail);
+
+        await _platform.AuditAsync(
+            action: "club.webmaster_password_reset",
+            actor: "platform_admin",
+            clubSlug: slug,
+            clubId: club.Id,
+            metadata: new { email = club.WebmasterEmail });
+
+        return Ok(new { tempPassword });
+    }
+
     // PUT /platform/clubs/{slug}/status
     [HttpPut("clubs/{slug}/status")]
     public async Task<IActionResult> UpdateClubStatus(string slug, [FromBody] UpdateClubStatusRequest req)
