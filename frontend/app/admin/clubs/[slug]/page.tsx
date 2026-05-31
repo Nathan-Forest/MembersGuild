@@ -29,20 +29,25 @@ const statusColour = (s: string) => ({
 
 export default function ClubDetailPage() {
   const { slug } = useParams<{ slug: string }>()
-  const [club,          setClub]          = useState<Club | null>(null)
-  const [packages,      setPackages]      = useState<Package[]>([])
-  const [billing,       setBilling]       = useState<BillingData | null>(null)
-  const [selectedPkgs,  setSelectedPkgs]  = useState<number[]>([])
-  const [discount,      setDiscount]      = useState({ type: 'none', value: '0', note: '' })
-  const [saving,        setSaving]        = useState(false)
-  const [savingBilling, setSavingBilling] = useState(false)
-  const [message,       setMessage]       = useState('')
-  const [isError,       setIsError]       = useState(false)
+  const [club,              setClub]              = useState<Club | null>(null)
+  const [packages,          setPackages]          = useState<Package[]>([])
+  const [billing,           setBilling]           = useState<BillingData | null>(null)
+  const [selectedPkgs,      setSelectedPkgs]      = useState<number[]>([])
+  const [discount,          setDiscount]          = useState({ type: 'none', value: '0', note: '' })
+  const [saving,            setSaving]            = useState(false)
+  const [savingBilling,     setSavingBilling]     = useState(false)
+  const [message,           setMessage]           = useState('')
+  const [isError,           setIsError]           = useState(false)
+  const [webmasterActive,   setWebmasterActive]   = useState<boolean | null>(null)
+  const [togglingWebmaster, setTogglingWebmaster] = useState(false)
 
   // Reset password modal state
   const [resetModal, setResetModal] = useState<{
     open: boolean; loading: boolean; tempPassword: string | null
   }>({ open: false, loading: false, tempPassword: null })
+
+  // Disable account modal state
+  const [disableModal, setDisableModal] = useState(false)
 
   useEffect(() => {
     if (!slug) return
@@ -59,6 +64,11 @@ export default function ClubDetailPage() {
         setSelectedPkgs(b.packages.map(p => p.id))
         setDiscount({ type: b.discountType, value: String(b.discountValue), note: b.discountNote ?? '' })
       }).catch(() => {})
+
+    fetch(`/api/platform/clubs/${slug}/webmaster-status`, { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => setWebmasterActive(d.isActive ?? null))
+      .catch(() => {})
   }, [slug])
 
   function flash(msg: string, error = false) {
@@ -100,6 +110,25 @@ export default function ClubDetailPage() {
       setResetModal({ open: false, loading: false, tempPassword: null })
       flash(err instanceof Error ? err.message : 'Password reset failed', true)
     }
+  }
+
+  async function handleToggleWebmaster() {
+    if (webmasterActive === null) return
+    setTogglingWebmaster(true)
+    try {
+      const res = await fetch(`/api/platform/clubs/${slug}/webmaster-status`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !webmasterActive })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed to update account')
+      setWebmasterActive(data.isActive)
+      flash(`Webmaster account ${data.isActive ? 'enabled' : 'disabled'}`)
+    } catch (err: unknown) {
+      flash(err instanceof Error ? err.message : 'Failed to update account', true)
+    }
+    setDisableModal(false)
+    setTogglingWebmaster(false)
   }
 
   if (!club) return <div className="text-gray-400 text-sm p-8">Loading…</div>
@@ -227,10 +256,16 @@ export default function ClubDetailPage() {
               <span>🔑 Reset Password</span>
               {resetModal.loading && <span className="text-xs text-gray-400">Resetting…</span>}
             </button>
-            <button disabled
-              className="w-full text-left px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-400 cursor-not-allowed flex items-center justify-between">
-              <span>🔒 Disable Account</span>
-              <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">Next session</span>
+            <button
+              onClick={() => setDisableModal(true)}
+              disabled={togglingWebmaster || webmasterActive === null}
+              className={`w-full text-left px-3 py-2 rounded-lg border text-sm transition-colors flex items-center justify-between disabled:opacity-50
+                ${webmasterActive === false
+                  ? 'border-green-200 text-green-700 hover:border-green-400'
+                  : 'border-gray-200 text-gray-700 hover:border-red-300 hover:text-red-600'
+                }`}>
+              <span>{webmasterActive === false ? '✅ Enable Account' : '🔒 Disable Account'}</span>
+              {webmasterActive === null && <span className="text-xs text-gray-400">Loading…</span>}
             </button>
           </div>
         </div>
@@ -414,6 +449,37 @@ export default function ClubDetailPage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Disable / Enable Account Modal */}
+      {disableModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 space-y-4">
+            <h2 className="text-lg font-bold text-gray-900">
+              {webmasterActive ? 'Disable Webmaster Account' : 'Enable Webmaster Account'}
+            </h2>
+            <p className="text-sm text-gray-600">
+              {webmasterActive
+                ? <>This will immediately block <span className="font-medium text-gray-900">{club.webmasterEmail}</span> from logging in. The account and all data are preserved.</>
+                : <>This will restore login access for <span className="font-medium text-gray-900">{club.webmasterEmail}</span>.</>
+              }
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDisableModal(false)}
+                className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-lg text-sm font-semibold hover:border-gray-400 transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={handleToggleWebmaster}
+                disabled={togglingWebmaster}
+                className={`flex-1 text-white py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50 transition-colors
+                  ${webmasterActive ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}>
+                {togglingWebmaster ? 'Updating…' : webmasterActive ? 'Disable' : 'Enable'}
+              </button>
+            </div>
           </div>
         </div>
       )}

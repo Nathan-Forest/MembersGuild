@@ -98,4 +98,17 @@ public async Task<string> ResetWebmasterPasswordAsync(string schemaName, string 
 
     return tempPassword;
 }
+
+public async Task<bool> SetWebmasterActiveAsync(string schemaName, string webmasterEmail, bool isActive)
+{
+    await using var db = _dbFactory.CreateForSchema(schemaName);
+    var user = await db.Users.FirstOrDefaultAsync(u =>
+        u.Email.ToLower() == webmasterEmail.ToLower());
+    if (user is null) throw new InvalidOperationException("Webmaster account not found.");
+
+    user.IsActive = isActive;
+    await db.SaveChangesAsync();
+
+    return isActive;
+}
 }

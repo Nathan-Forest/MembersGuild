@@ -63,3 +63,5 @@ public record ClubDetailResponse(
     string? WebmasterName, string? WebmasterEmail, string? WebmasterPhone,
     DateTime? OnboardedAt, DateTime CreatedAt, DateTime? LastActivityAt
 );
+
+public record SetWebmasterStatusRequest(bool IsActive);

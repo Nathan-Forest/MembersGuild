@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MembersGuild.API.DTOs.Platform;
 using MembersGuild.API.Services;
+using MembersGuild.API.Extensions;
 using MembersGuild.Data.Contexts;
 using MembersGuild.Data.Models.Platform;
 using Stripe;
@@ -238,6 +239,50 @@ public class PlatformController : ControllerBase
             metadata: new { email = club.WebmasterEmail });
 
         return Ok(new { tempPassword });
+    }
+
+    // PUT /platform/clubs/{slug}/webmaster-status
+    [HttpPut("clubs/{slug}/webmaster-status")]
+    public async Task<IActionResult> SetWebmasterStatus(string slug, [FromBody] SetWebmasterStatusRequest req)
+    {
+        var club = await _platformDb.Clubs
+            .FirstOrDefaultAsync(c => c.Slug == slug && c.IsActive);
+
+        if (club is null) return NotFound(new { error = $"Club '{slug}' not found" });
+        if (string.IsNullOrEmpty(club.WebmasterEmail))
+            return BadRequest(new { error = "No webmaster email on record for this club." });
+
+        await _platform.SetWebmasterActiveAsync(club.SchemaName, club.WebmasterEmail, req.IsActive);
+
+        await _platform.AuditAsync(
+            action: req.IsActive ? "club.webmaster_enabled" : "club.webmaster_disabled",
+            actor: "platform_admin",
+            clubSlug: slug,
+            clubId: club.Id,
+            metadata: new { email = club.WebmasterEmail, isActive = req.IsActive });
+
+        return Ok(new { isActive = req.IsActive });
+    }
+
+    // GET /platform/clubs/{slug}/webmaster-status
+    [HttpGet("clubs/{slug}/webmaster-status")]
+    public async Task<IActionResult> GetWebmasterStatus(string slug)
+    {
+        var club = await _platformDb.Clubs
+            .FirstOrDefaultAsync(c => c.Slug == slug && c.IsActive);
+
+        if (club is null) return NotFound(new { error = $"Club '{slug}' not found" });
+        if (string.IsNullOrEmpty(club.WebmasterEmail))
+            return Ok(new { isActive = (bool?)null });
+
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var dbFactory = scope.ServiceProvider.GetRequiredService<ClubDbContextFactory>();
+        await using var db = dbFactory.CreateForSchema(club.SchemaName);
+
+        var user = await db.Users.FirstOrDefaultAsync(u =>
+            u.Email.ToLower() == club.WebmasterEmail.ToLower());
+
+        return Ok(new { isActive = user?.IsActive });
     }
 
     // PUT /platform/clubs/{slug}/status
