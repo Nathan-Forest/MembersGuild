@@ -35,15 +35,18 @@ public class ClubProvisioningService : IClubProvisioningService
     private readonly PlatformDbContext _platformDb;
     private readonly IConfiguration _config;
     private readonly ILogger<ClubProvisioningService> _logger;
+    private readonly EmailService _email;
 
     public ClubProvisioningService(
         PlatformDbContext platformDb,
         IConfiguration config,
-        ILogger<ClubProvisioningService> logger)
+        ILogger<ClubProvisioningService> logger,
+        EmailService email)
     {
         _platformDb = platformDb;
         _config = config;
         _logger = logger;
+        _email = email;
     }
 
     public async Task<Club> ProvisionClubAsync(
@@ -159,6 +162,22 @@ public class ClubProvisioningService : IClubProvisioningService
             _logger.LogInformation(
                 "Webmaster credentials — Email: {Email} TempPass: {Pass}",
                 webmasterEmail, tempPassword);
+
+            await _email.SendGenericAsync(
+                to: webmasterEmail,
+                subject: $"Welcome to MembersGuild — your {displayName} portal is ready",
+                body: $"Hi {webmasterName ?? displayName},\n\n" +
+                      $"Your {displayName} portal is live and ready to go.\n\n" +
+                      $"Login URL: https://{slug}.membersguild.com.au/login\n" +
+                      $"Email: {webmasterEmail}\n" +
+                      $"Temporary password: {tempPassword}\n\n" +
+                      $"Please change your password after your first login.\n\n" +
+                      $"If you have any questions, reply to this email or contact us at hello@membersguild.com.au.\n\n" +
+                      $"Kind regards,\nThe MembersGuild Team",
+                clubName: "MembersGuild",
+                clubSlug: "membersguild",
+                primaryColor: "#1a56db"
+            );
         }
 
         return club;
