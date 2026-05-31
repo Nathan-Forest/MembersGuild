@@ -111,4 +111,16 @@ public async Task<bool> SetWebmasterActiveAsync(string schemaName, string webmas
 
     return isActive;
 }
+
+public async Task<bool?> GetWebmasterActiveAsync(string schemaName, string webmasterEmail)
+{
+    try
+    {
+        await using var db = _dbFactory.CreateForSchema(schemaName);
+        var user = await db.Users.FirstOrDefaultAsync(u =>
+            u.Email.ToLower() == webmasterEmail.ToLower());
+        return user?.IsActive;
+    }
+    catch { return null; }
+}
 }

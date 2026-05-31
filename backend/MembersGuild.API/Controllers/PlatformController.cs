@@ -275,14 +275,8 @@ public class PlatformController : ControllerBase
         if (string.IsNullOrEmpty(club.WebmasterEmail))
             return Ok(new { isActive = (bool?)null });
 
-        await using var scope = _scopeFactory.CreateAsyncScope();
-        var dbFactory = scope.ServiceProvider.GetRequiredService<ClubDbContextFactory>();
-        await using var db = dbFactory.CreateForSchema(club.SchemaName);
-
-        var user = await db.Users.FirstOrDefaultAsync(u =>
-            u.Email.ToLower() == club.WebmasterEmail.ToLower());
-
-        return Ok(new { isActive = user?.IsActive });
+        var isActive = await _platform.GetWebmasterActiveAsync(club.SchemaName, club.WebmasterEmail);
+        return Ok(new { isActive });
     }
 
     // PUT /platform/clubs/{slug}/status
