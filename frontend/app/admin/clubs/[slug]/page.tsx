@@ -325,6 +325,7 @@ export default function ClubDetailPage() {
               </button>
             ))}
           </div>
+          </div>
 
           {/* Grace period — next session */}
           <div className="border-t border-gray-100 pt-4">
@@ -423,7 +424,6 @@ export default function ClubDetailPage() {
             </button>
           </div>
         </div>'
-        </div>
 
         {/* Danger Zone */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-red-100">
