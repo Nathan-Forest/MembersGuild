@@ -422,6 +422,7 @@ export default function ClubDetailPage() {
               {savingBilling ? 'Saving…' : 'Save Billing'}
             </button>
           </div>
+        </div>'
         </div>
 
         {/* Danger Zone */}
@@ -565,6 +566,6 @@ export default function ClubDetailPage() {
         )}
 
       </div>
-    </div>
+    
   )
 }
