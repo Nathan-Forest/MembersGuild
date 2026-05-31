@@ -89,7 +89,8 @@ public async Task<string> ResetWebmasterPasswordAsync(string schemaName, string 
     var hashedPassword = BCrypt.Net.BCrypt.HashPassword(tempPassword);
 
     await using var db = _dbFactory.CreateForSchema(schemaName);
-    var user = await db.Users.FirstOrDefaultAsync(u => u.Email == webmasterEmail);
+    var user = await db.Users.FirstOrDefaultAsync(u =>
+    u.Email.ToLower() == webmasterEmail.ToLower());
     if (user is null) throw new InvalidOperationException("Webmaster account not found.");
 
     user.PasswordHash = hashedPassword;
