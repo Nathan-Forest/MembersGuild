@@ -4,6 +4,7 @@ using MembersGuild.Data.Models.Platform;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Npgsql;
+using Stripe;
 
 namespace MembersGuild.API.Services;
 
@@ -180,6 +181,16 @@ public class ClubProvisioningService : IClubProvisioningService
             );
         }
 
+        // Create Stripe customer + subscription if a package is assigned
+        if (packageId.HasValue)
+        {
+            var packageName = await _platformDb.Packages
+                .Where(p => p.Id == packageId.Value)
+                .Select(p => p.Name)
+                .FirstOrDefaultAsync();
+
+            await CreateStripeSubscriptionAsync(club, packageName);
+        }
         return club;
     }
 
@@ -229,6 +240,61 @@ public class ClubProvisioningService : IClubProvisioningService
         var random = new Random();
         return new string(Enumerable.Repeat(chars, 12)
             .Select(s => s[random.Next(s.Length)]).ToArray());
+    }
+
+    private async Task CreateStripeSubscriptionAsync(Club club, string? packageName)
+    {
+        var secretKey = _config["Stripe:SecretKey"]
+            ?? throw new InvalidOperationException("Stripe secret key not configured.");
+
+        StripeConfiguration.ApiKey = secretKey;
+
+        var priceId = packageName?.ToLower() switch
+        {
+            "medium" => _config["Stripe:PriceMedium"],
+            "large" => _config["Stripe:PriceLarge"],
+            _ => _config["Stripe:PriceSmall"],  // default to Small
+        } ?? throw new InvalidOperationException($"Stripe price ID not configured for package: {packageName}");
+
+        // 1. Create Stripe Customer
+        var customerService = new CustomerService();
+        var customer = await customerService.CreateAsync(new CustomerCreateOptions
+        {
+            Name = club.Name,
+            Email = club.WebmasterEmail,
+            Metadata = new Dictionary<string, string>
+        {
+            { "club_slug",   club.Slug },
+            { "club_schema", club.SchemaName },
+        }
+        });
+
+        // 2. Create Subscription with 30-day trial
+        var subscriptionService = new SubscriptionService();
+        var subscription = await subscriptionService.CreateAsync(new SubscriptionCreateOptions
+        {
+            Customer = customer.Id,
+            TrialPeriodDays = 30,
+            CollectionMethod = "charge_automatically",
+            Items = new List<SubscriptionItemOptions>
+        {
+            new SubscriptionItemOptions { Price = priceId }
+        },
+            Metadata = new Dictionary<string, string>
+        {
+            { "club_slug", club.Slug }
+        }
+        });
+
+        // 3. Write back to club record
+        club.StripeCustomerId = customer.Id;
+        club.StripeSubId = subscription.Id;
+        club.UpdatedAt = DateTime.UtcNow;
+        await _platformDb.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Created Stripe subscription for {Slug} — Customer: {CustomerId} Sub: {SubId}",
+            club.Slug, customer.Id, subscription.Id);
     }
 
     private async Task RunClubMigrationsAsync(string schemaName)
