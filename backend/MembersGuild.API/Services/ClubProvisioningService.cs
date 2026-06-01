@@ -241,7 +241,7 @@ public class ClubProvisioningService : IClubProvisioningService
             .Select(s => s[random.Next(s.Length)]).ToArray());
     }
 
-    private async Task CreateStripeSubscriptionAsync(Club club, string? packageName)
+    private async Task CreateStripeSubscriptionAsync(Club club, string? packageName, string? stripePaymentIntentId = null)
     {
         try
         {
