@@ -181,6 +181,8 @@ public class ClubProvisioningService : IClubProvisioningService
             );
         }
 
+        _logger.LogInformation("Checking Stripe block — packageId: {PackageId}", packageId);
+
         // Create Stripe customer + subscription if a package is assigned
         if (packageId.HasValue)
         {
