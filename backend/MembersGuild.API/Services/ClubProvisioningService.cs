@@ -51,14 +51,14 @@ public class ClubProvisioningService : IClubProvisioningService
     }
 
     public async Task<Club> ProvisionClubAsync(
-        string slug,
-        string name,
-        string displayName,
-        string sport = "general",
-        int? packageId = null,
-        int? applicationId = null,
-        string? webmasterName = null,    // ← ADD
-        string? webmasterEmail = null)   // ← ADD
+    string slug,
+    string name,
+    string displayName,
+    string sport = "general",
+    int? packageId = null,
+    int? applicationId = null,
+    string? webmasterName = null,
+    string? webmasterEmail = null)
     {
         var schemaName = $"club_{slug.ToLower().Replace("-", "_")}";
 
@@ -80,7 +80,6 @@ public class ClubProvisioningService : IClubProvisioningService
         }
         else
         {
-            // Fallback for manual provisioning (BSM, demo clubs etc.)
             featureKeys = new List<string>
         {
             FeatureKeys.Calendar, FeatureKeys.MySessions, FeatureKeys.Attendance,
@@ -101,8 +100,8 @@ public class ClubProvisioningService : IClubProvisioningService
             SportType = sport,
             ApplicationId = applicationId,
             OnboardedAt = DateTime.UtcNow,
-            WebmasterName = webmasterName,   // ← ADD
-            WebmasterEmail = webmasterEmail,  // ← ADD
+            WebmasterName = webmasterName,
+            WebmasterEmail = webmasterEmail,
         };
         _platformDb.Clubs.Add(club);
         await _platformDb.SaveChangesAsync();
@@ -133,7 +132,6 @@ public class ClubProvisioningService : IClubProvisioningService
             await _platformDb.SaveChangesAsync();
         }
 
-
         // 6. Mark application as onboarded if applicable
         if (applicationId.HasValue)
         {
@@ -154,7 +152,7 @@ public class ClubProvisioningService : IClubProvisioningService
             "Provisioned club: {Slug} → schema: {Schema} | package: {PackageId}",
             slug, schemaName, packageId);
 
-        // At end of ProvisionClubAsync, before return:
+        // 8. Create webmaster account + send welcome email
         if (!string.IsNullOrEmpty(webmasterEmail))
         {
             var tempPassword = await CreateWebmasterAccountAsync(
@@ -181,9 +179,7 @@ public class ClubProvisioningService : IClubProvisioningService
             );
         }
 
-        _logger.LogInformation("Checking Stripe block — packageId: {PackageId}", packageId);
-
-        // Create Stripe customer + subscription if a package is assigned
+        // 9. Create Stripe customer + subscription if a package is assigned
         if (packageId.HasValue)
         {
             var packageName = await _platformDb.Packages
@@ -193,6 +189,7 @@ public class ClubProvisioningService : IClubProvisioningService
 
             await CreateStripeSubscriptionAsync(club, packageName);
         }
+
         return club;
     }
 
@@ -256,11 +253,11 @@ public class ClubProvisioningService : IClubProvisioningService
             StripeConfiguration.ApiKey = secretKey;
 
             var priceId = packageName?.ToLower() switch
-{
-    "medium" => _config["Stripe:PriceMedium"] ?? _config["Stripe__PriceMedium"],
-    "large"  => _config["Stripe:PriceLarge"]  ?? _config["Stripe__PriceLarge"],
-    _        => _config["Stripe:PriceSmall"]  ?? _config["Stripe__PriceSmall"],
-} ?? throw new InvalidOperationException($"Stripe price ID not configured for package: {packageName}");
+            {
+                "medium" => _config["Stripe:PriceMedium"] ?? _config["Stripe__PriceMedium"],
+                "large" => _config["Stripe:PriceLarge"] ?? _config["Stripe__PriceLarge"],
+                _ => _config["Stripe:PriceSmall"] ?? _config["Stripe__PriceSmall"],
+            } ?? throw new InvalidOperationException($"Stripe price ID not configured for package: {packageName}");
 
             _logger.LogInformation("Using price ID: {PriceId}", priceId);
 
@@ -296,10 +293,15 @@ public class ClubProvisioningService : IClubProvisioningService
 
             _logger.LogInformation("Stripe subscription created: {SubId}", subscription.Id);
 
-            club.StripeCustomerId = customer.Id;
-            club.StripeSubId = subscription.Id;
-            club.UpdatedAt = DateTime.UtcNow;
-            await _platformDb.SaveChangesAsync();
+            var clubToUpdate = await _platformDb.Clubs
+                .FirstOrDefaultAsync(c => c.Slug == club.Slug);
+            if (clubToUpdate is not null)
+            {
+                clubToUpdate.StripeCustomerId = customer.Id;
+                clubToUpdate.StripeSubId = subscription.Id;
+                clubToUpdate.UpdatedAt = DateTime.UtcNow;
+                await _platformDb.SaveChangesAsync();
+            }
 
             _logger.LogInformation(
                 "Stripe subscription complete for {Slug} — Customer: {CustomerId} Sub: {SubId}",
