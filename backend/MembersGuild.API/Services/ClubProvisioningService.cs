@@ -410,7 +410,9 @@ public class ClubProvisioningService : IClubProvisioningService
         };
 
         var options = new DbContextOptionsBuilder<ClubDbContext>()
-            .UseNpgsql(builder.ToString()).Options;
+    .UseNpgsql(builder.ToString())
+    .ReplaceService<IModelCacheKeyFactory, DynamicSchemaModelCacheKeyFactory>()  // ← ADD
+    .Options;
         await using var db = new ClubDbContext(options, schemaName);
 
         var strokes = new[] { "Freestyle", "Backstroke", "Breaststroke", "Butterfly" };
