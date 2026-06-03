@@ -49,6 +49,7 @@ public class RegisterController : ControllerBase
         });
 
         // Create PaymentIntent for $199 setup fee
+        // Create PaymentIntent for $199 setup fee
         var piService = new PaymentIntentService();
         var pi = await piService.CreateAsync(new PaymentIntentCreateOptions
         {
@@ -59,6 +60,7 @@ public class RegisterController : ControllerBase
             {
                 Enabled = true
             },
+            SetupFutureUsage = "off_session",  // ← ADD — saves card for recurring billing
             Description = $"MembersGuild Setup Fee — {req.ClubName}",
             Metadata = new Dictionary<string, string>
             {

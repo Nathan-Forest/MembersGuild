@@ -187,7 +187,16 @@ public class ClubProvisioningService : IClubProvisioningService
                 .Select(p => p.Name)
                 .FirstOrDefaultAsync();
 
-            await CreateStripeSubscriptionAsync(club, packageName);
+            string? existingCustomerId = null;
+            if (applicationId.HasValue)
+            {
+                existingCustomerId = await _platformDb.ClubApplications
+                    .Where(a => a.Id == applicationId.Value)
+                    .Select(a => a.StripeCustomerId)
+                    .FirstOrDefaultAsync();
+            }
+
+            await CreateStripeSubscriptionAsync(club, packageName, existingCustomerId);
         }
 
         return club;
@@ -241,7 +250,7 @@ public class ClubProvisioningService : IClubProvisioningService
             .Select(s => s[random.Next(s.Length)]).ToArray());
     }
 
-    private async Task CreateStripeSubscriptionAsync(Club club, string? packageName, string? stripePaymentIntentId = null)
+    private async Task CreateStripeSubscriptionAsync(Club club, string? packageName, string? existingStripeCustomerId = null)
     {
         try
         {
@@ -261,34 +270,44 @@ public class ClubProvisioningService : IClubProvisioningService
 
             _logger.LogInformation("Using price ID: {PriceId}", priceId);
 
-            var customerService = new CustomerService();
-            var customer = await customerService.CreateAsync(new CustomerCreateOptions
+            // 1. Get or create Stripe Customer
+            string customerId;
+            if (!string.IsNullOrEmpty(existingStripeCustomerId))
             {
-                Name = club.Name,
-                Email = club.WebmasterEmail,
-                Metadata = new Dictionary<string, string>
-            {
-                { "club_slug",   club.Slug },
-                { "club_schema", club.SchemaName },
+                customerId = existingStripeCustomerId;
+                _logger.LogInformation("Reusing Stripe customer from checkout: {CustomerId}", customerId);
             }
-            });
-
-            _logger.LogInformation("Stripe customer created: {CustomerId}", customer.Id);
+            else
+            {
+                var customerService = new CustomerService();
+                var customer = await customerService.CreateAsync(new CustomerCreateOptions
+                {
+                    Name = club.Name,
+                    Email = club.WebmasterEmail,
+                    Metadata = new Dictionary<string, string>
+        {
+            { "club_slug",   club.Slug },
+            { "club_schema", club.SchemaName },
+        }
+                });
+                customerId = customer.Id;
+                _logger.LogInformation("Created new Stripe customer: {CustomerId}", customerId);
+            }
 
             var subscriptionService = new SubscriptionService();
             var subscription = await subscriptionService.CreateAsync(new SubscriptionCreateOptions
             {
-                Customer = customer.Id,
+                Customer = customerId,
                 TrialPeriodDays = 30,
                 CollectionMethod = "charge_automatically",
                 Items = new List<SubscriptionItemOptions>
-            {
-                new SubscriptionItemOptions { Price = priceId }
-            },
+    {
+        new SubscriptionItemOptions { Price = priceId }
+    },
                 Metadata = new Dictionary<string, string>
-            {
-                { "club_slug", club.Slug }
-            }
+    {
+        { "club_slug", club.Slug }
+    }
             });
 
             _logger.LogInformation("Stripe subscription created: {SubId}", subscription.Id);
@@ -297,7 +316,7 @@ public class ClubProvisioningService : IClubProvisioningService
                 .FirstOrDefaultAsync(c => c.Slug == club.Slug);
             if (clubToUpdate is not null)
             {
-                clubToUpdate.StripeCustomerId = customer.Id;
+                clubToUpdate.StripeCustomerId = customerId;
                 clubToUpdate.StripeSubId = subscription.Id;
                 clubToUpdate.UpdatedAt = DateTime.UtcNow;
                 await _platformDb.SaveChangesAsync();
@@ -305,7 +324,7 @@ public class ClubProvisioningService : IClubProvisioningService
 
             _logger.LogInformation(
                 "Stripe subscription complete for {Slug} — Customer: {CustomerId} Sub: {SubId}",
-                club.Slug, customer.Id, subscription.Id);
+                club.Slug, customerId, subscription.Id);
         }
         catch (Exception ex)
         {
