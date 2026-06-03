@@ -203,20 +203,22 @@ public class ClubProvisioningService : IClubProvisioningService
     }
 
     private async Task<string> CreateWebmasterAccountAsync(
-    string schemaName, string name, string email)
+     string schemaName, string name, string email)
     {
         var connectionString = _config.GetConnectionString("Default")!;
         var builder = new NpgsqlConnectionStringBuilder(connectionString)
         { SearchPath = schemaName };
+
         var options = new DbContextOptionsBuilder<ClubDbContext>()
-            .UseNpgsql(builder.ToString()).Options;
+            .UseNpgsql(builder.ToString())
+            .ReplaceService<IModelCacheKeyFactory, DynamicSchemaModelCacheKeyFactory>()
+            .Options;
+
         await using var db = new ClubDbContext(options, schemaName);
 
-        // Generate temporary password
         var tempPassword = GenerateTempPassword();
         var hash = BCrypt.Net.BCrypt.HashPassword(tempPassword);
 
-        // Split name
         var parts = name.Trim().Split(' ', 2);
         var firstName = parts[0];
         var lastName = parts.Length > 1 ? parts[1] : "";
@@ -241,7 +243,6 @@ public class ClubProvisioningService : IClubProvisioningService
 
         return tempPassword;
     }
-
     private static string GenerateTempPassword()
     {
         const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
