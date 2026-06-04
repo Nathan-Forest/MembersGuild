@@ -266,10 +266,11 @@ public class SessionService : ISessionService
     }
 
     public async Task<List<SessionResponse>> CreateRecurringSessionsAsync(
-        RecurringSessionRequest request, int createdBy)
+    RecurringSessionRequest request, int createdBy)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
 
+        var brisbaneZone = TimeZoneInfo.FindSystemTimeZoneById("Australia/Brisbane");
         var groupId = Guid.NewGuid();
         var sessions = new List<Session>();
         var current = request.StartDate;
@@ -278,8 +279,13 @@ public class SessionService : ISessionService
         {
             if (request.DaysOfWeek.Contains(current.DayOfWeek))
             {
-                var startDt = current.ToDateTime(request.StartTime).ToUniversalTime();
-                var endDt = current.ToDateTime(request.EndTime).ToUniversalTime();
+                var startLocal = current.ToDateTime(request.StartTime);
+                var endLocal = current.ToDateTime(request.EndTime);
+
+                var startUtc = TimeZoneInfo.ConvertTimeToUtc(
+                    DateTime.SpecifyKind(startLocal, DateTimeKind.Unspecified), brisbaneZone);
+                var endUtc = TimeZoneInfo.ConvertTimeToUtc(
+                    DateTime.SpecifyKind(endLocal, DateTimeKind.Unspecified), brisbaneZone);
 
                 sessions.Add(new Session
                 {
@@ -287,8 +293,8 @@ public class SessionService : ISessionService
                     Description = request.Description?.Trim(),
                     LocationId = request.LocationId,
                     CoachId = request.CoachId,
-                    StartTime = startDt,
-                    EndTime = endDt,
+                    StartTime = startUtc,
+                    EndTime = endUtc,
                     Capacity = request.Capacity,
                     CreditCost = request.CreditCost,
                     RegistrationCutoffHours = request.RegistrationCutoffHours,
@@ -305,7 +311,6 @@ public class SessionService : ISessionService
 
         return sessions.Select(s => MapSession(s, createdBy)).ToList();
     }
-
     private static SessionResponse MapSession(Session s, int currentUserId) => new(
         s.Id, s.Title, s.Description,
         s.LocationId, s.Location?.Name,
