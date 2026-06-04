@@ -60,6 +60,7 @@ export default function ClubNav({ config }: Props) {
   const pathname = usePathname()
   const [role, setRole] = useState<UserRole | null>(null)
   const [firstName, setFirstName] = useState<string>('')
+  const [permissions, setPermissions] = useState<string[]>([]) 
   const [menuOpen, setMenuOpen] = useState(false)
   const [mgmtOpen, setMgmtOpen] = useState(false)
 
@@ -68,14 +69,16 @@ export default function ClubNav({ config }: Props) {
     if (user) {
       setRole(user.role as UserRole)
       setFirstName(user.firstName)
+      setPermissions(user.permissions) 
     }
   }, [])
-  const canSee = (item: NavItem) => {
-    if (item.feature && !config.features[item.feature]) return false  // ← add this line
-    if (!item.roles) return true
-    if (!role) return false
-    return item.roles.includes(role)
-  }
+ const canSee = (item: NavItem) => {
+  if (item.feature && !config.features[item.feature]) return false
+  if (!item.roles) return true
+  if (!role) return false
+  // Check direct role match OR any inherited permission matches
+  return item.roles.includes(role) || item.roles.some(r => permissions.includes(r))
+}
 
   const visibleNav = NAV_ITEMS.filter(canSee)
   const visibleMgmt = MANAGEMENT_ITEMS.filter(canSee)
