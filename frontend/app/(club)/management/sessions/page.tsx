@@ -105,7 +105,7 @@ export default function ManageSessionsPage() {
     if (!user) { router.replace('/login'); return }
     const role = user.role as UserRole
     setCurrentRole(role)
-      if (!hasPermission(user, 'coach', 'committee', 'webmaster')) {
+    if (!hasPermission(user, 'coach', 'committee', 'webmaster')) {
       router.replace('/dashboard'); return
     }
     loadAll()
@@ -214,10 +214,10 @@ export default function ManageSessionsPage() {
         description: recurring.description.trim() || null,
         locationId: recurring.locationId ? parseInt(recurring.locationId) : null,
         coachId: recurring.coachId ? parseInt(recurring.coachId) : null,
-        startTime: recurring.startTime,
-        endTime: recurring.endTime,
+        startTime: recurring.startTime + ':00',   // "05:30" → "05:30:00"
+        endTime: recurring.endTime + ':00',       // "06:30" → "06:30:00"
         daysOfWeek: recurring.days,
-        startDate: recurring.startDate,
+        startDate: recurring.startDate,           // "2026-06-01" — DateOnly handles this fine
         endDate: recurring.endDate,
         capacity: parseInt(recurring.capacity),
         creditCost: parseInt(recurring.creditCost),
