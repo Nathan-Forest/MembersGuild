@@ -29,9 +29,14 @@ public class ClubDbContextFactory
         var connectionString = _config.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Connection string 'Default' not configured");
 
+        var builder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString)
+        {
+            SearchPath = _clubContext.SchemaName
+        };
+
         return new ClubDbContext(
             new DbContextOptionsBuilder<ClubDbContext>()
-                .UseNpgsql(connectionString)
+                .UseNpgsql(builder.ToString())
                 .Options,
             _clubContext.SchemaName
         );
@@ -42,9 +47,14 @@ public class ClubDbContextFactory
         var connectionString = _config.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Connection string 'Default' not configured");
 
+        var builder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString)
+        {
+            SearchPath = schemaName
+        };
+
         return new ClubDbContext(
             new DbContextOptionsBuilder<ClubDbContext>()
-                .UseNpgsql(connectionString)
+                .UseNpgsql(builder.ToString())
                 .Options,
             schemaName
         );
