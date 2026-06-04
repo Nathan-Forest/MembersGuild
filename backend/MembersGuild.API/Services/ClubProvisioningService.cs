@@ -383,9 +383,10 @@ public class ClubProvisioningService : IClubProvisioningService
         };
 
         var options = new DbContextOptionsBuilder<ClubDbContext>()
-    .UseNpgsql(builder.ToString())
-    .ReplaceService<IModelCacheKeyFactory, DynamicSchemaModelCacheKeyFactory>()
-    .Options;
+            .UseNpgsql(builder.ToString())
+            .ReplaceService<IModelCacheKeyFactory, DynamicSchemaModelCacheKeyFactory>()
+            .Options;
+
         await using var db = new ClubDbContext(options, schemaName);
 
         db.ClubSettings.AddRange(
@@ -397,9 +398,65 @@ public class ClubProvisioningService : IClubProvisioningService
 
         db.PaymentSettings.Add(new PaymentSettings { Id = 1 });
 
+        // Seed default shop category and credit packs
+        db.ShopCategories.AddRange(
+            new ShopCategory
+            {
+                Name = "Credit Packs",
+                Slug = "credit-packs",
+                IsSystem = true,
+                DisplayOrder = 1,
+                IsActive = true,
+            }
+        );
+
+        await db.SaveChangesAsync();
+
+        // Credit packs reference the category — fetch it after save
+        var creditPackCategory = await db.ShopCategories
+            .FirstAsync(c => c.Slug == "credit-packs");
+
+        db.ShopItems.AddRange(
+            new ShopItem
+            {
+                Name = "1 Credit",
+                Description = "1 session credit",
+                Category = creditPackCategory.Slug,
+                BasePrice = 0,
+                CreditValue = 1,
+                IsSystem = true,
+                IsActive = true,
+                DisplayOrder = 1,
+                CreatedAt = DateTime.UtcNow,
+            },
+            new ShopItem
+            {
+                Name = "5 Credits",
+                Description = "5 session credits",
+                Category = creditPackCategory.Slug,
+                BasePrice = 0,
+                CreditValue = 5,
+                IsSystem = true,
+                IsActive = true,
+                DisplayOrder = 2,
+                CreatedAt = DateTime.UtcNow,
+            },
+            new ShopItem
+            {
+                Name = "10 Credits",
+                Description = "10 session credits",
+                Category = creditPackCategory.Slug,
+                BasePrice = 0,
+                CreditValue = 10,
+                IsSystem = true,
+                IsActive = true,
+                DisplayOrder = 3,
+                CreatedAt = DateTime.UtcNow,
+            }
+        );
+
         await db.SaveChangesAsync();
     }
-
     public async Task SeedSwimmingTemplateAsync(string schemaName)
     {
         var connectionString = _config.GetConnectionString("Default")!;
