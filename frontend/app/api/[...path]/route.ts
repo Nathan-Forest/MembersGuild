@@ -28,6 +28,7 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
   // ... existing handler logic continues unchanged below
 
   const host = request.headers.get('host') ?? ''
+  console.log('[PROXY] host:', host, 'path:', backendPath)
   const slug = host.split('.')[0]
 
   const url = new URL(`${BACKEND_URL}/api/${backendPath}`)
