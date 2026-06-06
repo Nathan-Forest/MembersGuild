@@ -343,8 +343,12 @@ public class EmailService
     string? logoUrl = null,
     string primaryColor = "#1a2744")
   {
-    var date = startTime.ToString("dddd d MMMM yyyy");
-    var time = $"{startTime:HH:mm}–{endTime:HH:mm}";
+    var brisbaneZone = TimeZoneInfo.FindSystemTimeZoneById("Australia/Brisbane");
+    var startLocal = TimeZoneInfo.ConvertTimeFromUtc(startTime, brisbaneZone);
+    var endLocal = TimeZoneInfo.ConvertTimeFromUtc(endTime, brisbaneZone);
+
+    var date = startLocal.ToString("dddd d MMMM yyyy");
+    var time = $"{startLocal:HH:mm}–{endLocal:HH:mm}";
 
     var attended = members.Count(m => m.Status == "attended");
     var late = members.Count(m => m.Status == "late");
