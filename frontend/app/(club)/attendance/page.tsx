@@ -32,7 +32,7 @@ function sameDay(a: Date, b: Date) {
 function getDaysInMonth(year: number, month: number) {
   const days: (Date | null)[] = []
   const first = new Date(year, month, 1)
-  const last  = new Date(year, month + 1, 0)
+  const last = new Date(year, month + 1, 0)
   let startDow = first.getDay() - 1
   if (startDow < 0) startDow = 6
   for (let i = 0; i < startDow; i++) days.push(null)
@@ -64,7 +64,7 @@ export default function AttendancePage() {
     if (!user) { router.replace('/login'); return }
     const role = user.role as UserRole
     if (!hasPermission(user, 'coach', 'committee', 'membership', 'finance', 'webmaster')) {
-    router.replace('/dashboard'); return
+      router.replace('/dashboard'); return
     }
     loadSessions()
   }, [router])
@@ -91,8 +91,13 @@ export default function AttendancePage() {
   const monthLabel = new Date(monthYear.year, monthYear.month)
     .toLocaleDateString('en-AU', { month: 'long', year: 'numeric' })
 
-  const past = sessions.filter(s => isPast(s.startTime))
-  const upcoming = sessions.filter(s => !isPast(s.startTime))
+  const past = sessions
+    .filter(s => isPast(s.startTime))
+    .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()) // most recent first
+
+  const upcoming = sessions
+    .filter(s => !isPast(s.startTime))
+    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()) // soonest first
 
   return (
     <div className="space-y-6">
@@ -109,9 +114,8 @@ export default function AttendancePage() {
           {(['list', 'month'] as ViewMode[]).map(mode => (
             <button key={mode}
               onClick={() => setViewMode(mode)}
-              className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
-                viewMode === mode ? 'text-white' : 'text-gray-600 bg-white hover:bg-gray-50'
-              }`}
+              className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors ${viewMode === mode ? 'text-white' : 'text-gray-600 bg-white hover:bg-gray-50'
+                }`}
               style={viewMode === mode ? { backgroundColor: 'var(--color-primary)' } : {}}
             >
               {mode === 'list' ? (
@@ -163,7 +167,7 @@ export default function AttendancePage() {
                     Past Sessions
                   </h2>
                   <div className="space-y-3">
-                    {[...past].reverse().map(s => (
+                    {past.map(s => (
                       <SessionAttendanceCard key={s.id} session={s} onClick={() => openSheet(s.id)} />
                     ))}
                   </div>
@@ -217,9 +221,8 @@ export default function AttendancePage() {
                       {day && (
                         <>
                           <div className="flex justify-center mb-1">
-                            <span className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full ${
-                              isToday ? 'text-white' : 'text-gray-600'
-                            }`} style={isToday ? { backgroundColor: 'var(--color-primary)' } : {}}>
+                            <span className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'text-white' : 'text-gray-600'
+                              }`} style={isToday ? { backgroundColor: 'var(--color-primary)' } : {}}>
                               {day.getDate()}
                             </span>
                           </div>
