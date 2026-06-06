@@ -45,33 +45,33 @@ const FAQS = [
 // ── Category tabs ─────────────────────────────────────────────────────────────
 
 const CATEGORY_TABS = [
-  { key: 'members',    label: 'Members',    icon: '👤', description: 'Logging in, booking sessions, credits and your profile' },
-  { key: 'committee',  label: 'Committee',  icon: '📋', description: 'Attendance, shop management and member administration' },
-  { key: 'webmaster',  label: 'Webmaster',  icon: '⚙️', description: 'Portal setup, settings and advanced configuration' },
+  { key: 'members', label: 'Members', icon: '👤', description: 'Logging in, booking sessions, credits and your profile' },
+  { key: 'committee', label: 'Committee', icon: '📋', description: 'Attendance, shop management and member administration' },
+  { key: 'webmaster', label: 'Webmaster', icon: '⚙️', description: 'Portal setup, settings and advanced configuration' },
 ] as const
 
 // ── Support form ──────────────────────────────────────────────────────────────
 
 interface SupportForm {
-  category:    string
-  name:        string
-  email:       string
+  category: string
+  name: string
+  email: string
   description: string
-  startedAt:   string
-  device:      string
-  guideRead:   boolean
+  startedAt: string
+  device: string
+  guideRead: boolean
 }
 
 export default function SupportPage() {
-  const [search,      setSearch]      = useState('')
-  const [activeTab,   setActiveTab]   = useState<'members' | 'committee' | 'webmaster'>('members')
-  const [openFaq,     setOpenFaq]     = useState<number | null>(null)
-  const [form,        setForm]        = useState<SupportForm>({
+  const [search, setSearch] = useState('')
+  const [activeTab, setActiveTab] = useState<'members' | 'committee' | 'webmaster'>('members')
+  const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const [form, setForm] = useState<SupportForm>({
     category: '', name: '', email: '', description: '',
     startedAt: '', device: '', guideRead: false,
   })
-  const [submitting,  setSubmitting]  = useState(false)
-  const [submitted,   setSubmitted]   = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
   // Pre-fill name/email if logged in
@@ -80,7 +80,7 @@ export default function SupportPage() {
     if (user) {
       setForm(f => ({
         ...f,
-        name:  `${user.firstName} ${user.lastName}`,
+        name: `${user.firstName} ${user.lastName}`,
         email: user.email ?? '',
       }))
     }
@@ -98,7 +98,7 @@ export default function SupportPage() {
 
   // Selected support category guide
   const selectedCategory = SUPPORT_CATEGORIES.find(c => c.value === form.category)
-  const linkedGuide      = selectedCategory?.guide ?? null
+  const linkedGuide = selectedCategory?.guide ?? null
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -106,13 +106,13 @@ export default function SupportPage() {
     setSubmitting(true); setSubmitError('')
     try {
       await api.post('/public/support', {
-        category:    form.category,
-        name:        form.name,
-        email:       form.email,
+        category: form.category,
+        name: form.name,
+        email: form.email,
         description: form.description,
-        startedAt:   form.startedAt || null,
-        device:      form.device    || null,
-        guideRead:   form.guideRead,
+        startedAt: form.startedAt || null,
+        device: form.device || null,
+        guideRead: form.guideRead,
       })
       setSubmitted(true)
     } catch {
@@ -155,6 +155,24 @@ export default function SupportPage() {
           )}
         </div>
       </div>
+
+      {/* ── What's New banner ────────────────────────────────────── */}
+      {!search && (
+        <Link href="/support/whats-new"
+          className="flex items-center justify-between p-4 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors group">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🆕</span>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">What's New</p>
+              <p className="text-xs text-gray-500">See the latest updates and fixes to your portal</p>
+            </div>
+          </div>
+          <svg className="w-4 h-4 text-gray-400 group-hover:text-gray-600 flex-shrink-0"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+      )}
 
       {/* ── FAQ ──────────────────────────────────────────────────── */}
       {!search && (
@@ -200,11 +218,10 @@ export default function SupportPage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === tab.key
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === tab.key
                     ? 'text-white'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                  }`}
                 style={activeTab === tab.key
                   ? { backgroundColor: 'var(--color-primary)' }
                   : {}}
@@ -245,11 +262,10 @@ export default function SupportPage() {
                     {guide.description}
                   </p>
                   {search && (
-                    <span className={`inline-block mt-2 text-xs px-2 py-0.5 rounded-full font-medium ${
-                      guide.category === 'members'   ? 'bg-blue-50 text-blue-700' :
-                      guide.category === 'committee' ? 'bg-purple-50 text-purple-700' :
-                      'bg-amber-50 text-amber-700'
-                    }`}>
+                    <span className={`inline-block mt-2 text-xs px-2 py-0.5 rounded-full font-medium ${guide.category === 'members' ? 'bg-blue-50 text-blue-700' :
+                        guide.category === 'committee' ? 'bg-purple-50 text-purple-700' :
+                          'bg-amber-50 text-amber-700'
+                      }`}>
                       {guide.category}
                     </span>
                   )}
