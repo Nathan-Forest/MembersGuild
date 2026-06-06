@@ -370,15 +370,23 @@ public class SettingsController : ControllerBase
         return Ok(new { success = true });
     }
     // GET /api/settings/report-recipients
-    [HttpGet("report-recipients")]
-    [Authorize(Roles = "webmaster")]
-    public async Task<IActionResult> GetReportRecipients()
+[HttpGet("report-recipients")]
+[Authorize(Roles = "webmaster")]
+public async Task<IActionResult> GetReportRecipients()
+{
+    await using var db = _dbFactory.CreateForCurrentClub();
+    var setting = await db.ClubSettings
+        .FirstOrDefaultAsync(s => s.Key == "attendance_report_recipients");
+    var json = setting?.Value ?? "[]";
+
+    var options = new System.Text.Json.JsonSerializerOptions
     {
-        await using var db = _dbFactory.CreateForCurrentClub();
-        var setting = await db.ClubSettings.FirstOrDefaultAsync(s => s.Key == "attendance_report_recipients");
-        var json = setting?.Value ?? "[]";
-        return Ok(json);
-    }
+        PropertyNameCaseInsensitive = true
+    };
+    var recipients = System.Text.Json.JsonSerializer
+        .Deserialize<List<ReportRecipientDto>>(json, options);
+    return Ok(recipients);
+}
 
     // PUT /api/settings/report-recipients
     [HttpPut("report-recipients")]
