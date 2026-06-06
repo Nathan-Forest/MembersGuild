@@ -126,8 +126,8 @@ export default function AttendanceSheetPage() {
     loadSheet()
     api.get<{ id: number; name: string }[]>('/attendance/coaches')
       .then(setCoaches).catch(() => { })
-    api.get<string>('/settings/report-recipients')
-      .then(json => setSavedRecipients(JSON.parse(json)))
+    api.get<{name: string; email: string}[]>('/settings/report-recipients')
+       .then(data => setSavedRecipients(data))
       .catch(() => { })
   }, [router, sessionId])
 
