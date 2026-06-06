@@ -156,8 +156,8 @@ export default function SettingsPage() {
       setRules(data)
       if (data.length === 0) setNewRule({ thresholdCredits: 5, emailTemplateId: 0 })
     }).catch(() => { })
-    api.get<string>('/settings/report-recipients')
-      .then(json => setRecipients(JSON.parse(json)))
+    api.get<{ name: string; email: string }[]>('/settings/report-recipients')
+      .then(data => setRecipients(data))
       .catch(() => { })
   }, [router])
 
