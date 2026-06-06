@@ -36,7 +36,7 @@ public record QrTokenResponse(
 );
 
 public record UpdateCoachRequest(int? CoachId, bool NoShow);
-public record EmailReportRequest(string Email);
+public record EmailReportRequest(List<string> Emails);
 
 public record AttendanceReportMember(
     string FullName,

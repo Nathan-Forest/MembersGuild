@@ -369,4 +369,26 @@ public class SettingsController : ControllerBase
         await db.SaveChangesAsync();
         return Ok(new { success = true });
     }
+    // GET /api/settings/report-recipients
+    [HttpGet("report-recipients")]
+    [Authorize(Roles = "webmaster")]
+    public async Task<IActionResult> GetReportRecipients()
+    {
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var setting = await db.ClubSettings.FirstOrDefaultAsync(s => s.Key == "attendance_report_recipients");
+        var json = setting?.Value ?? "[]";
+        return Ok(json);
+    }
+
+    // PUT /api/settings/report-recipients
+    [HttpPut("report-recipients")]
+    [Authorize(Roles = "webmaster")]
+    public async Task<IActionResult> UpdateReportRecipients([FromBody] List<ReportRecipientDto> recipients)
+    {
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var json = System.Text.Json.JsonSerializer.Serialize(recipients);
+        await UpsertSettingAsync(db, "attendance_report_recipients", json);
+        return Ok(new { success = true });
+    }
+
 }

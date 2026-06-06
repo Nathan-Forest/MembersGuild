@@ -116,6 +116,9 @@ export default function AttendanceSheetPage() {
   const [sendingReport, setSendingReport] = useState(false)
   const [reportSent, setReportSent] = useState(false)
 
+  const [savedRecipients, setSavedRecipients] = useState<{ name: string; email: string }[]>([])
+  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([])
+
   useEffect(() => {
     const user = getCurrentUser()
     if (!user) { router.replace('/login'); return }
@@ -123,6 +126,9 @@ export default function AttendanceSheetPage() {
     loadSheet()
     api.get<{ id: number; name: string }[]>('/attendance/coaches')
       .then(setCoaches).catch(() => { })
+    api.get<string>('/settings/report-recipients')
+      .then(json => setSavedRecipients(JSON.parse(json)))
+      .catch(() => { })
   }, [router, sessionId])
 
   // Auto-refresh every 30 seconds so QR check-ins appear automatically
@@ -561,8 +567,7 @@ export default function AttendanceSheetPage() {
               <button onClick={() => setReportOpen(false)}
                 className="text-gray-400 hover:text-gray-600 p-1">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
@@ -571,39 +576,64 @@ export default function AttendanceSheetPage() {
                 <div className="text-center py-4 space-y-2">
                   <p className="text-3xl">✅</p>
                   <p className="font-medium text-gray-900">Report sent!</p>
-                  <p className="text-sm text-gray-400">{reportEmail}</p>
                   <button onClick={() => setReportOpen(false)}
-                    className="btn-secondary px-6 py-2 text-sm mt-2">
-                    Close
-                  </button>
+                    className="btn-secondary px-6 py-2 text-sm mt-2">Close</button>
                 </div>
               ) : (
                 <>
+                  {savedRecipients.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Saved Recipients
+                      </label>
+                      <div className="space-y-2">
+                        {savedRecipients.map((r, i) => (
+                          <label key={i} className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-gray-50">
+                            <input type="checkbox"
+                              checked={selectedRecipients.includes(r.email)}
+                              onChange={e => setSelectedRecipients(prev =>
+                                e.target.checked
+                                  ? [...prev, r.email]
+                                  : prev.filter(x => x !== r.email)
+                              )}
+                              className="rounded border-gray-300" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">{r.name}</p>
+                              <p className="text-xs text-gray-400">{r.email}</p>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Send to
+                      {savedRecipients.length > 0 ? 'Additional Email (optional)' : 'Send to'}
                     </label>
                     <input
                       type="email"
                       className="input"
-                      placeholder="coach@yourclub.com"
+                      placeholder="one-off@email.com"
                       value={reportEmail}
                       onChange={e => setReportEmail(e.target.value)}
-                      autoFocus
+                      autoFocus={savedRecipients.length === 0}
                     />
                   </div>
+
                   <div className="flex justify-end gap-3">
                     <button onClick={() => setReportOpen(false)}
-                      className="btn-secondary px-4 py-2 text-sm">
-                      Cancel
-                    </button>
+                      className="btn-secondary px-4 py-2 text-sm">Cancel</button>
                     <button
-                      disabled={sendingReport || !reportEmail.trim()}
+                      disabled={sendingReport || (selectedRecipients.length === 0 && !reportEmail.trim())}
                       onClick={async () => {
                         setSendingReport(true)
                         try {
-                          await api.post(`/attendance/sessions/${sessionId}/email-report`,
-                            { email: reportEmail })
+                          const emails = [
+                            ...selectedRecipients,
+                            ...(reportEmail.trim() ? [reportEmail.trim()] : [])
+                          ]
+                          await api.post(`/attendance/sessions/${sessionId}/email-report`, { emails })
                           setReportSent(true)
                         } catch {
                           alert('Failed to send report')

@@ -50,3 +50,5 @@ public record CatsFieldRequest(
     string? FieldOptions,
     bool    IsRequired
 );
+
+public record ReportRecipientDto(string Name, string Email);

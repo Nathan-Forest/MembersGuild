@@ -131,6 +131,12 @@ export default function SettingsPage() {
   const [addingRule, setAddingRule] = useState(false)
   const [ruleError, setRuleError] = useState('')
 
+  const [recipients, setRecipients] = useState<{ name: string; email: string }[]>([])
+  const [newRecipient, setNewRecipient] = useState({ name: '', email: '' })
+  const [savingRecipients, setSavingRecipients] = useState(false)
+  const [savedRecipients, setSavedRecipients] = useState(false)
+  const [recipientError, setRecipientError] = useState('')
+
   useEffect(() => {
     const user = getCurrentUser()
     if (!user || user.role !== 'webmaster') { router.replace('/dashboard'); return }
@@ -150,6 +156,9 @@ export default function SettingsPage() {
       setRules(data)
       if (data.length === 0) setNewRule({ thresholdCredits: 5, emailTemplateId: 0 })
     }).catch(() => { })
+    api.get<string>('/settings/report-recipients')
+      .then(json => setRecipients(JSON.parse(json)))
+      .catch(() => { })
   }, [router])
 
   // ── Main settings handlers ─────────────────────────────────────────────────
@@ -322,6 +331,16 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleSaveRecipients() {
+    setSavingRecipients(true); setSavedRecipients(false)
+    try {
+      await api.put('/settings/report-recipients', recipients)
+      setSavedRecipients(true)
+      setTimeout(() => setSavedRecipients(false), 3000)
+    } catch { setRecipientError('Failed to save recipients') }
+    finally { setSavingRecipients(false) }
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
   if (loading) return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -355,6 +374,7 @@ export default function SettingsPage() {
           { label: 'Attendance', href: '#attendance' },
           { label: 'Features', href: '#features' },
           { label: 'Email & Notifications', href: '#email' },
+          { label: 'Report Recipients', href: '#recipients' },
         ].map(item => (
           <a key={item.href} href={item.href} className="hover:text-gray-700 transition-colors">
             {item.label}
@@ -556,6 +576,73 @@ export default function SettingsPage() {
                 onChange={e => update('attendanceLanesLabel', e.target.value)} />
             </Field>
           )}
+        </div>
+      </SettingsCard>
+
+      <SectionHeading title="Report Recipients" id="recipients" />
+      <SettingsCard title="Attendance Report Recipients" icon="📧">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500">
+            Saved contacts appear as checkboxes when sending an attendance report — no need to type the email each time.
+          </p>
+
+          {recipients.length > 0 && (
+            <div className="space-y-2">
+              {recipients.map((r, i) => (
+                <div key={i} className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">{r.name}</p>
+                    <p className="text-xs text-gray-400">{r.email}</p>
+                  </div>
+                  <button
+                    onClick={() => setRecipients(prev => prev.filter((_, idx) => idx !== i))}
+                    className="text-gray-400 hover:text-red-500 transition-colors text-lg leading-none">×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {recipients.length === 0 && (
+            <p className="text-sm text-gray-400 italic">No saved recipients yet.</p>
+          )}
+
+          <div className="border border-dashed border-gray-200 rounded-xl p-4 space-y-3">
+            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Add Recipient</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Name</label>
+                <input type="text" className="input" placeholder="e.g. President"
+                  value={newRecipient.name}
+                  onChange={e => setNewRecipient(p => ({ ...p, name: e.target.value }))} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                <input type="email" className="input" placeholder="president@bsm.com"
+                  value={newRecipient.email}
+                  onChange={e => setNewRecipient(p => ({ ...p, email: e.target.value }))} />
+              </div>
+            </div>
+            {recipientError && <p className="text-xs text-red-500">{recipientError}</p>}
+            <button
+              onClick={() => {
+                if (!newRecipient.name.trim() || !newRecipient.email.trim()) {
+                  setRecipientError('Both name and email are required'); return
+                }
+                setRecipientError('')
+                setRecipients(prev => [...prev, { name: newRecipient.name.trim(), email: newRecipient.email.trim() }])
+                setNewRecipient({ name: '', email: '' })
+              }}
+              className="btn-primary text-sm px-4 py-2">
+              + Add
+            </button>
+          </div>
+
+          <div className="flex justify-end border-t border-gray-100 pt-4">
+            <button onClick={handleSaveRecipients} disabled={savingRecipients} className="btn-primary px-6 py-2">
+              {savingRecipients ? 'Saving…' : savedRecipients ? '✓ Saved' : 'Save Recipients'}
+            </button>
+          </div>
         </div>
       </SettingsCard>
 
@@ -895,18 +982,16 @@ function Toggle({ checked, onChange, disabled = false, size = 'md' }: {
 }) {
   const track = size === 'sm' ? 'h-5 w-9' : 'h-6 w-11'
   const thumb = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4'
-  const on    = size === 'sm' ? 'translate-x-5' : 'translate-x-6'
+  const on = size === 'sm' ? 'translate-x-5' : 'translate-x-6'
   return (
     <button
       onClick={() => !disabled && onChange(!checked)}
       disabled={disabled}
-      className={`relative inline-flex ${track} items-center rounded-full transition-colors ${
-        disabled ? 'bg-gray-100 cursor-not-allowed'
+      className={`relative inline-flex ${track} items-center rounded-full transition-colors ${disabled ? 'bg-gray-100 cursor-not-allowed'
         : checked ? 'bg-[var(--color-primary)]' : 'bg-gray-200'
-      }`}>
-      <span className={`inline-block ${thumb} transform rounded-full bg-white transition-transform ${
-        checked ? on : 'translate-x-1'
-      }`} />
+        }`}>
+      <span className={`inline-block ${thumb} transform rounded-full bg-white transition-transform ${checked ? on : 'translate-x-1'
+        }`} />
     </button>
   )
 }

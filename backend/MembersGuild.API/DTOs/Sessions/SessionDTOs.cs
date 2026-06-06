@@ -59,3 +59,5 @@ public record RecurringSessionRequest(
     int CreditCost = 1,
     int RegistrationCutoffHours = 24
 );
+
+public record ReportRecipientDto(string Name, string Email);

@@ -540,12 +540,12 @@ public class AttendanceController : ControllerBase
     }
 
     // POST /api/attendance/sessions/{id}/email-report
-    [HttpPost("sessions/{id:int}/email-report")]
+    [HttpPost("sessions/{id}/email-report")]
     public async Task<IActionResult> EmailReport(int id, [FromBody] EmailReportRequest req)
     {
         if (!CanManageAttendance()) return Forbid();
-        if (string.IsNullOrWhiteSpace(req.Email))
-            return BadRequest(new { error = "Email is required" });
+        if (req.Emails == null || req.Emails.All(string.IsNullOrWhiteSpace))
+            return BadRequest(new { error = "At least one email is required" });
 
         await using var db = _dbFactory.CreateForCurrentClub();
 
@@ -587,23 +587,26 @@ public class AttendanceController : ControllerBase
             ? $"{session.Coach.FirstName} {session.Coach.LastName}"
             : null;
 
-        await _email.SendAttendanceReportAsync(
-            recipientEmail: req.Email,
-            clubName: _clubContext.DisplayName,
-            clubSlug: _clubContext.Slug,
-            sessionTitle: session.Title,
-            startTime: session.StartTime,
-            endTime: session.EndTime,
-            locationName: session.Location?.Name,
-            coachName: coachName,
-            coachNoShow: session.CoachNoShow,
-            lanesCount: session.LanesCount,
-            lanesEnabled: lanesEnabled,
-            lanesLabel: lanesLabel,
-            members: members,
-            logoUrl: _clubContext.LogoUrl,
-            primaryColor: _clubContext.PrimaryColor
-        );
+        foreach (var email in req.Emails.Where(e => !string.IsNullOrWhiteSpace(e)))
+        {
+            await _email.SendAttendanceReportAsync(
+                recipientEmail: email,
+                clubName: _clubContext.DisplayName,
+                clubSlug: _clubContext.Slug,
+                sessionTitle: session.Title,
+                startTime: session.StartTime,
+                endTime: session.EndTime,
+                locationName: session.Location?.Name,
+                coachName: coachName,
+                coachNoShow: session.CoachNoShow,
+                lanesCount: session.LanesCount,
+                lanesEnabled: lanesEnabled,
+                lanesLabel: lanesLabel,
+                members: members,
+                logoUrl: _clubContext.LogoUrl,
+                primaryColor: _clubContext.PrimaryColor
+            );
+        }
 
         return Ok(new { success = true });
     }
