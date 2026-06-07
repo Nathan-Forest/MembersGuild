@@ -371,7 +371,7 @@ public class SettingsController : ControllerBase
     }
     // GET /api/settings/report-recipients
 [HttpGet("report-recipients")]
-[Authorize(Roles = "webmaster")]
+[Authorize]
 public async Task<IActionResult> GetReportRecipients()
 {
     await using var db = _dbFactory.CreateForCurrentClub();
