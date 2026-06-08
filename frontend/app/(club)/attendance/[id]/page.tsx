@@ -137,6 +137,9 @@ export default function AttendanceSheetPage() {
     api.get<{ name: string; email: string }[]>('/settings/report-recipients')
       .then(data => setSavedRecipients(data))
       .catch(() => { })
+    api.get<{ note: string }>(`/attendance/sessions/${sessionId}/session-note`)
+      .then(d => setSessionNote(d.note))
+      .catch(() => { })
   }, [router, sessionId])
 
   // Auto-refresh every 30 seconds so QR check-ins appear automatically
