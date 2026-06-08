@@ -133,7 +133,8 @@ public class AttendanceController : ControllerBase
                 b.User.Role,
                 record?.Status,
                 record?.CreditRefunded ?? false,
-                b.User.CreditBalance
+                b.User.CreditBalance,
+                record?.Notes
             );
         }).ToList();
 
@@ -260,7 +261,8 @@ public class AttendanceController : ControllerBase
         return Ok(new AttendanceSheetMember(
             existing.UserId, "", "", "",
             existing.Status, existing.CreditRefunded,
-            0
+            0,
+            existing.Notes
         ));
     }
 
@@ -378,6 +380,40 @@ public class AttendanceController : ControllerBase
         await db.SaveChangesAsync();
 
         return Ok(new { lanesCount = session.LanesCount });
+    }
+
+    // PATCH /api/attendance/sessions/{id}/note
+    [HttpPatch("sessions/{id:int}/note")]
+    public async Task<IActionResult> UpdateNote(int id, [FromBody] UpdateNoteRequest req)
+    {
+        if (!CanManageAttendance()) return Forbid();
+
+        await using var db = _dbFactory.CreateForCurrentClub();
+
+        var existing = await db.AttendanceRecords
+            .FirstOrDefaultAsync(a => a.SessionId == id && a.UserId == req.UserId);
+
+        if (existing is null)
+        {
+            // Record doesn't exist yet — create it with no status, just a note
+            existing = new AttendanceRecord
+            {
+                SessionId = id,
+                UserId = req.UserId,
+                Status = null!,
+                Notes = req.Notes,
+                MarkedBy = CurrentUserId,
+            };
+            db.AttendanceRecords.Add(existing);
+        }
+        else
+        {
+            existing.Notes = req.Notes;
+            existing.UpdatedAt = DateTime.UtcNow;
+        }
+
+        await db.SaveChangesAsync();
+        return Ok(new { success = true });
     }
 
     // ── POST /api/attendance/checkin ─────────────────────────────────────────

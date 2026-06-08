@@ -20,7 +20,8 @@ public record AttendanceSheetMember(
     string Role,
     string? Status,  // null = not yet marked
     bool CreditRefunded,
-    int CreditBalance 
+    int CreditBalance,
+    string? Notes 
 );
 
 public record MarkAttendanceRequest(
@@ -43,3 +44,5 @@ public record AttendanceReportMember(
     string? Status,
     bool CreditRefunded
 );
+
+public record UpdateNoteRequest(int UserId, string? Notes);

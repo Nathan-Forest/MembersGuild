@@ -14,6 +14,7 @@ interface SheetMember {
   status: string | null
   creditRefunded: boolean
   creditBalance: number
+  notes: string | null
 }
 
 interface SessionInfo {
@@ -119,6 +120,9 @@ export default function AttendanceSheetPage() {
   const [savedRecipients, setSavedRecipients] = useState<{ name: string; email: string }[]>([])
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([])
 
+  const [savingNote, setSavingNote] = useState<number | null>(null)
+  const [noteValues, setNoteValues] = useState<Record<number, string>>({})
+
   useEffect(() => {
     const user = getCurrentUser()
     if (!user) { router.replace('/login'); return }
@@ -126,8 +130,8 @@ export default function AttendanceSheetPage() {
     loadSheet()
     api.get<{ id: number; name: string }[]>('/attendance/coaches')
       .then(setCoaches).catch(() => { })
-    api.get<{name: string; email: string}[]>('/settings/report-recipients')
-       .then(data => setSavedRecipients(data))
+    api.get<{ name: string; email: string }[]>('/settings/report-recipients')
+      .then(data => setSavedRecipients(data))
       .catch(() => { })
   }, [router, sessionId])
 
@@ -144,10 +148,13 @@ export default function AttendanceSheetPage() {
     try {
       const d = await api.get<SheetData>(`/attendance/sessions/${sessionId}/sheet`)
       setData(d)
-      if (d.session.lanesCount) setLanesCount(d.session.lanesCount)  // ← add this
+      if (d.session.lanesCount) setLanesCount(d.session.lanesCount)
+      // Initialise note values from loaded data
+      const notes: Record<number, string> = {}
+      d.members.forEach(m => { notes[m.userId] = m.notes ?? '' })
+      setNoteValues(notes)
     } catch { }
     finally { setLoading(false) }
-
   }
 
   async function markAttendance(userId: number, status: string) {
@@ -221,6 +228,17 @@ export default function AttendanceSheetPage() {
       await loadSheet()
     } catch { }
     finally { setWalkinLoading(false) }
+  }
+
+  async function saveNote(userId: number) {
+    setSavingNote(userId)
+    try {
+      await api.patch(`/attendance/sessions/${sessionId}/note`, {
+        userId,
+        notes: noteValues[userId] || null,
+      })
+    } catch { }
+    finally { setSavingNote(null) }
   }
 
   const filteredWalkins = allMembers.filter(m => {
@@ -487,7 +505,7 @@ export default function AttendanceSheetPage() {
           </div>
 
           {/* Row 2 — status action buttons */}
-          <div className="flex gap-1.5 flex-wrap">
+          <div className="flex gap-1.5 flex-wrap mb-3">
             {STATUS_OPTIONS.map(opt => (
               <button
                 key={opt.value}
@@ -501,6 +519,21 @@ export default function AttendanceSheetPage() {
                 {marking === m.userId ? '…' : opt.label}
               </button>
             ))}
+          </div>
+
+          {/* Row 3 — notes */}
+          <div className="flex items-center gap-2">
+            <textarea
+              rows={1}
+              placeholder="Add a note (injury, lead, follow-up…)"
+              value={noteValues[m.userId] ?? ''}
+              onChange={e => setNoteValues(prev => ({ ...prev, [m.userId]: e.target.value }))}
+              onBlur={() => saveNote(m.userId)}
+              className="flex-1 text-xs px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-300 resize-none placeholder-gray-400 text-gray-700"
+            />
+            {savingNote === m.userId && (
+              <span className="text-xs text-gray-400 flex-shrink-0">Saving…</span>
+            )}
           </div>
         </div>
       ))}
