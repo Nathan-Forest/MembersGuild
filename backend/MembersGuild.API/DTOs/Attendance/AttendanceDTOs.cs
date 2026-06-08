@@ -46,3 +46,4 @@ public record AttendanceReportMember(
 );
 
 public record UpdateNoteRequest(int UserId, string? Notes);
+public record SessionNoteRequest(string? Note);

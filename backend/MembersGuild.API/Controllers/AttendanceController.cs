@@ -575,6 +575,33 @@ public class AttendanceController : ControllerBase
         });
     }
 
+    // GET /api/attendance/sessions/{id}/session-note
+    [HttpGet("sessions/{id:int}/session-note")]
+    public async Task<IActionResult> GetSessionNote(int id)
+    {
+        if (!CanManageAttendance()) return Forbid();
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var setting = await db.ClubSettings
+            .FirstOrDefaultAsync(s => s.Key == $"session_note_{id}");
+        return Ok(new { note = setting?.Value ?? "" });
+    }
+
+    // PATCH /api/attendance/sessions/{id}/session-note
+    [HttpPatch("sessions/{id:int}/session-note")]
+    public async Task<IActionResult> UpdateSessionNote(int id, [FromBody] SessionNoteRequest req)
+    {
+        if (!CanManageAttendance()) return Forbid();
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var key = $"session_note_{id}";
+        var setting = await db.ClubSettings.FirstOrDefaultAsync(s => s.Key == key);
+        if (setting is null)
+            db.ClubSettings.Add(new ClubSetting { Key = key, Value = req.Note ?? "" });
+        else
+            setting.Value = req.Note ?? "";
+        await db.SaveChangesAsync();
+        return Ok(new { success = true });
+    }
+
     // POST /api/attendance/sessions/{id}/email-report
     [HttpPost("sessions/{id}/email-report")]
     public async Task<IActionResult> EmailReport(int id, [FromBody] EmailReportRequest req)

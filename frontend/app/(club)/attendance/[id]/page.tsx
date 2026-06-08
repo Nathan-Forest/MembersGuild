@@ -123,6 +123,10 @@ export default function AttendanceSheetPage() {
   const [savingNote, setSavingNote] = useState<number | null>(null)
   const [noteValues, setNoteValues] = useState<Record<number, string>>({})
 
+  const [sessionNote, setSessionNote] = useState('')
+  const [savingSessionNote, setSavingSessionNote] = useState(false)
+  const [sessionNoteSaved, setSessionNoteSaved] = useState(false)
+
   useEffect(() => {
     const user = getCurrentUser()
     if (!user) { router.replace('/login'); return }
@@ -239,6 +243,17 @@ export default function AttendanceSheetPage() {
       })
     } catch { }
     finally { setSavingNote(null) }
+  }
+
+  async function saveSessionNote() {
+    setSavingSessionNote(true)
+    setSessionNoteSaved(false)
+    try {
+      await api.patch(`/attendance/sessions/${sessionId}/session-note`, { note: sessionNote })
+      setSessionNoteSaved(true)
+      setTimeout(() => setSessionNoteSaved(false), 2000)
+    } catch { }
+    finally { setSavingSessionNote(false) }
   }
 
   const filteredWalkins = allMembers.filter(m => {
@@ -460,6 +475,23 @@ export default function AttendanceSheetPage() {
             Send Report
           </button>
         </div>
+      </div>
+
+      {/* Session Notes */}
+      <div className="card p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Session Notes</p>
+          {savingSessionNote && <span className="text-xs text-gray-400">Saving…</span>}
+          {sessionNoteSaved && <span className="text-xs text-green-600">✓ Saved</span>}
+        </div>
+        <textarea
+          rows={2}
+          placeholder="General session notes — visible to staff only…"
+          value={sessionNote}
+          onChange={e => setSessionNote(e.target.value)}
+          onBlur={saveSessionNote}
+          className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-300 resize-none placeholder-gray-400 text-gray-700"
+        />
       </div>
 
       {/* Legend */}
