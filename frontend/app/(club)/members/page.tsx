@@ -457,6 +457,8 @@ export default function MembersPage() {
   const allChecked = members.length > 0 && checkedIds.length === members.length
   const someChecked = checkedIds.length > 0 && !allChecked
 
+  console.log('canManageCredits:', canManageCredits, 'user:', user?.role, 'permissions:', user?.permissions)
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
