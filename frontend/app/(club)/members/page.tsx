@@ -51,7 +51,7 @@ const CREDIT_FILTERS = [
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function getVisibleTabs(role: UserRole | null): { key: ModalTab; label: string }[] {
+function getVisibleTabs(role: UserRole | null, permissions: string[]): { key: ModalTab; label: string }[] {
   const all: { key: ModalTab; label: string }[] = [
     { key: 'details', label: 'Details' },
     { key: 'emergency', label: 'Emergency Contact' },
@@ -60,11 +60,20 @@ function getVisibleTabs(role: UserRole | null): { key: ModalTab; label: string }
     { key: 'sessions', label: 'Upcoming Sessions' },
   ]
   if (role === 'webmaster') return all
-  if (role === 'finance') return all.filter(t => t.key !== 'role')
-  if (role === 'membership') return all.filter(t => t.key !== 'role')
-  if (role === 'coach' || role === 'committee')
-    return all.filter(t => t.key === 'details' || t.key === 'emergency' || t.key === 'sessions')
-  return all.filter(t => t.key === 'details' || t.key === 'emergency' || t.key === 'sessions')
+
+  const hasFinance = permissions.includes('finance')
+  const hasMembership = permissions.includes('membership')
+  const hasCommittee = permissions.includes('committee')
+  const hasCoach = role === 'coach' || permissions.includes('coach')
+
+  return all.filter(t => {
+    if (t.key === 'details') return true
+    if (t.key === 'emergency') return true
+    if (t.key === 'credits') return hasFinance || hasMembership
+    if (t.key === 'role') return false // webmaster only, handled above
+    if (t.key === 'sessions') return hasFinance || hasMembership || hasCommittee || hasCoach
+    return false
+  })
 }
 
 function roleBadgeClass(role: string) {
@@ -658,15 +667,14 @@ export default function MembersPage() {
             </div>
 
             <div className="flex border-b border-gray-100">
-              {getVisibleTabs(currentRole).map(tab => (
-                <button key={tab.key} onClick={() => setModalTab(tab.key)}
-                  className={`flex-1 py-3 text-xs font-medium transition-colors ${modalTab === tab.key
-                    ? 'border-b-2 text-[var(--color-primary)]'
-                    : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  style={modalTab === tab.key ? { borderColor: 'var(--color-primary)' } : {}}>
-                  {tab.label}
-                </button>
+              {getVisibleTabs(currentRole, getCurrentUser()?.permissions ?? []).map(tab => (<button key={tab.key} onClick={() => setModalTab(tab.key)}
+                className={`flex-1 py-3 text-xs font-medium transition-colors ${modalTab === tab.key
+                  ? 'border-b-2 text-[var(--color-primary)]'
+                  : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                style={modalTab === tab.key ? { borderColor: 'var(--color-primary)' } : {}}>
+                {tab.label}
+              </button>
               ))}
             </div>
 
