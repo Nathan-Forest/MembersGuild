@@ -37,6 +37,8 @@ public class ClubDbContextFactory
         return new ClubDbContext(
             new DbContextOptionsBuilder<ClubDbContext>()
                 .UseNpgsql(builder.ToString())
+                .ReplaceService<Microsoft.EntityFrameworkCore.Infrastructure.IModelCacheKeyFactory,
+                    MembersGuild.API.Services.DynamicSchemaModelCacheKeyFactory>()
                 .Options,
             _clubContext.SchemaName
         );
@@ -55,6 +57,8 @@ public class ClubDbContextFactory
         return new ClubDbContext(
             new DbContextOptionsBuilder<ClubDbContext>()
                 .UseNpgsql(builder.ToString())
+                .ReplaceService<Microsoft.EntityFrameworkCore.Infrastructure.IModelCacheKeyFactory,
+                    MembersGuild.API.Services.DynamicSchemaModelCacheKeyFactory>()
                 .Options,
             schemaName
         );
