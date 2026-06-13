@@ -25,6 +25,31 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
     })
   }
 
+  // Square OAuth callback — bypass club auth, forward directly to backend
+  if (backendPath.startsWith('square/callback')) {
+    const callbackUrl = `${BACKEND_URL}/api/${backendPath}${request.nextUrl.search}`
+    const res = await fetch(callbackUrl, {
+      method: request.method,
+      headers: { 'Content-Type': 'application/json' },
+      redirect: 'manual',  // ← don't follow redirects — pass them through
+      cache: 'no-store',
+    })
+
+    // If backend returns a redirect, forward it to the browser
+    if (res.status === 301 || res.status === 302 || res.status === 307 || res.status === 308) {
+      const location = res.headers.get('location')
+      if (location) {
+        return NextResponse.redirect(location)
+      }
+    }
+
+    const body = await res.text()
+    return new NextResponse(body, {
+      status: res.status,
+      headers: { 'Content-Type': res.headers.get('Content-Type') ?? 'application/json' }
+    })
+  }
+
   // ... existing handler logic continues unchanged below
 
   const host = request.headers.get('host') ?? ''
