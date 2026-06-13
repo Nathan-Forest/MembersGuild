@@ -26,6 +26,7 @@ public class PlatformDbContext : DbContext
     public DbSet<DiscountCode> DiscountCodes => Set<DiscountCode>();
     public DbSet<ClubDiscount> ClubDiscounts => Set<ClubDiscount>();
     public DbSet<Expense> Expenses => Set<Expense>();
+    public DbSet<SquareConnection> SquareConnections => Set<SquareConnection>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -83,5 +84,22 @@ public class PlatformDbContext : DbContext
     entity.ToTable("provisioning_jobs");
     entity.HasKey(e => e.Id);
 });
+
+        modelBuilder.Entity<SquareConnection>(entity =>
+        {
+            entity.ToTable("square_connections");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.ClubId).IsUnique();
+            entity.Property(e => e.MerchantId).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.LocationId).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.MerchantName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.AccessTokenEncrypted).IsRequired();
+            entity.Property(e => e.RefreshTokenEncrypted).IsRequired();
+            entity.Property(e => e.ConnectedAt).HasDefaultValueSql("NOW()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("NOW()");
+            entity.HasOne(e => e.Club)
+                  .WithOne()
+                  .HasForeignKey<SquareConnection>(e => e.ClubId);
+        });
     }
 }

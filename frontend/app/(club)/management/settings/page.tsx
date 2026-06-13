@@ -65,6 +65,15 @@ interface CreditAlertRule {
   isEnabled: boolean
 }
 
+interface SquareStatus {
+  connected: boolean
+  merchantName?: string
+  merchantId?: string
+  locationId?: string
+  connectedAt?: string
+  expiresAt?: string
+}
+
 const TIMEZONES = [
   { label: 'Brisbane (UTC+10, no DST)', value: 'Australia/Brisbane' },
   { label: 'Sydney / Melbourne (AEDT)', value: 'Australia/Sydney' },
@@ -137,6 +146,10 @@ export default function SettingsPage() {
   const [savedRecipients, setSavedRecipients] = useState(false)
   const [recipientError, setRecipientError] = useState('')
 
+  const [squareStatus, setSquareStatus] = useState<SquareStatus | null>(null)
+  const [squareLoading, setSquareLoading] = useState(false)
+  const [squareError, setSquareError] = useState('')
+
   useEffect(() => {
     const user = getCurrentUser()
     if (!user || user.role !== 'webmaster') { router.replace('/dashboard'); return }
@@ -159,6 +172,20 @@ export default function SettingsPage() {
     api.get<{ name: string; email: string }[]>('/settings/report-recipients')
       .then(data => setRecipients(data))
       .catch(() => { })
+    api.get<SquareStatus>('/square/status')
+      .then(setSquareStatus)
+      .catch(() => setSquareStatus({ connected: false }))
+
+    // Handle redirect back from Square OAuth
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('square_connected')) {
+      setSquareStatus(prev => prev ? { ...prev, connected: true } : { connected: true })
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+    if (params.get('square_error')) {
+      setSquareError(`Square connection failed: ${params.get('square_error')}`)
+      window.history.replaceState({}, '', window.location.pathname)
+    }
   }, [router])
 
   // ── Main settings handlers ─────────────────────────────────────────────────
@@ -341,6 +368,31 @@ export default function SettingsPage() {
     finally { setSavingRecipients(false) }
   }
 
+  async function handleSquareConnect() {
+    setSquareLoading(true)
+    setSquareError('')
+    try {
+      const { authUrl } = await api.get<{ authUrl: string }>('/square/connect')
+      window.location.href = authUrl
+    } catch {
+      setSquareError('Failed to initiate Square connection')
+      setSquareLoading(false)
+    }
+  }
+
+  async function handleSquareDisconnect() {
+    if (!confirm('Disconnect Square? Members will no longer be able to pay by card.')) return
+    setSquareLoading(true)
+    try {
+      await api.delete('/square/disconnect')
+      setSquareStatus({ connected: false })
+    } catch {
+      setSquareError('Failed to disconnect Square')
+    } finally {
+      setSquareLoading(false)
+    }
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
   if (loading) return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -375,6 +427,7 @@ export default function SettingsPage() {
           { label: 'Features', href: '#features' },
           { label: 'Email & Notifications', href: '#email' },
           { label: 'Report Recipients', href: '#recipients' },
+          { label: 'Payments', href: '#payments' },
         ].map(item => (
           <a key={item.href} href={item.href} className="hover:text-gray-700 transition-colors">
             {item.label}
@@ -958,6 +1011,96 @@ export default function SettingsPage() {
               {savingAlerts ? 'Saving…' : savedAlerts ? '✓ Saved' : 'Save Alert Settings'}
             </button>
           </div>
+        </div>
+      </SettingsCard>
+
+      {/* ── Payments ──────────────────────────────────────────────────────────── */}
+      <SectionHeading title="Payments" id="payments" />
+      <SettingsCard title="Square Integration" icon="💳">
+        <div className="space-y-5">
+          <p className="text-sm text-gray-500">
+            Connect your club&apos;s Square account to accept card payments in the shop.
+            Members will see a &ldquo;Pay by Card&rdquo; option at checkout alongside Direct Deposit.
+          </p>
+
+          {squareError && (
+            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              {squareError}
+            </div>
+          )}
+
+          {squareStatus === null ? (
+            <div className="h-16 bg-gray-50 rounded-xl animate-pulse" />
+          ) : squareStatus.connected ? (
+            <div className="space-y-4">
+              <div className="flex items-start gap-4 p-4 rounded-xl bg-green-50 border border-green-200">
+                <div className="text-green-500 text-2xl flex-shrink-0">✅</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-green-800">Square Connected</p>
+                  {squareStatus.merchantName && (
+                    <p className="text-sm text-green-700 mt-0.5">{squareStatus.merchantName}</p>
+                  )}
+                  <div className="mt-2 space-y-1 text-xs text-green-600">
+                    {squareStatus.merchantId && (
+                      <p>Merchant ID: <span className="font-mono">{squareStatus.merchantId}</span></p>
+                    )}
+                    {squareStatus.locationId && (
+                      <p>Location ID: <span className="font-mono">{squareStatus.locationId}</span></p>
+                    )}
+                    {squareStatus.connectedAt && (
+                      <p>Connected: {new Date(squareStatus.connectedAt).toLocaleDateString('en-AU', {
+                        day: 'numeric', month: 'short', year: 'numeric'
+                      })}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Card payments</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Active — members can pay by card at checkout</p>
+                </div>
+                <button
+                  onClick={handleSquareDisconnect}
+                  disabled={squareLoading}
+                  className="btn-secondary text-sm px-4 py-2 text-red-600 border-red-200 hover:border-red-400">
+                  {squareLoading ? 'Disconnecting…' : 'Disconnect Square'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 flex items-start gap-3">
+                <div className="text-gray-400 text-xl flex-shrink-0">💳</div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Square not connected</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Connect your Square account to enable card payments. You&apos;ll be redirected
+                    to Square to authorise access — it only takes a minute.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleSquareConnect}
+                disabled={squareLoading}
+                className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border-2 border-gray-200 hover:border-gray-300 transition-colors disabled:opacity-50 bg-white">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                  <rect width="24" height="24" rx="4" fill="#006AFF" />
+                  <path d="M7 7h10v10H7z" fill="white" />
+                </svg>
+                <span className="text-sm font-semibold text-gray-800">
+                  {squareLoading ? 'Redirecting to Square…' : 'Connect with Square'}
+                </span>
+              </button>
+
+              <p className="text-xs text-gray-400 text-center">
+                You&apos;ll be redirected to Square to authorise MembersGuild.
+                Your credentials are never stored on our servers — only a secure access token.
+              </p>
+            </div>
+          )}
         </div>
       </SettingsCard>
 

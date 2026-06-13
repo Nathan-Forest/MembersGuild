@@ -78,6 +78,7 @@ builder.Services.AddResend(options =>
     options.ApiToken = builder.Configuration["Resend:ApiKey"] ?? "";
 });
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<SquareService>();
 
 // ── API ───────────────────────────────────────────────────────────────────────
 

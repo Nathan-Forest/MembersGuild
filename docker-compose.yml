@@ -34,6 +34,10 @@ services:
       Stripe__PriceMedium: ${Stripe__PriceMedium}
       Stripe__PriceLarge: ${Stripe__PriceLarge}
       Platform__ApiKey: ${Platform__ApiKey}
+      Square__AppId: ${Square__AppId}
+      Square__AppSecret: ${Square__AppSecret}
+      Square__Environment: ${Square__Environment}
+      Square__EncryptionKey: ${Square__EncryptionKey}
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Default: >-
         Host=membersguild-db;
