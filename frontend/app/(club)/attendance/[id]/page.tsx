@@ -841,7 +841,13 @@ export default function AttendanceSheetPage() {
                     ))}
                   </div>
                 )}
-                {/* ── Quick CATS Sign-up Modal ──────────────────────────────────────── */}
+              </div>
+            </div>
+          </div>
+
+)
+      }
+      {/* ── Quick CATS Sign-up Modal ──────────────────────────────────────── */}
 {catsOpen && (
   <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
     <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col">
@@ -918,12 +924,6 @@ export default function AttendanceSheetPage() {
     </div>
   </div>
 )}
-              </div>
-            </div>
-          </div>
-
-)
-      }
     </div >
   )
 }
