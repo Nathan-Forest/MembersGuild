@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '@/lib/api'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser, hasPermission } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -214,9 +214,11 @@ export default function ReportsPage() {
   const [coaches, setCoaches] = useState<CoachesReport | null>(null)
 
   const allowedRoles = ['committee', 'membership', 'finance', 'webmaster', 'coach']
-  useEffect(() => {
-    if (user && !allowedRoles.includes(user.role)) router.replace('/dashboard')
-  }, [])
+ useEffect(() => {
+  if (user && !hasPermission(user, 'committee', 'membership', 'finance', 'webmaster', 'coach')) {
+    router.replace('/dashboard')
+  }
+}, [])
 
   const { start, end } = getPeriodDates(period, customStart, customEnd)
 
