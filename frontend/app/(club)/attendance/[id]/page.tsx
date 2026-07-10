@@ -101,6 +101,19 @@ export default function AttendanceSheetPage() {
   const [walkinSearch, setWalkinSearch] = useState('')
   const [walkinLoading, setWalkinLoading] = useState(false)
 
+  // Quick CATS Modal
+  const [catsOpen, setCatsOpen] = useState(false)
+  const [catsSubmitting, setCatsSubmitting] = useState(false)
+  const [catsError, setCatsError] = useState<string | null>(null)
+  const [catsForm, setCatsForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+  })
+
   // Mark all
   const [markingAll, setMarkingAll] = useState(false)
 
@@ -235,6 +248,53 @@ export default function AttendanceSheetPage() {
       await loadSheet()
     } catch { }
     finally { setWalkinLoading(false) }
+  }
+
+  function openCatsSignup() {
+    setCatsForm({
+      firstName: '', lastName: '', email: '', phone: '',
+      emergencyContactName: '', emergencyContactPhone: '',
+    })
+    setCatsError(null)
+    setCatsOpen(true)
+  }
+
+  async function handleCatsSignup() {
+    setCatsError(null)
+    const { firstName, lastName, email, phone } = catsForm
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim()) {
+      setCatsError('First name, last name, email and phone are required')
+      return
+    }
+
+    setCatsSubmitting(true)
+    try {
+      const signup = await api.post<{
+        userId: number
+        email: string
+        firstName: string
+        generatedPassword: string
+        initialCredits: number
+        message: string
+      }>('/public/signup', {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        emergencyContactName: catsForm.emergencyContactName.trim() || null,
+        emergencyContactPhone: catsForm.emergencyContactPhone.trim() || null,
+      })
+
+      // Reuse the walk-in endpoint: registers + marks attended in one call
+      await api.post(`/attendance/sessions/${sessionId}/walkin`, signup.userId)
+
+      setCatsOpen(false)
+      await loadSheet()
+    } catch (err) {
+      setCatsError('Failed to register — check the email isn\'t already in use')
+    } finally {
+      setCatsSubmitting(false)
+    }
   }
 
   async function saveNote(userId: number) {
@@ -449,6 +509,9 @@ export default function AttendanceSheetPage() {
         <div className="flex gap-2 flex-wrap">
           <button onClick={openWalkin} className="btn-secondary text-sm px-3 py-2">
             + Walk-in
+          </button>
+          <button onClick={openCatsSignup} className="btn-secondary text-sm px-3 py-2">
+            + CATS
           </button>
           <button
             onClick={markAllAttended}
@@ -778,10 +841,88 @@ export default function AttendanceSheetPage() {
                     ))}
                   </div>
                 )}
+                {/* ── Quick CATS Sign-up Modal ──────────────────────────────────────── */}
+{catsOpen && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col">
+      <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
+        <div>
+          <h2 className="font-bold text-gray-900">Quick CATS Sign-Up</h2>
+          <p className="text-xs text-gray-400 mt-0.5">Trial member will be registered and marked attended</p>
+        </div>
+        <button onClick={() => setCatsOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="overflow-y-auto flex-1 p-6 space-y-4">
+        {catsError && (
+          <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+            {catsError}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+            <input type="text" className="input" value={catsForm.firstName}
+              onChange={e => setCatsForm(prev => ({ ...prev, firstName: e.target.value }))}
+              autoFocus />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+            <input type="text" className="input" value={catsForm.lastName}
+              onChange={e => setCatsForm(prev => ({ ...prev, lastName: e.target.value }))} />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+          <input type="email" className="input" value={catsForm.email}
+            onChange={e => setCatsForm(prev => ({ ...prev, email: e.target.value }))} />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+          <input type="tel" className="input" value={catsForm.phone}
+            onChange={e => setCatsForm(prev => ({ ...prev, phone: e.target.value }))} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
+            <input type="text" className="input" value={catsForm.emergencyContactName}
+              onChange={e => setCatsForm(prev => ({ ...prev, emergencyContactName: e.target.value }))} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Phone</label>
+            <input type="tel" className="input" value={catsForm.emergencyContactPhone}
+              onChange={e => setCatsForm(prev => ({ ...prev, emergencyContactPhone: e.target.value }))} />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-3 p-6 border-t border-gray-100 flex-shrink-0">
+        <button onClick={() => setCatsOpen(false)} className="btn-secondary px-4 py-2 text-sm">
+          Cancel
+        </button>
+        <button
+          onClick={handleCatsSignup}
+          disabled={catsSubmitting}
+          className="btn-primary px-4 py-2 text-sm">
+          {catsSubmitting ? 'Registering…' : 'Register & Mark Attended'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
               </div>
             </div>
           </div>
-        )
+
+)
       }
     </div >
   )
