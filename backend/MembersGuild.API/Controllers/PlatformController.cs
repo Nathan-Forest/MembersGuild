@@ -576,6 +576,18 @@ public class PlatformController : ControllerBase
             .FirstOrDefaultAsync(c => c.StripeSubId == sub.Id);
         if (club is null) return;
 
+        // Free-forever clubs stay active regardless of Stripe subscription state
+        if (club.DiscountType == "free_forever")
+        {
+            await _platform.AuditAsync(
+                action: "stripe.subscription_updated_ignored",
+                actor: "system",
+                clubSlug: club.Slug,
+                clubId: club.Id,
+                metadata: new { reason = "free_forever", stripeStatus = sub.Status });
+            return;
+        }
+
         var previousStatus = club.SubscriptionStatus;
         club.StripeSubId = sub.Id;
         club.SubscriptionStatus = sub.Status switch
@@ -632,6 +644,18 @@ public class PlatformController : ControllerBase
         var club = await _platformDb.Clubs
             .FirstOrDefaultAsync(c => c.StripeCustomerId == invoice.CustomerId);
         if (club is null) return;
+
+        // Free-forever clubs are never billed — ignore Stripe failures entirely
+        if (club.DiscountType == "free_forever")
+        {
+            await _platform.AuditAsync(
+                action: "stripe.payment_failed_ignored",
+                actor: "system",
+                clubSlug: club.Slug,
+                clubId: club.Id,
+                metadata: new { reason = "free_forever", invoiceId = invoice.Id });
+            return;
+        }
 
         club.FailedPaymentCount++;
         club.UpdatedAt = DateTime.UtcNow;
