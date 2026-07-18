@@ -207,6 +207,12 @@ export default function MembersPage() {
 
   const [exportingMarketing, setExportingMarketing] = useState(false)
 
+  const [emailEdit, setEmailEdit] = useState('')
+  const [savingEmail, setSavingEmail] = useState(false)
+  const [emailError, setEmailError] = useState('')
+
+  const [emergencyNameEdit, setEmergencyNameEdit] = useState('')
+  const [emergencyPhoneEdit, setEmergencyPhoneEdit] = useState('')
 
   // ── Init ───────────────────────────────────────────────────────────────────
 
@@ -375,15 +381,32 @@ export default function MembersPage() {
         lastName: selected.lastName,
         phone: selected.phone,
         memberNumber: selected.memberNumber,
-        dateOfBirth: dobEdit || null,              // ← add
-        emergencyContactName: selected.emergencyContactName,
-        emergencyContactPhone: selected.emergencyContactPhone,
+        dateOfBirth: dobEdit || null,
+        emergencyContactName: emergencyNameEdit || null,
+        emergencyContactPhone: emergencyPhoneEdit || null,
         joinedAt: joinedAtEdit ? new Date(joinedAtEdit).toISOString() : null,
         associationNumber: assocNumberEdit || null,
         marketingOptOut: selected.marketingOptOut,
       })
       setSelected(detail)
     } catch { }
+  }
+
+  async function handleSaveEmail() {
+    if (!selected) return
+    setEmailError('')
+    setSavingEmail(true)
+    try {
+      const detail = await api.put<MemberDetailResponse>(`/members/${selected.id}/email`, {
+        email: emailEdit,
+      })
+      setSelected(detail)
+      await loadData()
+    } catch (err) {
+      setEmailError(err instanceof Error ? err.message : 'Failed to update email')
+    } finally {
+      setSavingEmail(false)
+    }
   }
 
   // ── Add member ─────────────────────────────────────────────────────────────
@@ -499,6 +522,7 @@ export default function MembersPage() {
   const validImportRows = importRows.filter(r => r.errors.length === 0).length
   const allChecked = members.length > 0 && checkedIds.length === members.length
   const someChecked = checkedIds.length > 0 && !allChecked
+  const canEditContact = user ? hasPermission(user, 'committee', 'membership', 'finance', 'webmaster') : false
 
   console.log('canManageCredits:', canManageCredits, 'user:', user?.role, 'permissions:', user?.permissions)
 
@@ -831,6 +855,26 @@ export default function MembersPage() {
                     <>
                       <div className="rounded-xl bg-red-50 border border-red-100 p-4 flex items-start gap-3">
                         <span className="text-red-500 text-lg mt-0.5">🚨</span>
+                        {canEditContact && (
+                          <div className="pt-4 border-t border-gray-100 space-y-3">
+                            <p className="text-sm font-medium text-gray-700">Update Emergency Contact</p>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500 mb-1">Name</label>
+                              <input type="text" className="input text-sm"
+                                value={emergencyNameEdit}
+                                onChange={e => setEmergencyNameEdit(e.target.value)} />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500 mb-1">Phone</label>
+                              <input type="tel" className="input text-sm"
+                                value={emergencyPhoneEdit}
+                                onChange={e => setEmergencyPhoneEdit(e.target.value)} />
+                            </div>
+                            <button onClick={handleSaveDetails} className="btn-secondary text-xs px-3 py-1.5">
+                              Save Emergency Contact
+                            </button>
+                          </div>
+                        )}
                         <div>
                           <p className="text-sm font-semibold text-red-800">Emergency Contact</p>
                           <p className="text-xs text-red-600 mt-0.5">For use in medical emergencies only</p>

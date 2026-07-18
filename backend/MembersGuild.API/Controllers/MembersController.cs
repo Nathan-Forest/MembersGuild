@@ -179,6 +179,23 @@ public class MembersController : ControllerBase
         return Ok(await _members.GetMarketingContactsAsync());
     }
 
+    /// <summary>PUT /api/members/{id}/email — Committee+ only</summary>
+    [HttpPut("{id:int}/email")]
+    public async Task<IActionResult> UpdateEmail(int id, [FromBody] UpdateEmailRequest request)
+    {
+        if (!CanEditContactDetails()) return Forbid();
+
+        try
+        {
+            var member = await _members.UpdateEmailAsync(id, request.Email);
+            return Ok(member);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { error = ex.Message });
+        }
+    }
+
     // POST /api/members/resend-welcome
     [HttpPost("resend-welcome")]
     [Authorize(Roles = "webmaster,membership")]
@@ -275,4 +292,5 @@ public class MembersController : ControllerBase
     private bool IsStaff() =>
     HasRole("coach", "committee", "membership", "finance", "webmaster");
     private bool CanManageMembers() => HasRole("membership", "webmaster");
+    private bool CanEditContactDetails() => HasRole("committee", "membership", "finance", "webmaster");
 }

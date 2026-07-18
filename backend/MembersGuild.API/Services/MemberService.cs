@@ -19,6 +19,7 @@ public interface IMemberService
     Task<MemberStatsResponse> GetStatsAsync();
     Task<ImportResult> ImportMembersAsync(List<ImportMemberRequest> requests, int importedBy);
     Task<List<MarketingContactResponse>> GetMarketingContactsAsync();
+    Task<MemberDetailResponse> UpdateEmailAsync(int id, string newEmail);
 }
 
 public class MemberService : IMemberService
@@ -154,6 +155,23 @@ public class MemberService : IMemberService
             user.MarketingOptOut = request.MarketingOptOut.Value;
         user.UpdatedAt = DateTime.UtcNow;
 
+        await db.SaveChangesAsync();
+        return MapDetail(user);
+    }
+
+    public async Task<MemberDetailResponse> UpdateEmailAsync(int id, string newEmail)
+    {
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var user = await db.Users.FindAsync(id)
+            ?? throw new InvalidOperationException("Member not found");
+
+        var normalised = newEmail.Trim().ToLower();
+
+        var exists = await db.Users.AnyAsync(u => u.Email == normalised && u.Id != id);
+        if (exists) throw new InvalidOperationException("Email already in use by another member");
+
+        user.Email = normalised;
+        user.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return MapDetail(user);
     }

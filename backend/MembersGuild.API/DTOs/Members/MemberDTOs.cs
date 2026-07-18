@@ -119,3 +119,7 @@ public record MarketingContactResponse(
     string Email,
     string? Phone
 );
+
+public record UpdateEmailRequest(
+    [Required, EmailAddress, MaxLength(200)] string Email
+);
