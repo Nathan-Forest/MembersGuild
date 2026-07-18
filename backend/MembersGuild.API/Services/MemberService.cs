@@ -249,7 +249,7 @@ public class MemberService : IMemberService
     var users = await db.Users.ToListAsync();
 
     return new MemberStatsResponse(
-        users.Count(u => u.Role != "coach"),
+        users.Count(u => u.Role != "coach" && u.IsActive),
         users.Count(u => u.IsActive),
         users.Count(u => !u.IsActive),
         users.Count(u => u.CreditBalance > 0 && u.CreditBalance <= 2),
