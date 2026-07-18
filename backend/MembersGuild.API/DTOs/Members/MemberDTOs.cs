@@ -113,3 +113,9 @@ public record UpcomingSessionResponse(
     DateTime EndTime,
     int CreditCost
 );
+
+public record MarketingContactResponse(
+    string FullName,
+    string Email,
+    string? Phone
+);

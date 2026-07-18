@@ -18,6 +18,7 @@ public interface IMemberService
     Task<bool> DeleteMemberAsync(int id, int requestingUserId);
     Task<MemberStatsResponse> GetStatsAsync();
     Task<ImportResult> ImportMembersAsync(List<ImportMemberRequest> requests, int importedBy);
+    Task<List<MarketingContactResponse>> GetMarketingContactsAsync();
 }
 
 public class MemberService : IMemberService
@@ -227,6 +228,17 @@ public class MemberService : IMemberService
             users.Count(u => u.CreditBalance > 0 && u.CreditBalance <= 2),
             users.Count(u => u.CreditBalance <= 0)
         );
+    }
+
+    public async Task<List<MarketingContactResponse>> GetMarketingContactsAsync()
+    {
+        await using var db = _dbFactory.CreateForCurrentClub();
+
+        return await db.Users
+            .Where(u => u.IsActive && !u.MarketingOptOut)
+            .OrderBy(u => u.LastName).ThenBy(u => u.FirstName)
+            .Select(u => new MarketingContactResponse(u.FullName, u.Email, u.Phone))
+            .ToListAsync();
     }
 
     private static MemberDetailResponse MapDetail(User u) => new(

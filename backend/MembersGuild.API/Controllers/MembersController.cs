@@ -171,6 +171,14 @@ public class MembersController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>GET /api/members/marketing-export — Membership/Webmaster only</summary>
+    [HttpGet("marketing-export")]
+    public async Task<IActionResult> GetMarketingExport()
+    {
+        if (!CanManageMembers()) return Forbid();
+        return Ok(await _members.GetMarketingContactsAsync());
+    }
+
     // POST /api/members/resend-welcome
     [HttpPost("resend-welcome")]
     [Authorize(Roles = "webmaster,membership")]

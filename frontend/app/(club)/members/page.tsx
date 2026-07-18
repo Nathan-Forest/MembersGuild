@@ -108,6 +108,20 @@ function downloadTemplate() {
   URL.revokeObjectURL(url)
 }
 
+function exportMarketingCsv(rows: { fullName: string; email: string; phone: string | null }[]) {
+  const headers = ['Name', 'Email', 'Phone']
+  const escape = (v: string) => `"${v.replace(/"/g, '""')}"`
+  const lines = [
+    headers.map(escape).join(','),
+    ...rows.map(r => [r.fullName, r.email, r.phone ?? ''].map(escape).join(',')),
+  ]
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = `marketing-list-${new Date().toISOString().split('T')[0]}.csv`; a.click()
+  URL.revokeObjectURL(url)
+}
+
 function parseCsvLine(line: string): string[] {
   const result: string[] = []
   let inQuotes = false
@@ -190,6 +204,8 @@ export default function MembersPage() {
   // State:
   const [memberSessions, setMemberSessions] = useState<UpcomingSession[]>([])
   const [loadingSessions, setLoadingSessions] = useState(false)
+
+  const [exportingMarketing, setExportingMarketing] = useState(false)
 
 
   // ── Init ───────────────────────────────────────────────────────────────────
@@ -457,6 +473,23 @@ export default function MembersPage() {
     }
   }
 
+  // Marketing Export
+  async function handleExportMarketing() {
+    setExportingMarketing(true)
+    try {
+      const rows = await api.get<{ fullName: string; email: string; phone: string | null }[]>('/members/marketing-export')
+      if (rows.length === 0) {
+        alert('No members found — everyone has opted out or there are no active members.')
+        return
+      }
+      exportMarketingCsv(rows)
+    } catch {
+      alert('Failed to export marketing list')
+    } finally {
+      setExportingMarketing(false)
+    }
+  }
+
   // ── Derived ────────────────────────────────────────────────────────────────
 
   const user = getCurrentUser()
@@ -480,6 +513,12 @@ export default function MembersPage() {
         {canManage && (
           <div className="flex gap-2">
             <button onClick={openImport} className="btn-secondary px-4 py-2">↑ Import CSV</button>
+            <button
+              onClick={handleExportMarketing}
+              disabled={exportingMarketing}
+              className="btn-secondary px-4 py-2">
+              {exportingMarketing ? 'Exporting…' : '↓ Export Marketing List'}
+            </button>
             <button
               onClick={() => { setAddModalOpen(true); setNewMemberPassword(null); setAddError('') }}
               className="btn-primary px-4 py-2">
