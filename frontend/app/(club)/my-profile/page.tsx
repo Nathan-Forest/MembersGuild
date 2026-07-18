@@ -23,6 +23,7 @@ export default function MyProfilePage() {
     dateOfBirth: "",
     emergencyContactName: '',
     emergencyContactPhone: '',
+    marketingOptOut: false,
   })
 
   const [passwordForm, setPasswordForm] = useState({
@@ -51,6 +52,7 @@ export default function MyProfilePage() {
             : '',
           emergencyContactName: data.emergencyContactName ?? '',
           emergencyContactPhone: data.emergencyContactPhone ?? '',
+          marketingOptOut: data.marketingOptOut,
         })
       })
       .catch(() => setError('Failed to load profile'))
@@ -74,6 +76,7 @@ export default function MyProfilePage() {
         dateOfBirth: form.dateOfBirth || null,
         emergencyContactName: form.emergencyContactName || null,
         emergencyContactPhone: form.emergencyContactPhone || null,
+        marketingOptOut: form.marketingOptOut,
       })
       setProfile(updated)
       setEditing(false)
@@ -240,6 +243,22 @@ export default function MyProfilePage() {
                     onChange={e => setForm(f => ({ ...f, emergencyContactPhone: e.target.value }))} />
                 </div>
               </div>
+            </div>
+            <div className="border-t border-gray-100 pt-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300 mt-0.5"
+                  checked={form.marketingOptOut}
+                  onChange={e => setForm(f => ({ ...f, marketingOptOut: e.target.checked }))}
+                />
+                <span>
+                  <span className="text-sm font-medium text-gray-700">Opt out of marketing communications</span>
+                  <span className="block text-xs text-gray-400 mt-0.5">
+                    You'll still receive essential club emails (bookings, receipts, account notices)
+                  </span>
+                </span>
+              </label>
             </div>
 
             <div className="flex gap-3 pt-2">

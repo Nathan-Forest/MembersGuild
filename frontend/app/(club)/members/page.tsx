@@ -364,6 +364,7 @@ export default function MembersPage() {
         emergencyContactPhone: selected.emergencyContactPhone,
         joinedAt: joinedAtEdit ? new Date(joinedAtEdit).toISOString() : null,
         associationNumber: assocNumberEdit || null,
+        marketingOptOut: selected.marketingOptOut,
       })
       setSelected(detail)
     } catch { }
@@ -743,6 +744,20 @@ export default function MembersPage() {
                           <input type="text" className="input text-sm flex-1" placeholder="Optional"
                             value={assocNumberEdit}
                             onChange={e => setAssocNumberEdit(e.target.value)} />
+                          <button onClick={handleSaveDetails} className="btn-secondary text-xs px-3">Save</button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selected.marketingOptOut}
+                            onChange={e => setSelected({ ...selected, marketingOptOut: e.target.checked })}
+                            className="rounded border-gray-300"
+                          />
+                          <span className="text-sm font-medium text-gray-700">Opt out of marketing communications</span>
+                        </label>
+                        <div className="flex justify-end mt-2">
                           <button onClick={handleSaveDetails} className="btn-secondary text-xs px-3">Save</button>
                         </div>
                       </div>

@@ -21,6 +21,7 @@ public class User
     public string? AssociationNumber { get; set; }
     public string? EmergencyContactName { get; set; }
     public string? EmergencyContactPhone { get; set; }
+    public bool MarketingOptOut { get; set; } = false;
     public bool IsActive { get; set; } = true;
     public DateTime? LastLoginAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

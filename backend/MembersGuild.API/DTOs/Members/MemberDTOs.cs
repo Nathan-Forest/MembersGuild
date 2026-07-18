@@ -35,6 +35,7 @@ public record MemberDetailResponse(
     DateOnly? DateOfBirth,
     string? EmergencyContactName,
     string? EmergencyContactPhone,
+    bool MarketingOptOut,   
     bool IsActive,
     DateTime? LastLoginAt,
     DateTime CreatedAt,
@@ -65,7 +66,8 @@ public record UpdateMemberRequest(
     string? EmergencyContactName,
     string? EmergencyContactPhone,
     string? AssociationNumber,
-    DateTime? JoinedAt    
+    DateTime? JoinedAt,  
+    bool? MarketingOptOut = null
 );
 
 public record UpdateRoleRequest(

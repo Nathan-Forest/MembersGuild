@@ -149,6 +149,8 @@ public class MemberService : IMemberService
         user.EmergencyContactName = request.EmergencyContactName?.Trim();
         user.EmergencyContactPhone = request.EmergencyContactPhone?.Trim();
         user.JoinedAt = request.JoinedAt;
+        if (request.MarketingOptOut.HasValue)
+            user.MarketingOptOut = request.MarketingOptOut.Value;
         user.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
@@ -231,7 +233,7 @@ public class MemberService : IMemberService
         u.Id, u.Email, u.FirstName, u.LastName, u.Role,
         u.Role, u.CreditBalance, u.Phone, u.MemberNumber, u.AssociationNumber,
         u.ProfilePhotoUrl, u.DateOfBirth, u.EmergencyContactName,
-        u.EmergencyContactPhone, u.IsActive, u.LastLoginAt, u.CreatedAt,
+        u.EmergencyContactPhone, u.MarketingOptOut, u.IsActive, u.LastLoginAt, u.CreatedAt,
         u.JoinedAt,
         u.EffectiveJoinDate
     );

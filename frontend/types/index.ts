@@ -271,6 +271,7 @@ export interface Member extends AuthUser {
   associationNumber?: string
   emergencyContactName: string | null
   emergencyContactPhone: string | null
+  marketingOptOut: boolean
   lastLoginAt: string | null
   createdAt: string
   joinedAt?: string           // ← add
@@ -376,6 +377,7 @@ export interface MemberDetailResponse {
   dateOfBirth: DateOnly | null
   emergencyContactName: string | null
   emergencyContactPhone: string | null
+  marketingOptOut: boolean
   isActive: boolean
   lastLoginAt: string | null
   createdAt: string
