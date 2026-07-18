@@ -56,8 +56,6 @@ const STATUS_FILTERS = [
   { value: 'coach', label: 'Coaches' },
 ]
 
-const [statusFilter, setStatusFilter] = useState('')
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getVisibleTabs(role: UserRole | null, permissions: string[]): { key: ModalTab; label: string }[] {
@@ -175,6 +173,7 @@ export default function MembersPage() {
   // Search / filter
   const [search, setSearch] = useState('')
   const [creditFilter, setCreditFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('') 
 
   // Checkbox selection for bulk actions
   const [checkedIds, setCheckedIds] = useState<number[]>([])
