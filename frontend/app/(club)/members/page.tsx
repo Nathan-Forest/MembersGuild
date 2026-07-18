@@ -207,9 +207,12 @@ export default function MembersPage() {
 
   const [exportingMarketing, setExportingMarketing] = useState(false)
 
+  // Contact details edit mode (email, phone, association number)
+  const [contactEditMode, setContactEditMode] = useState(false)
   const [emailEdit, setEmailEdit] = useState('')
-  const [savingEmail, setSavingEmail] = useState(false)
-  const [emailError, setEmailError] = useState('')
+  const [phoneEdit, setPhoneEdit] = useState('')
+  const [savingContact, setSavingContact] = useState(false)
+  const [contactError, setContactError] = useState('')
 
   const [emergencyNameEdit, setEmergencyNameEdit] = useState('')
   const [emergencyPhoneEdit, setEmergencyPhoneEdit] = useState('')
@@ -276,6 +279,12 @@ export default function MembersPage() {
       setSelected(detail)
       setAssocNumberEdit(detail.associationNumber ?? '')
       setJoinedAtEdit(detail.joinedAt ? new Date(detail.joinedAt).toISOString().split('T')[0] : '')
+      setEmailEdit(detail.email)
+      setPhoneEdit(detail.phone ?? '')
+      setEmergencyNameEdit(detail.emergencyContactName ?? '')
+      setEmergencyPhoneEdit(detail.emergencyContactPhone ?? '')
+      setContactEditMode(false)
+      setContactError('')
       setDobEdit(detail.dateOfBirth
         ? new Date(detail.dateOfBirth as unknown as string).toISOString().split('T')[0]
         : '')
@@ -392,21 +401,63 @@ export default function MembersPage() {
     } catch { }
   }
 
-  async function handleSaveEmail() {
+  async function handleSaveContactDetails() {
     if (!selected) return
-    setEmailError('')
-    setSavingEmail(true)
+    setContactError('')
+
+    const trimmedEmail = emailEdit.trim()
+    const emailChanged = trimmedEmail.toLowerCase() !== selected.email.trim().toLowerCase()
+
+    if (emailChanged) {
+      const confirmed = confirm(
+        `You're changing this member's login email from "${selected.email}" to "${trimmedEmail}". ` +
+        `They'll need to use the new address to sign in from now on. Continue?`
+      )
+      if (!confirmed) return
+    }
+
+    setSavingContact(true)
     try {
-      const detail = await api.put<MemberDetailResponse>(`/members/${selected.id}/email`, {
-        email: emailEdit,
+      let detail = selected
+
+      if (emailChanged) {
+        detail = await api.put<MemberDetailResponse>(`/members/${selected.id}/email`, {
+          email: trimmedEmail,
+        })
+      }
+
+      detail = await api.put<MemberDetailResponse>(`/members/${selected.id}`, {
+        firstName: detail.firstName,
+        lastName: detail.lastName,
+        phone: phoneEdit || null,
+        memberNumber: detail.memberNumber,
+        dateOfBirth: dobEdit || null,
+        emergencyContactName: emergencyNameEdit || null,
+        emergencyContactPhone: emergencyPhoneEdit || null,
+        joinedAt: joinedAtEdit ? new Date(joinedAtEdit).toISOString() : null,
+        associationNumber: assocNumberEdit || null,
+        marketingOptOut: detail.marketingOptOut,
       })
+
       setSelected(detail)
+      setEmailEdit(detail.email)
+      setPhoneEdit(detail.phone ?? '')
+      setContactEditMode(false)
       await loadData()
     } catch (err) {
-      setEmailError(err instanceof Error ? err.message : 'Failed to update email')
+      setContactError(err instanceof Error ? err.message : 'Failed to save contact details')
     } finally {
-      setSavingEmail(false)
+      setSavingContact(false)
     }
+  }
+
+  function cancelContactEdit() {
+    if (!selected) return
+    setEmailEdit(selected.email)
+    setPhoneEdit(selected.phone ?? '')
+    setAssocNumberEdit(selected.associationNumber ?? '')
+    setContactError('')
+    setContactEditMode(false)
   }
 
   // ── Add member ─────────────────────────────────────────────────────────────
@@ -749,7 +800,7 @@ export default function MembersPage() {
                 <div className="space-y-4">
                   <dl className="space-y-0 divide-y divide-gray-100">
                     <ModalRow label="Email" value={selected.email} />
-                    <ModalRow label="Phone" value={selected.phone ?? '—'} />
+                    {!contactEditMode && <ModalRow label="Phone" value={selected.phone ?? '—'} />}
                     <ModalRow label="Member No." value={selected.memberNumber ? `#${selected.memberNumber}` : '—'} />
                     {selected.associationNumber && (
                       <ModalRow label={assocLabel} value={selected.associationNumber} />
@@ -799,17 +850,60 @@ export default function MembersPage() {
                     </div>
                   )}
 
+                  {canEditContact && (
+                    <div className="pt-4 border-t border-gray-100">
+                      {!contactEditMode ? (
+                        <button onClick={() => setContactEditMode(true)} className="btn-secondary text-xs px-3 py-1.5">
+                          ✎ Edit Contact Details
+                        </button>
+                      ) : (
+                        <div className="space-y-3">
+                          <p className="text-sm font-medium text-gray-700">Edit Contact Details</p>
+
+                          {contactError && (
+                            <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+                              {contactError}
+                            </div>
+                          )}
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                            <input type="email" className="input text-sm"
+                              value={emailEdit}
+                              onChange={e => setEmailEdit(e.target.value)} />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Phone</label>
+                            <input type="tel" className="input text-sm"
+                              value={phoneEdit}
+                              onChange={e => setPhoneEdit(e.target.value)} />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">{assocLabel}</label>
+                            <input type="text" className="input text-sm" placeholder="Optional"
+                              value={assocNumberEdit}
+                              onChange={e => setAssocNumberEdit(e.target.value)} />
+                          </div>
+
+                          <div className="flex gap-2 pt-1">
+                            <button onClick={handleSaveContactDetails} disabled={savingContact}
+                              className="btn-primary text-xs px-4 py-1.5">
+                              {savingContact ? 'Saving…' : 'Save'}
+                            </button>
+                            <button onClick={cancelContactEdit} disabled={savingContact}
+                              className="btn-secondary text-xs px-4 py-1.5">
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {canManage && (
                     <div className="pt-3 border-t border-gray-100 space-y-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">{assocLabel}</label>
-                        <div className="flex gap-2">
-                          <input type="text" className="input text-sm flex-1" placeholder="Optional"
-                            value={assocNumberEdit}
-                            onChange={e => setAssocNumberEdit(e.target.value)} />
-                          <button onClick={handleSaveDetails} className="btn-secondary text-xs px-3">Save</button>
-                        </div>
-                      </div>
                       <div>
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
