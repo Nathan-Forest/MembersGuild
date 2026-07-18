@@ -335,8 +335,9 @@ export interface CreditBalanceResponse {
 }
 
 export interface MemberStatsResponse {
-  totalMembers: number
-  activeMembers: number
+  membersTotal: number
+  totalActive: number
+  totalInactive: number
   lowCreditMembers: number
   noCreditsMembers: number
 }

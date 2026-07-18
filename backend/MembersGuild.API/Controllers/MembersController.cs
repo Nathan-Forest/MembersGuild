@@ -43,10 +43,11 @@ public class MembersController : ControllerBase
 
     /// <summary>GET /api/members — staff only</summary>
     [HttpGet]
-    public async Task<IActionResult> GetMembers([FromQuery] string? search, [FromQuery] string? credits)
+    public async Task<IActionResult> GetMembers(
+     [FromQuery] string? search, [FromQuery] string? credits, [FromQuery] string? status)
     {
         if (!IsStaff()) return Forbid();
-        return Ok(await _members.GetMembersAsync(search, credits));
+        return Ok(await _members.GetMembersAsync(search, credits, status));
     }
 
     /// <summary>GET /api/members/stats</summary>

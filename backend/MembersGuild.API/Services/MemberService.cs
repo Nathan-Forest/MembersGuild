@@ -8,7 +8,7 @@ namespace MembersGuild.API.Services;
 
 public interface IMemberService
 {
-    Task<List<MemberListResponse>> GetMembersAsync(string? search, string? creditFilter);
+    Task<List<MemberListResponse>> GetMembersAsync(string? search, string? creditFilter, string? statusFilter);
     Task<MemberDetailResponse?> GetMemberAsync(int id);
     Task<MemberDetailResponse> CreateMemberAsync(CreateMemberRequest request, int createdBy);
     Task<MemberDetailResponse?> UpdateMemberAsync(int id, UpdateMemberRequest request);
@@ -48,7 +48,7 @@ public class MemberService : IMemberService
         _auth = auth;
     }
 
-    public async Task<List<MemberListResponse>> GetMembersAsync(string? search, string? creditFilter)
+    public async Task<List<MemberListResponse>> GetMembersAsync(string? search, string? creditFilter, string? statusFilter)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
 
@@ -71,6 +71,14 @@ public class MemberService : IMemberService
             "none" => query.Where(u => u.CreditBalance <= 0),
             "low" => query.Where(u => u.CreditBalance > 0 && u.CreditBalance <= 2),
             "ok" => query.Where(u => u.CreditBalance > 2),
+            _ => query
+        };
+
+        query = statusFilter switch
+        {
+            "active" => query.Where(u => u.IsActive),
+            "inactive" => query.Where(u => !u.IsActive),
+            "coach" => query.Where(u => u.Role == "coach"),
             _ => query
         };
 
@@ -236,17 +244,18 @@ public class MemberService : IMemberService
     }
 
     public async Task<MemberStatsResponse> GetStatsAsync()
-    {
-        await using var db = _dbFactory.CreateForCurrentClub();
-        var users = await db.Users.ToListAsync();
+{
+    await using var db = _dbFactory.CreateForCurrentClub();
+    var users = await db.Users.ToListAsync();
 
-        return new MemberStatsResponse(
-            users.Count,
-            users.Count(u => u.IsActive),
-            users.Count(u => u.CreditBalance > 0 && u.CreditBalance <= 2),
-            users.Count(u => u.CreditBalance <= 0)
-        );
-    }
+    return new MemberStatsResponse(
+        users.Count(u => u.Role != "coach"),
+        users.Count(u => u.IsActive),
+        users.Count(u => !u.IsActive),
+        users.Count(u => u.CreditBalance > 0 && u.CreditBalance <= 2),
+        users.Count(u => u.CreditBalance <= 0)
+    );
+}
 
     public async Task<List<MarketingContactResponse>> GetMarketingContactsAsync()
     {

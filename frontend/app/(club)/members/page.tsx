@@ -49,6 +49,15 @@ const CREDIT_FILTERS = [
   { value: 'ok', label: 'Has Credits' },
 ]
 
+const STATUS_FILTERS = [
+  { value: '', label: 'All Statuses' },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'coach', label: 'Coaches' },
+]
+
+const [statusFilter, setStatusFilter] = useState('')
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getVisibleTabs(role: UserRole | null, permissions: string[]): { key: ModalTab; label: string }[] {
@@ -229,7 +238,7 @@ export default function MembersPage() {
   useEffect(() => {
     const timer = setTimeout(loadFiltered, 300)
     return () => clearTimeout(timer)
-  }, [search, creditFilter])
+  }, [search, creditFilter, statusFilter])
 
   // ── Data loading ───────────────────────────────────────────────────────────
 
@@ -267,6 +276,7 @@ export default function MembersPage() {
     const params = new URLSearchParams()
     if (search) params.set('search', search)
     if (creditFilter) params.set('credits', creditFilter)
+    if (statusFilter) params.set('status', statusFilter)
     try {
       const data = await api.get<MemberListResponse[]>(`/members?${params}`)
       setMembers(data)
@@ -605,9 +615,10 @@ export default function MembersPage() {
 
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard label="Total Members" value={stats.totalMembers} color="blue" />
-          <StatCard label="Active" value={stats.activeMembers} color="green" />
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+          <StatCard label="Members Total" value={stats.membersTotal} color="blue" />
+          <StatCard label="Total Active" value={stats.totalActive} color="green" />
+          <StatCard label="Total Inactive" value={stats.totalInactive} color="gray" />
           <StatCard label="Low Credits" value={stats.lowCreditMembers} color="amber" />
           <StatCard label="No Credits" value={stats.noCreditsMembers} color="red" />
         </div>
@@ -628,6 +639,10 @@ export default function MembersPage() {
         <select className="input sm:w-52" value={creditFilter}
           onChange={e => setCreditFilter(e.target.value)}>
           {CREDIT_FILTERS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+        </select>
+        <select className="input sm:w-52" value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}>
+          {STATUS_FILTERS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
         </select>
       </div>
 
@@ -1379,13 +1394,14 @@ export default function MembersPage() {
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function StatCard({ label, value, color }: {
-  label: string; value: number; color: 'blue' | 'green' | 'amber' | 'red'
+  label: string; value: number; color: 'blue' | 'green' | 'amber' | 'red' | 'gray'
 }) {
   const colors = {
     blue: 'bg-blue-50 text-blue-700 border-blue-100',
     green: 'bg-green-50 text-green-700 border-green-100',
     amber: 'bg-amber-50 text-amber-700 border-amber-100',
     red: 'bg-red-50 text-red-700 border-red-100',
+    gray: 'bg-gray-50 text-gray-700 border-gray-200',
   }
   return (
     <div className={`rounded-xl border p-4 ${colors[color]}`}>

@@ -79,8 +79,9 @@ public record ResetPasswordResponse(
 );
 
 public record MemberStatsResponse(
-    int TotalMembers,
-    int ActiveMembers,
+    int MembersTotal,       // everyone except Coaches
+    int TotalActive,        // all active users, including Coaches
+    int TotalInactive,      // all inactive users
     int LowCreditMembers,
     int NoCreditsMembers
 );
