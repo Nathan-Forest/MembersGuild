@@ -949,26 +949,6 @@ export default function MembersPage() {
                     <>
                       <div className="rounded-xl bg-red-50 border border-red-100 p-4 flex items-start gap-3">
                         <span className="text-red-500 text-lg mt-0.5">🚨</span>
-                        {canEditContact && (
-                          <div className="pt-4 border-t border-gray-100 space-y-3">
-                            <p className="text-sm font-medium text-gray-700">Update Emergency Contact</p>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-500 mb-1">Name</label>
-                              <input type="text" className="input text-sm"
-                                value={emergencyNameEdit}
-                                onChange={e => setEmergencyNameEdit(e.target.value)} />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-500 mb-1">Phone</label>
-                              <input type="tel" className="input text-sm"
-                                value={emergencyPhoneEdit}
-                                onChange={e => setEmergencyPhoneEdit(e.target.value)} />
-                            </div>
-                            <button onClick={handleSaveDetails} className="btn-secondary text-xs px-3 py-1.5">
-                              Save Emergency Contact
-                            </button>
-                          </div>
-                        )}
                         <div>
                           <p className="text-sm font-semibold text-red-800">Emergency Contact</p>
                           <p className="text-xs text-red-600 mt-0.5">For use in medical emergencies only</p>
@@ -992,6 +972,27 @@ export default function MembersPage() {
                       <p className="text-xs text-amber-600 mt-1">
                         Ask {selected.firstName} to update their profile
                       </p>
+                    </div>
+                  )}
+
+                  {canEditContact && (
+                    <div className="pt-4 border-t border-gray-100 space-y-3">
+                      <p className="text-sm font-medium text-gray-700">Update Emergency Contact</p>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Name</label>
+                        <input type="text" className="input text-sm"
+                          value={emergencyNameEdit}
+                          onChange={e => setEmergencyNameEdit(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Phone</label>
+                        <input type="tel" className="input text-sm"
+                          value={emergencyPhoneEdit}
+                          onChange={e => setEmergencyPhoneEdit(e.target.value)} />
+                      </div>
+                      <button onClick={handleSaveDetails} className="btn-secondary text-xs px-3 py-1.5">
+                        Save Emergency Contact
+                      </button>
                     </div>
                   )}
                 </div>
