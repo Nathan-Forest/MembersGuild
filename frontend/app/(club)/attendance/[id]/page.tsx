@@ -22,12 +22,15 @@ interface SessionInfo {
   title: string
   startTime: string
   endTime: string
+  locationId: number | null       // ← add
   locationName: string | null
   coachName: string | null
   coachNoShow: boolean
   capacity: number
   lanesCount?: number
   coachId: number | null
+  isCancelled: boolean             // ← add
+  cancellationReason: string | null // ← add
 }
 
 interface SheetData {
@@ -48,6 +51,11 @@ interface AllMember {
   firstName: string
   lastName: string
   email: string
+}
+
+interface LocationOption {
+  id: number
+  name: string
 }
 
 const STATUS_OPTIONS = [
@@ -125,6 +133,15 @@ export default function AttendanceSheetPage() {
   const [coaches, setCoaches] = useState<{ id: number; name: string }[]>([])
   const [updatingCoach, setUpdatingCoach] = useState(false)
 
+  const [locations, setLocations] = useState<LocationOption[]>([])
+  const [updatingLocation, setUpdatingLocation] = useState(false)
+
+  // Cancel Session modal
+  const [cancelOpen, setCancelOpen] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelResult, setCancelResult] = useState<{ refundedCount: number } | null>(null)
+
   const [reportOpen, setReportOpen] = useState(false)
   const [reportEmail, setReportEmail] = useState('')
   const [sendingReport, setSendingReport] = useState(false)
@@ -147,6 +164,8 @@ export default function AttendanceSheetPage() {
     loadSheet()
     api.get<{ id: number; name: string }[]>('/attendance/coaches')
       .then(setCoaches).catch(() => { })
+    api.get<LocationOption[]>('/locations/active')
+      .then(setLocations).catch(() => { })
     api.get<{ name: string; email: string }[]>('/settings/report-recipients')
       .then(data => setSavedRecipients(data))
       .catch(() => { })
@@ -248,6 +267,47 @@ export default function AttendanceSheetPage() {
       await loadSheet()
     } catch { }
     finally { setWalkinLoading(false) }
+  }
+
+  async function handleLocationChange(locationId: string) {
+    setUpdatingLocation(true)
+    try {
+      const result = await api.patch<{ locationId: number | null; locationName: string | null }>(
+        `/attendance/sessions/${sessionId}/location`,
+        { locationId: locationId ? parseInt(locationId) : null }
+      )
+      setData(prev => prev ? {
+        ...prev,
+        session: {
+          ...prev.session,
+          locationId: result.locationId,
+          locationName: result.locationName,
+        }
+      } : prev)
+    } catch { }
+    finally { setUpdatingLocation(false) }
+  }
+
+  function openCancelSession() {
+    setCancelReason('')
+    setCancelResult(null)
+    setCancelOpen(true)
+  }
+
+  async function handleCancelSession() {
+    setCancelling(true)
+    try {
+      const result = await api.post<{ success: boolean; refundedCount: number }>(
+        `/attendance/sessions/${sessionId}/cancel`,
+        { reason: cancelReason.trim() || null }
+      )
+      setCancelResult({ refundedCount: result.refundedCount })
+      await loadSheet()
+    } catch {
+      alert('Failed to cancel session')
+    } finally {
+      setCancelling(false)
+    }
   }
 
   function openCatsSignup() {
@@ -386,7 +446,21 @@ export default function AttendanceSheetPage() {
               })}–{new Date(session.endTime).toLocaleTimeString('en-AU', {
                 hour: '2-digit', minute: '2-digit', hour12: false
               })}</span>
-              {session.locationName && <span>📍 {session.locationName}</span>}
+              <div className="flex items-center gap-1 text-sm text-gray-500">
+                <span>📍</span>
+                <select
+                  value={data?.session.locationId?.toString() ?? ''}
+                  onChange={e => handleLocationChange(e.target.value)}
+                  disabled={updatingLocation}
+                  className="text-sm bg-transparent border-0 border-b border-dashed border-gray-300 focus:outline-none cursor-pointer disabled:opacity-50"
+                >
+                  <option value="">— No location —</option>
+                  {locations.map(l => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+                {updatingLocation && <span className="text-xs text-gray-400 ml-1">Saving...</span>}
+              </div>
               {/* was: {session.coachName && <span>👤 {session.coachName}</span>} */}
               <div className="flex items-center gap-1 text-sm text-gray-500">
                 <span>👤</span>
@@ -447,6 +521,15 @@ export default function AttendanceSheetPage() {
           </div>
         </div>
       </div>
+
+      {session.isCancelled && (
+        <div className="rounded-xl bg-red-50 border border-red-200 p-4">
+          <p className="text-sm font-semibold text-red-800">⛔ This session was cancelled</p>
+          {session.cancellationReason && (
+            <p className="text-xs text-red-600 mt-1">Reason: {session.cancellationReason}</p>
+          )}
+        </div>
+      )}
 
       {/* Stats bar */}
       <div className="card p-4 space-y-4">
@@ -540,6 +623,11 @@ export default function AttendanceSheetPage() {
             </svg>
             Send Report
           </button>
+          {!session.isCancelled && (
+            <button onClick={openCancelSession} className="btn-danger text-sm px-3 py-2">
+              ⛔ Cancel Session
+            </button>
+          )}
         </div>
       </div>
 
@@ -845,85 +933,152 @@ export default function AttendanceSheetPage() {
             </div>
           </div>
 
-)
+        )
       }
+
+      {/* ── Cancel Session Modal ────────────────────────────────────────────── */}
+      {cancelOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <div>
+                <h2 className="font-bold text-gray-900">Cancel Session</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{session.title}</p>
+              </div>
+              <button onClick={() => setCancelOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {cancelResult ? (
+                <div className="text-center py-4 space-y-2">
+                  <p className="text-3xl">✅</p>
+                  <p className="font-medium text-gray-900">Session cancelled</p>
+                  <p className="text-sm text-gray-500">
+                    {cancelResult.refundedCount} member{cancelResult.refundedCount !== 1 ? 's' : ''} refunded
+                  </p>
+                  <button onClick={() => setCancelOpen(false)} className="btn-secondary px-6 py-2 text-sm mt-2">
+                    Close
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700">
+                    This will refund credits to everyone registered — except members already marked
+                    <strong> Attended</strong> or <strong> NSBA</strong> (already refunded). This cannot be undone.
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Reason <span className="text-gray-400 font-normal">(optional, shown in credit history)</span>
+                    </label>
+                    <textarea
+                      rows={3}
+                      className="input text-sm w-full resize-none"
+                      placeholder="e.g. Pool closed for maintenance"
+                      value={cancelReason}
+                      onChange={e => setCancelReason(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button onClick={() => setCancelOpen(false)} className="btn-secondary px-4 py-2 text-sm">
+                      Back
+                    </button>
+                    <button
+                      onClick={handleCancelSession}
+                      disabled={cancelling}
+                      className="btn-danger px-4 py-2 text-sm">
+                      {cancelling ? 'Cancelling…' : 'Cancel Session & Refund'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {/* ── Quick CATS Sign-up Modal ──────────────────────────────────────── */}
-{catsOpen && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col">
-      <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
-        <div>
-          <h2 className="font-bold text-gray-900">Quick CATS Sign-Up</h2>
-          <p className="text-xs text-gray-400 mt-0.5">Trial member will be registered and marked attended</p>
-        </div>
-        <button onClick={() => setCatsOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
+      {catsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
+              <div>
+                <h2 className="font-bold text-gray-900">Quick CATS Sign-Up</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Trial member will be registered and marked attended</p>
+              </div>
+              <button onClick={() => setCatsOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
 
-      <div className="overflow-y-auto flex-1 p-6 space-y-4">
-        {catsError && (
-          <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-            {catsError}
+            <div className="overflow-y-auto flex-1 p-6 space-y-4">
+              {catsError && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                  {catsError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                  <input type="text" className="input" value={catsForm.firstName}
+                    onChange={e => setCatsForm(prev => ({ ...prev, firstName: e.target.value }))}
+                    autoFocus />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                  <input type="text" className="input" value={catsForm.lastName}
+                    onChange={e => setCatsForm(prev => ({ ...prev, lastName: e.target.value }))} />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                <input type="email" className="input" value={catsForm.email}
+                  onChange={e => setCatsForm(prev => ({ ...prev, email: e.target.value }))} />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                <input type="tel" className="input" value={catsForm.phone}
+                  onChange={e => setCatsForm(prev => ({ ...prev, phone: e.target.value }))} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
+                  <input type="text" className="input" value={catsForm.emergencyContactName}
+                    onChange={e => setCatsForm(prev => ({ ...prev, emergencyContactName: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Phone</label>
+                  <input type="tel" className="input" value={catsForm.emergencyContactPhone}
+                    onChange={e => setCatsForm(prev => ({ ...prev, emergencyContactPhone: e.target.value }))} />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 p-6 border-t border-gray-100 flex-shrink-0">
+              <button onClick={() => setCatsOpen(false)} className="btn-secondary px-4 py-2 text-sm">
+                Cancel
+              </button>
+              <button
+                onClick={handleCatsSignup}
+                disabled={catsSubmitting}
+                className="btn-primary px-4 py-2 text-sm">
+                {catsSubmitting ? 'Registering…' : 'Register & Mark Attended'}
+              </button>
+            </div>
           </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
-            <input type="text" className="input" value={catsForm.firstName}
-              onChange={e => setCatsForm(prev => ({ ...prev, firstName: e.target.value }))}
-              autoFocus />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
-            <input type="text" className="input" value={catsForm.lastName}
-              onChange={e => setCatsForm(prev => ({ ...prev, lastName: e.target.value }))} />
-          </div>
         </div>
+      )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-          <input type="email" className="input" value={catsForm.email}
-            onChange={e => setCatsForm(prev => ({ ...prev, email: e.target.value }))} />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
-          <input type="tel" className="input" value={catsForm.phone}
-            onChange={e => setCatsForm(prev => ({ ...prev, phone: e.target.value }))} />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
-            <input type="text" className="input" value={catsForm.emergencyContactName}
-              onChange={e => setCatsForm(prev => ({ ...prev, emergencyContactName: e.target.value }))} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Phone</label>
-            <input type="tel" className="input" value={catsForm.emergencyContactPhone}
-              onChange={e => setCatsForm(prev => ({ ...prev, emergencyContactPhone: e.target.value }))} />
-          </div>
-        </div>
-      </div>
-
-      <div className="flex justify-end gap-3 p-6 border-t border-gray-100 flex-shrink-0">
-        <button onClick={() => setCatsOpen(false)} className="btn-secondary px-4 py-2 text-sm">
-          Cancel
-        </button>
-        <button
-          onClick={handleCatsSignup}
-          disabled={catsSubmitting}
-          className="btn-primary px-4 py-2 text-sm">
-          {catsSubmitting ? 'Registering…' : 'Register & Mark Attended'}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
     </div >
   )
 }
