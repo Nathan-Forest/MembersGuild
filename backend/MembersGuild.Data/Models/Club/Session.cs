@@ -29,6 +29,9 @@ public class Session
     public bool IsCancelled { get; set; } = false;
     public bool IsRecurring { get; set; } = false;
     public Guid? RecurringGroupId { get; set; }
+    public string? CancellationReason { get; set; }
+    public DateTime? CancelledAt { get; set; }
+    public int? CancelledBy { get; set; }
     public int? CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -77,8 +80,8 @@ public class AttendanceRecord
 public static class AttendanceStatus
 {
     public const string Attended = "attended";
-    public const string Absent   = "absent";
-    public const string Late     = "late";
-    public const string NoShow   = "noshow";  // no credit refund
-    public const string Nsba     = "nsba";    // no show but advised → refund
+    public const string Absent = "absent";
+    public const string Late = "late";
+    public const string NoShow = "noshow";  // no credit refund
+    public const string Nsba = "nsba";    // no show but advised → refund
 }

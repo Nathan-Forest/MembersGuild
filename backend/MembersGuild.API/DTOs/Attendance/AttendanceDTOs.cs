@@ -37,6 +37,8 @@ public record QrTokenResponse(
 );
 
 public record UpdateCoachRequest(int? CoachId, bool NoShow);
+public record UpdateLocationRequest(int? LocationId);
+public record CancelSessionRequest(string? Reason);
 public record EmailReportRequest(List<string> Emails);
 
 public record AttendanceReportMember(

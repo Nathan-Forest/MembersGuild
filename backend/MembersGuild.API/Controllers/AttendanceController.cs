@@ -154,6 +154,7 @@ public class AttendanceController : ControllerBase
                 title = session.Title,
                 startTime = session.StartTime,
                 endTime = session.EndTime,
+                locationId = session.LocationId,
                 locationName = session.Location?.Name,
                 coachId = session.CoachId,
                 coachName = session.Coach != null
@@ -162,6 +163,8 @@ public class AttendanceController : ControllerBase
                 coachNoShow = session.CoachNoShow,
                 capacity = session.Capacity,
                 lanesCount = session.LanesCount,
+                isCancelled = session.IsCancelled,         // ← add
+                cancellationReason = session.CancellationReason,  // ← add
             },
             members = sheet,
             lanesEnabled = lanesEnabled,
@@ -573,6 +576,89 @@ public class AttendanceController : ControllerBase
             coachName,
             coachNoShow = session.CoachNoShow,
         });
+    }
+
+    // PATCH /api/attendance/sessions/{id}/location
+    [HttpPatch("sessions/{id:int}/location")]
+    public async Task<IActionResult> UpdateLocation(int id, [FromBody] UpdateLocationRequest req)
+    {
+        if (!CanManageAttendance()) return Forbid();
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var session = await db.Sessions.FindAsync(id);
+        if (session is null) return NotFound();
+
+        session.LocationId = req.LocationId;
+        session.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        string? locationName = null;
+        if (session.LocationId.HasValue)
+        {
+            var location = await db.Locations.FindAsync(session.LocationId.Value);
+            locationName = location?.Name;
+        }
+
+        return Ok(new { locationId = session.LocationId, locationName });
+    }
+
+    // POST /api/attendance/sessions/{id}/cancel
+    [HttpPost("sessions/{id:int}/cancel")]
+    public async Task<IActionResult> CancelSession(int id, [FromBody] CancelSessionRequest req)
+    {
+        if (!CanManageAttendance()) return Forbid();
+
+        await using var db = _dbFactory.CreateForCurrentClub();
+
+        var session = await db.Sessions
+            .Include(s => s.Bookings)
+            .FirstOrDefaultAsync(s => s.Id == id);
+
+        if (session is null) return NotFound();
+        if (session.IsCancelled) return BadRequest(new { error = "Session is already cancelled" });
+
+        var records = await db.AttendanceRecords
+            .Where(a => a.SessionId == id)
+            .ToListAsync();
+
+        var refundedCount = 0;
+
+        foreach (var booking in session.Bookings)
+        {
+            var record = records.FirstOrDefault(r => r.UserId == booking.UserId);
+
+            // Skip members already marked Attended or NSBA — NSBA is already refunded,
+            // and Attended means the session genuinely ran for them
+            if (record != null && (record.Status == "attended" || record.Status == "nsba"))
+                continue;
+
+            var user = await db.Users.FindAsync(booking.UserId);
+            if (user is null) continue;
+
+            user.CreditBalance += session.CreditCost;
+            db.CreditTransactions.Add(new CreditTransaction
+            {
+                UserId = booking.UserId,
+                Amount = session.CreditCost,
+                BalanceAfter = user.CreditBalance,
+                TransactionType = TransactionTypes.SessionRefund,
+                ReferenceId = session.Id,
+                ReferenceType = "session",
+                Notes = string.IsNullOrWhiteSpace(req.Reason)
+                    ? $"Session cancelled: {session.Title}"
+                    : $"Session cancelled: {session.Title} — {req.Reason}",
+            });
+            refundedCount++;
+        }
+
+        session.IsCancelled = true;
+        session.CancellationReason = req.Reason;
+        session.CancelledAt = DateTime.UtcNow;
+        session.CancelledBy = CurrentUserId;
+        session.UpdatedAt = DateTime.UtcNow;
+
+        await db.SaveChangesAsync();
+
+        return Ok(new { success = true, refundedCount });
     }
 
     // GET /api/attendance/sessions/{id}/session-note
