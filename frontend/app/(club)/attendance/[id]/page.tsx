@@ -36,6 +36,7 @@ interface SessionInfo {
 interface SheetData {
   session: SessionInfo
   members: SheetMember[]
+  guests: Guest[]
   lanesEnabled: boolean
   lanesLabel: string
 }
@@ -51,6 +52,18 @@ interface AllMember {
   firstName: string
   lastName: string
   email: string
+}
+
+interface Guest {
+  id: number
+  name: string
+  email: string | null
+  phone: string | null
+  homeSuburb: string | null
+  isMemberOfAnotherClub: boolean
+  associationNumber: string | null
+  notes: string | null
+  attendedAt: string
 }
 
 interface LocationOption {
@@ -120,6 +133,16 @@ export default function AttendanceSheetPage() {
     phone: '',
     emergencyContactName: '',
     emergencyContactPhone: '',
+  })
+
+  // Guest Modal
+  const [guestOpen, setGuestOpen] = useState(false)
+  const [guestSubmitting, setGuestSubmitting] = useState(false)
+  const [guestError, setGuestError] = useState<string | null>(null)
+  const [guestForm, setGuestForm] = useState({
+    name: '', email: '', phone: '',
+    emergencyContactName: '', emergencyContactPhone: '',
+    homeSuburb: '', isMemberOfAnotherClub: false, associationNumber: '', notes: '',
   })
 
   // Mark all
@@ -357,6 +380,45 @@ export default function AttendanceSheetPage() {
     }
   }
 
+  function openGuestModal() {
+    setGuestForm({
+      name: '', email: '', phone: '',
+      emergencyContactName: '', emergencyContactPhone: '',
+      homeSuburb: '', isMemberOfAnotherClub: false, associationNumber: '', notes: '',
+    })
+    setGuestError(null)
+    setGuestOpen(true)
+  }
+
+  async function handleAddGuest() {
+    setGuestError(null)
+    if (!guestForm.name.trim()) {
+      setGuestError('Guest name is required')
+      return
+    }
+
+    setGuestSubmitting(true)
+    try {
+      await api.post(`/attendance/sessions/${sessionId}/guest`, {
+        name: guestForm.name.trim(),
+        email: guestForm.email.trim() || null,
+        phone: guestForm.phone.trim() || null,
+        emergencyContactName: guestForm.emergencyContactName.trim() || null,
+        emergencyContactPhone: guestForm.emergencyContactPhone.trim() || null,
+        homeSuburb: guestForm.homeSuburb.trim() || null,
+        isMemberOfAnotherClub: guestForm.isMemberOfAnotherClub,
+        associationNumber: guestForm.associationNumber.trim() || null,
+        notes: guestForm.notes.trim() || null,
+      })
+      setGuestOpen(false)
+      await loadSheet()
+    } catch {
+      setGuestError('Failed to add guest')
+    } finally {
+      setGuestSubmitting(false)
+    }
+  }
+
   async function saveNote(userId: number) {
     setSavingNote(userId)
     try {
@@ -421,6 +483,7 @@ export default function AttendanceSheetPage() {
       setSavingLanes(false)
     }
   }
+
 
   return (
     <div className="space-y-6">
@@ -596,6 +659,9 @@ export default function AttendanceSheetPage() {
           <button onClick={openCatsSignup} className="btn-secondary text-sm px-3 py-2">
             + CATS
           </button>
+          <button onClick={openGuestModal} className="btn-secondary text-sm px-3 py-2">
+            + Guest
+          </button>
           <button
             onClick={markAllAttended}
             disabled={markingAll || members.every(m => m.status)}
@@ -724,6 +790,32 @@ export default function AttendanceSheetPage() {
         </div>
       ))}
 
+      {data.guests.length > 0 && (
+        <div className="card p-4 space-y-3">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            Guests ({data.guests.length})
+          </p>
+          {data.guests.map(g => (
+            <div key={g.id} className="flex items-center justify-between rounded-xl border border-gray-100 px-4 py-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-gray-900">{g.name}</p>
+                  <span className="badge badge-gray text-xs">Guest</span>
+                  {g.isMemberOfAnotherClub && (
+                    <span className="badge badge-blue text-xs">Other Club{g.associationNumber ? ` · ${g.associationNumber}` : ''}</span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {[g.phone, g.homeSuburb].filter(Boolean).join(' · ') || '—'}
+                </p>
+              </div>
+              <span className="text-xs text-gray-400 flex-shrink-0">
+                {new Date(g.attendedAt).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── QR Code Modal ─────────────────────────────────────────────────── */}
       {
@@ -1001,6 +1093,112 @@ export default function AttendanceSheetPage() {
           </div>
         </div>
       )}
+
+      {/* ── Add Guest Modal ─────────────────────────────────────────────────── */}
+      {guestOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
+              <div>
+                <h2 className="font-bold text-gray-900">Add Guest</h2>
+                <p className="text-xs text-gray-400 mt-0.5">One-off visitor — pays the club directly, no credit used</p>
+              </div>
+              <button onClick={() => setGuestOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-6 space-y-4">
+              {guestError && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                  {guestError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <input type="text" className="input" value={guestForm.name}
+                  onChange={e => setGuestForm(prev => ({ ...prev, name: e.target.value }))}
+                  autoFocus />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input type="email" className="input" value={guestForm.email}
+                    onChange={e => setGuestForm(prev => ({ ...prev, email: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <input type="tel" className="input" value={guestForm.phone}
+                    onChange={e => setGuestForm(prev => ({ ...prev, phone: e.target.value }))} />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Home Suburb</label>
+                <input type="text" className="input" value={guestForm.homeSuburb}
+                  onChange={e => setGuestForm(prev => ({ ...prev, homeSuburb: e.target.value }))} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
+                  <input type="text" className="input" value={guestForm.emergencyContactName}
+                    onChange={e => setGuestForm(prev => ({ ...prev, emergencyContactName: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Phone</label>
+                  <input type="tel" className="input" value={guestForm.emergencyContactPhone}
+                    onChange={e => setGuestForm(prev => ({ ...prev, emergencyContactPhone: e.target.value }))} />
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100 pt-4 space-y-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={guestForm.isMemberOfAnotherClub}
+                    onChange={e => setGuestForm(prev => ({ ...prev, isMemberOfAnotherClub: e.target.checked }))}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Member of another club</span>
+                </label>
+
+                {guestForm.isMemberOfAnotherClub && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Association Number</label>
+                    <input type="text" className="input" value={guestForm.associationNumber}
+                      onChange={e => setGuestForm(prev => ({ ...prev, associationNumber: e.target.value }))} />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea rows={2} className="input text-sm w-full resize-none"
+                  value={guestForm.notes}
+                  onChange={e => setGuestForm(prev => ({ ...prev, notes: e.target.value }))} />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 p-6 border-t border-gray-100 flex-shrink-0">
+              <button onClick={() => setGuestOpen(false)} className="btn-secondary px-4 py-2 text-sm">
+                Cancel
+              </button>
+              <button
+                onClick={handleAddGuest}
+                disabled={guestSubmitting}
+                className="btn-primary px-4 py-2 text-sm">
+                {guestSubmitting ? 'Adding…' : 'Add Guest'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Quick CATS Sign-up Modal ──────────────────────────────────────── */}
       {catsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">

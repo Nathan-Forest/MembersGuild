@@ -54,6 +54,26 @@ public class SessionBooking
     public User? User { get; set; }
 }
 
+public class Guest
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string? Phone { get; set; }
+    public string? EmergencyContactName { get; set; }
+    public string? EmergencyContactPhone { get; set; }
+    public string? HomeSuburb { get; set; }
+    public bool IsMemberOfAnotherClub { get; set; } = false;
+    public string? AssociationNumber { get; set; }
+    public string? Notes { get; set; }
+    public int SessionId { get; set; }
+    public DateTime AttendedAt { get; set; } = DateTime.UtcNow;
+    public int? CreatedBy { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public Session? Session { get; set; }
+}
+
 public class AttendanceRecord
 {
     public int Id { get; set; }

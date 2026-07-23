@@ -1,5 +1,7 @@
 namespace MembersGuild.API.DTOs.Attendance;
 
+using System.ComponentModel.DataAnnotations;
+
 public record AttendanceSessionResponse(
     int Id,
     string Title,
@@ -21,7 +23,7 @@ public record AttendanceSheetMember(
     string? Status,  // null = not yet marked
     bool CreditRefunded,
     int CreditBalance,
-    string? Notes 
+    string? Notes
 );
 
 public record MarkAttendanceRequest(
@@ -49,3 +51,27 @@ public record AttendanceReportMember(
 
 public record UpdateNoteRequest(int UserId, string? Notes);
 public record SessionNoteRequest(string? Note);
+
+public record AddGuestRequest(
+    [Required, MaxLength(150)] string Name,
+    string? Email,
+    string? Phone,
+    string? EmergencyContactName,
+    string? EmergencyContactPhone,
+    string? HomeSuburb,
+    bool IsMemberOfAnotherClub,
+    string? AssociationNumber,
+    string? Notes
+);
+
+public record GuestResponse(
+    int Id,
+    string Name,
+    string? Email,
+    string? Phone,
+    string? HomeSuburb,
+    bool IsMemberOfAnotherClub,
+    string? AssociationNumber,
+    string? Notes,
+    DateTime AttendedAt
+);

@@ -45,6 +45,7 @@ public class ClubDbContext : DbContext
     public DbSet<CreditAlertRule> CreditAlertRules => Set<CreditAlertRule>();
     public DbSet<CreditAlertLog> CreditAlertLog => Set<CreditAlertLog>();
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+    public DbSet<Guest> Guests => Set<Guest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

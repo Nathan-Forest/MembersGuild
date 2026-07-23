@@ -145,6 +145,14 @@ public class AttendanceController : ControllerBase
         var lanesLabel = (await db.ClubSettings
             .FirstOrDefaultAsync(s => s.Key == "attendance_lanes_label"))
             ?.Value ?? "Lanes";
+        var guests = await db.Guests
+            .Where(g => g.SessionId == id)
+            .OrderBy(g => g.AttendedAt)
+            .Select(g => new GuestResponse(
+                g.Id, g.Name, g.Email, g.Phone, g.HomeSuburb,
+                g.IsMemberOfAnotherClub, g.AssociationNumber, g.Notes, g.AttendedAt
+            ))
+            .ToListAsync();
 
         return Ok(new
         {
@@ -167,6 +175,7 @@ public class AttendanceController : ControllerBase
                 cancellationReason = session.CancellationReason,  // ← add
             },
             members = sheet,
+            guests = guests,
             lanesEnabled = lanesEnabled,
             lanesLabel = lanesLabel,
         });
@@ -342,6 +351,44 @@ public class AttendanceController : ControllerBase
         // ─────────────────────────────────────────────────────────
 
         return Ok(new { success = true });
+    }
+
+    // POST /api/attendance/sessions/{id}/guest
+    [HttpPost("sessions/{id:int}/guest")]
+    public async Task<IActionResult> AddGuest(int id, [FromBody] AddGuestRequest req)
+    {
+        if (!CanManageAttendance()) return Forbid();
+        if (string.IsNullOrWhiteSpace(req.Name))
+            return BadRequest(new { error = "Guest name is required" });
+
+        await using var db = _dbFactory.CreateForCurrentClub();
+
+        var session = await db.Sessions.FindAsync(id);
+        if (session is null) return NotFound();
+
+        var guest = new Guest
+        {
+            Name = req.Name.Trim(),
+            Email = req.Email?.Trim(),
+            Phone = req.Phone?.Trim(),
+            EmergencyContactName = req.EmergencyContactName?.Trim(),
+            EmergencyContactPhone = req.EmergencyContactPhone?.Trim(),
+            HomeSuburb = req.HomeSuburb?.Trim(),
+            IsMemberOfAnotherClub = req.IsMemberOfAnotherClub,
+            AssociationNumber = req.AssociationNumber?.Trim(),
+            Notes = req.Notes?.Trim(),
+            SessionId = id,
+            AttendedAt = DateTime.UtcNow,
+            CreatedBy = CurrentUserId,
+        };
+
+        db.Guests.Add(guest);
+        await db.SaveChangesAsync();
+
+        return Ok(new GuestResponse(
+            guest.Id, guest.Name, guest.Email, guest.Phone, guest.HomeSuburb,
+            guest.IsMemberOfAnotherClub, guest.AssociationNumber, guest.Notes, guest.AttendedAt
+        ));
     }
 
     // ── GET /api/attendance/sessions/{id}/qr ────────────────────────────────
