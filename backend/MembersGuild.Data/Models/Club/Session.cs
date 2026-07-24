@@ -11,6 +11,19 @@ public class Location
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<Session> Sessions { get; set; } = new List<Session>();
+    public ICollection<Pool> Pools { get; set; } = new List<Pool>();
+}
+
+public class Pool
+{
+    public int Id { get; set; }
+    public int LocationId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public decimal? HireFeePerHourPerLane { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public Location? Location { get; set; }
 }
 
 public class Session
@@ -19,6 +32,8 @@ public class Session
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public int? LocationId { get; set; }
+    public int? PoolId { get; set; }
+    public Pool? Pool { get; set; }
     public int? CoachId { get; set; }
     public bool CoachNoShow { get; set; } = false;
     public DateTime StartTime { get; set; }

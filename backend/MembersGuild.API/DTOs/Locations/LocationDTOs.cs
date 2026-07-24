@@ -25,3 +25,22 @@ public record UpdateLocationRequest(
     int? Capacity,
     bool IsActive
 );
+
+public record PoolResponse(
+    int Id,
+    int LocationId,
+    string Name,
+    decimal? HireFeePerHourPerLane,
+    bool IsActive
+);
+
+public record CreatePoolRequest(
+    [Required, MaxLength(100)] string Name,
+    decimal? HireFeePerHourPerLane
+);
+
+public record UpdatePoolRequest(
+    [Required, MaxLength(100)] string Name,
+    decimal? HireFeePerHourPerLane,
+    bool IsActive
+);

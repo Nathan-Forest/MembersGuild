@@ -1,5 +1,6 @@
 using MembersGuild.Data.Models.Club;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 
 namespace MembersGuild.Data.Contexts;
 
@@ -46,6 +47,18 @@ public class ClubDbContext : DbContext
     public DbSet<CreditAlertLog> CreditAlertLog => Set<CreditAlertLog>();
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
     public DbSet<Guest> Guests => Set<Guest>();
+    public DbSet<Pool> Pools => Set<Pool>();
+
+    public record CreatePoolRequest(
+        [Required, MaxLength(100)] string Name,
+        decimal? HireFeePerHourPerLane
+    );
+
+    public record UpdatePoolRequest(
+        [Required, MaxLength(100)] string Name,
+        decimal? HireFeePerHourPerLane,
+        bool IsActive
+    );
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -92,6 +105,17 @@ public class ClubDbContext : DbContext
             entity.Property(e => e.IsActive).HasDefaultValue(true);
         });
 
+        modelBuilder.Entity<Pool>(entity =>
+        {
+            entity.ToTable("pools");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.HireFeePerHourPerLane).HasPrecision(10, 2);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
+            entity.HasOne(e => e.Location).WithMany(l => l.Pools).HasForeignKey(e => e.LocationId);
+        });
+
         modelBuilder.Entity<Session>(entity =>
         {
             entity.ToTable("sessions");
@@ -104,6 +128,7 @@ public class ClubDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("NOW()");
             entity.HasOne(e => e.Location).WithMany(l => l.Sessions).HasForeignKey(e => e.LocationId);
+            entity.HasOne(e => e.Pool).WithMany().HasForeignKey(e => e.PoolId);
             entity.HasOne(e => e.Coach).WithMany().HasForeignKey(e => e.CoachId);
         });
 

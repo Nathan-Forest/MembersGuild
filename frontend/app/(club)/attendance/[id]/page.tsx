@@ -24,6 +24,8 @@ interface SessionInfo {
   endTime: string
   locationId: number | null       // ← add
   locationName: string | null
+  poolId: number | null
+  poolName: string | null
   coachName: string | null
   coachNoShow: boolean
   capacity: number
@@ -39,6 +41,7 @@ interface SheetData {
   guests: Guest[]
   lanesEnabled: boolean
   lanesLabel: string
+  poolTrackingEnabled: boolean
 }
 
 interface QrData {
@@ -159,6 +162,9 @@ export default function AttendanceSheetPage() {
   const [locations, setLocations] = useState<LocationOption[]>([])
   const [updatingLocation, setUpdatingLocation] = useState(false)
 
+  const [sessionPools, setSessionPools] = useState<{ id: number; name: string }[]>([])
+  const [updatingPool, setUpdatingPool] = useState(false)
+
   // Cancel Session modal
   const [cancelOpen, setCancelOpen] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
@@ -204,6 +210,16 @@ export default function AttendanceSheetPage() {
     }, 30000)
     return () => clearInterval(interval)
   }, [sessionId])
+
+  useEffect(() => {
+    if (data?.session.locationId && data.poolTrackingEnabled) {
+      api.get<{ id: number; name: string }[]>(`/locations/${data.session.locationId}/pools/active`)
+        .then(setSessionPools)
+        .catch(() => setSessionPools([]))
+    } else {
+      setSessionPools([])
+    }
+  }, [data?.session.locationId, data?.poolTrackingEnabled])
 
   async function loadSheet() {
     setLoading(true)
@@ -309,6 +325,21 @@ export default function AttendanceSheetPage() {
       } : prev)
     } catch { }
     finally { setUpdatingLocation(false) }
+  }
+
+  async function handlePoolChange(poolId: string) {
+    setUpdatingPool(true)
+    try {
+      const result = await api.patch<{ poolId: number | null; poolName: string | null }>(
+        `/attendance/sessions/${sessionId}/pool`,
+        poolId ? parseInt(poolId) : null
+      )
+      setData(prev => prev ? {
+        ...prev,
+        session: { ...prev.session, poolId: result.poolId, poolName: result.poolName }
+      } : prev)
+    } catch { }
+    finally { setUpdatingPool(false) }
   }
 
   function openCancelSession() {
@@ -524,6 +555,23 @@ export default function AttendanceSheetPage() {
                 </select>
                 {updatingLocation && <span className="text-xs text-gray-400 ml-1">Saving...</span>}
               </div>
+              {data?.poolTrackingEnabled && sessionPools.length > 0 && (
+                <div className="flex items-center gap-1 text-sm text-gray-500">
+                  <span>🏊</span>
+                  <select
+                    value={data?.session.poolId?.toString() ?? ''}
+                    onChange={e => handlePoolChange(e.target.value)}
+                    disabled={updatingPool}
+                    className="text-sm bg-transparent border-0 border-b border-dashed border-gray-300 focus:outline-none cursor-pointer disabled:opacity-50"
+                  >
+                    <option value="">— No pool —</option>
+                    {sessionPools.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                  {updatingPool && <span className="text-xs text-gray-400 ml-1">Saving...</span>}
+                </div>
+              )}
               {/* was: {session.coachName && <span>👤 {session.coachName}</span>} */}
               <div className="flex items-center gap-1 text-sm text-gray-500">
                 <span>👤</span>

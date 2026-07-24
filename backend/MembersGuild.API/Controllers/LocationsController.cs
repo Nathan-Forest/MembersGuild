@@ -113,4 +113,87 @@ public class LocationsController : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary>GET /api/locations/{locationId}/pools — all roles</summary>
+    [HttpGet("{locationId:int}/pools")]
+    public async Task<IActionResult> GetPools(int locationId)
+    {
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var pools = await db.Pools
+            .Where(p => p.LocationId == locationId)
+            .OrderBy(p => p.Name)
+            .Select(p => new PoolResponse(p.Id, p.LocationId, p.Name, p.HireFeePerHourPerLane, p.IsActive))
+            .ToListAsync();
+        return Ok(pools);
+    }
+
+    /// <summary>GET /api/locations/{locationId}/pools/active — active only, for session/attendance dropdowns</summary>
+    [HttpGet("{locationId:int}/pools/active")]
+    public async Task<IActionResult> GetActivePools(int locationId)
+    {
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var pools = await db.Pools
+            .Where(p => p.LocationId == locationId && p.IsActive)
+            .OrderBy(p => p.Name)
+            .Select(p => new PoolResponse(p.Id, p.LocationId, p.Name, p.HireFeePerHourPerLane, p.IsActive))
+            .ToListAsync();
+        return Ok(pools);
+    }
+
+    /// <summary>POST /api/locations/{locationId}/pools — Webmaster only</summary>
+    [HttpPost("{locationId:int}/pools")]
+    public async Task<IActionResult> CreatePool(int locationId, [FromBody] CreatePoolRequest request)
+    {
+        if (!User.IsInRole("webmaster")) return Forbid();
+
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var location = await db.Locations.FindAsync(locationId);
+        if (location is null) return NotFound(new { error = "Location not found" });
+
+        var pool = new Pool
+        {
+            LocationId = locationId,
+            Name = request.Name.Trim(),
+            HireFeePerHourPerLane = request.HireFeePerHourPerLane,
+            IsActive = true,
+        };
+
+        db.Pools.Add(pool);
+        await db.SaveChangesAsync();
+
+        return Ok(new PoolResponse(pool.Id, pool.LocationId, pool.Name, pool.HireFeePerHourPerLane, pool.IsActive));
+    }
+
+    /// <summary>PUT /api/locations/pools/{id} — Webmaster only</summary>
+    [HttpPut("pools/{id:int}")]
+    public async Task<IActionResult> UpdatePool(int id, [FromBody] UpdatePoolRequest request)
+    {
+        if (!User.IsInRole("webmaster")) return Forbid();
+
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var pool = await db.Pools.FindAsync(id);
+        if (pool is null) return NotFound();
+
+        pool.Name = request.Name.Trim();
+        pool.HireFeePerHourPerLane = request.HireFeePerHourPerLane;
+        pool.IsActive = request.IsActive;
+        await db.SaveChangesAsync();
+
+        return Ok(new PoolResponse(pool.Id, pool.LocationId, pool.Name, pool.HireFeePerHourPerLane, pool.IsActive));
+    }
+
+    /// <summary>DELETE /api/locations/pools/{id} — Webmaster only (soft delete)</summary>
+    [HttpDelete("pools/{id:int}")]
+    public async Task<IActionResult> DeletePool(int id)
+    {
+        if (!User.IsInRole("webmaster")) return Forbid();
+
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var pool = await db.Pools.FindAsync(id);
+        if (pool is null) return NotFound();
+
+        pool.IsActive = false;
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
 }

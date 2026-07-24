@@ -109,6 +109,7 @@ public class AttendanceController : ControllerBase
         var session = await db.Sessions
             .Include(s => s.Location)
             .Include(s => s.Coach)
+            .Include(s => s.Pool)  
             .FirstOrDefaultAsync(s => s.Id == id);
 
         if (session is null) return NotFound();
@@ -154,6 +155,10 @@ public class AttendanceController : ControllerBase
             ))
             .ToListAsync();
 
+        var poolTrackingEnabled = (await db.ClubSettings
+    .FirstOrDefaultAsync(s => s.Key == "pool_tracking_enabled"))
+    ?.Value == "true";
+
         return Ok(new
         {
             session = new
@@ -164,6 +169,8 @@ public class AttendanceController : ControllerBase
                 endTime = session.EndTime,
                 locationId = session.LocationId,
                 locationName = session.Location?.Name,
+                poolId = session.PoolId,
+                poolName = session.Pool?.Name,
                 coachId = session.CoachId,
                 coachName = session.Coach != null
                     ? $"{session.Coach.FirstName} {session.Coach.LastName}"
@@ -646,6 +653,29 @@ public class AttendanceController : ControllerBase
         }
 
         return Ok(new { locationId = session.LocationId, locationName });
+    }
+
+    // PATCH /api/attendance/sessions/{id}/pool
+    [HttpPatch("sessions/{id:int}/pool")]
+    public async Task<IActionResult> UpdatePool(int id, [FromBody] int? poolId)
+    {
+        if (!CanManageAttendance()) return Forbid();
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var session = await db.Sessions.FindAsync(id);
+        if (session is null) return NotFound();
+
+        session.PoolId = poolId;
+        session.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        string? poolName = null;
+        if (session.PoolId.HasValue)
+        {
+            var pool = await db.Pools.FindAsync(session.PoolId.Value);
+            poolName = pool?.Name;
+        }
+
+        return Ok(new { poolId = session.PoolId, poolName });
     }
 
     // POST /api/attendance/sessions/{id}/cancel
