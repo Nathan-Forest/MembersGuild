@@ -178,6 +178,7 @@ public class AttendanceController : ControllerBase
                 coachNoShow = session.CoachNoShow,
                 capacity = session.Capacity,
                 lanesCount = session.LanesCount,
+                poolTrackingEnabled = poolTrackingEnabled,
                 isCancelled = session.IsCancelled,         // ← add
                 cancellationReason = session.CancellationReason,  // ← add
             },
