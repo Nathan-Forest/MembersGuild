@@ -8,6 +8,7 @@ public record ClubSettingsResponse(
     string AssociationNumberLabel,
     int CatsInitialCredits,
     string CatsDescription,
+    bool PoolTrackingEnabled,
     // Attendance
     string AttendanceLanesLabel,
     bool AttendanceLanesEnabled,
@@ -35,6 +36,7 @@ public record UpdateClubSettingsRequest(
     bool AttendanceLanesEnabled,
     string ClubTimezone,
     string CreditPriceAud,
+    bool PoolTrackingEnabled,
     string WelcomeEmailSubject,
     string WelcomeEmailBody,
     string CatsNotificationEmail,

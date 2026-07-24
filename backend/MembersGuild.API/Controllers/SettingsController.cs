@@ -70,7 +70,13 @@ public class SettingsController : ControllerBase
     public async Task<IActionResult> GetLabels()
     {
         var label = await _settings.GetAssociationNumberLabelAsync();
-        return Ok(new { associationNumberLabel = label });
+
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var poolTrackingEnabled = (await db.ClubSettings
+            .FirstOrDefaultAsync(s => s.Key == "pool_tracking_enabled"))
+            ?.Value == "true";
+
+        return Ok(new { associationNumberLabel = label, poolTrackingEnabled });
     }
 
     // ── GET /api/settings/club ───────────────────────────────────────────────
@@ -99,6 +105,7 @@ public class SettingsController : ControllerBase
             WelcomeEmailSubject: Get("welcome_email_subject", "Welcome to {{clubName}}!"),
             WelcomeEmailBody: Get("welcome_email_body", "Hi {{firstName}}, welcome!"),
             CatsNotificationEmail: Get("cats_notification_email", ""),
+            PoolTrackingEnabled: Get("pool_tracking_enabled", "false") == "true",
             TrainingMetricsEnabled: Get("training_metrics_enabled", "true") == "true",
             TrainingSetsEnabled: Get("training_sets_enabled", "true") == "true",
             TrainingVideosEnabled: Get("training_videos_enabled", "true") == "true"
@@ -125,6 +132,7 @@ public class SettingsController : ControllerBase
             ["welcome_email_subject"] = req.WelcomeEmailSubject,
             ["welcome_email_body"] = req.WelcomeEmailBody,
             ["cats_notification_email"] = req.CatsNotificationEmail,
+            ["pool_tracking_enabled"] = req.PoolTrackingEnabled.ToString().ToLower(),
             ["training_metrics_enabled"] = req.TrainingMetricsEnabled.ToString().ToLower(),
             ["training_sets_enabled"] = req.TrainingSetsEnabled.ToString().ToLower(),
             ["training_videos_enabled"] = req.TrainingVideosEnabled.ToString().ToLower(),
@@ -357,6 +365,7 @@ public class SettingsController : ControllerBase
         return Ok(new { field.Id, field.FieldKey, field.FieldLabel, field.FieldType, field.FieldOptions, field.IsRequired });
     }
 
+
     // DELETE /api/settings/cats-fields/{id}
     [HttpDelete("cats-fields/{id}")]
     [Authorize(Roles = "webmaster")]
@@ -370,23 +379,23 @@ public class SettingsController : ControllerBase
         return Ok(new { success = true });
     }
     // GET /api/settings/report-recipients
-[HttpGet("report-recipients")]
-[Authorize]
-public async Task<IActionResult> GetReportRecipients()
-{
-    await using var db = _dbFactory.CreateForCurrentClub();
-    var setting = await db.ClubSettings
-        .FirstOrDefaultAsync(s => s.Key == "attendance_report_recipients");
-    var json = setting?.Value ?? "[]";
-
-    var options = new System.Text.Json.JsonSerializerOptions
+    [HttpGet("report-recipients")]
+    [Authorize]
+    public async Task<IActionResult> GetReportRecipients()
     {
-        PropertyNameCaseInsensitive = true
-    };
-    var recipients = System.Text.Json.JsonSerializer
-        .Deserialize<List<ReportRecipientDto>>(json, options);
-    return Ok(recipients);
-}
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var setting = await db.ClubSettings
+            .FirstOrDefaultAsync(s => s.Key == "attendance_report_recipients");
+        var json = setting?.Value ?? "[]";
+
+        var options = new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+        var recipients = System.Text.Json.JsonSerializer
+            .Deserialize<List<ReportRecipientDto>>(json, options);
+        return Ok(recipients);
+    }
 
     // PUT /api/settings/report-recipients
     [HttpPut("report-recipients")]

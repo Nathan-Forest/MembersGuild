@@ -18,6 +18,7 @@ interface ClubSettings {
   catsNotificationEmail: string
   attendanceLanesLabel: string
   attendanceLanesEnabled: boolean
+  poolTrackingEnabled: boolean
   clubTimezone: string
   creditPriceAud: string
   welcomeEmailSubject: string
@@ -629,6 +630,40 @@ export default function SettingsPage() {
                 onChange={e => update('attendanceLanesLabel', e.target.value)} />
             </Field>
           )}
+        </div>
+      </SettingsCard>
+
+      <SettingsCard title="Attendance" icon="✓">
+        <div className="space-y-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Track Lanes Used</p>
+              <p className="text-xs text-gray-400 mt-0.5">Enables the lanes input on the attendance sheet</p>
+            </div>
+            <Toggle
+              checked={form.attendanceLanesEnabled}
+              onChange={v => update('attendanceLanesEnabled', v)} />
+          </div>
+          {form.attendanceLanesEnabled && (
+            <Field label="Lanes Field Label"
+              hint="What the lanes tracking field is called on the attendance sheet">
+              <input type="text" className="input w-48" value={form.attendanceLanesLabel}
+                onChange={e => update('attendanceLanesLabel', e.target.value)} />
+            </Field>
+          )}
+
+          {/* ← add this new block */}
+          <div className="flex items-center justify-between border-t border-gray-100 pt-5">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Pool Tracking</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Adds a Pool selector to the attendance sheet and lets you manage pools per location, for facility cost reporting
+              </p>
+            </div>
+            <Toggle
+              checked={form.poolTrackingEnabled}
+              onChange={v => update('poolTrackingEnabled', v)} />
+          </div>
         </div>
       </SettingsCard>
 

@@ -56,8 +56,8 @@ export default function LocationsPage() {
       return
     }
     loadLocations()
-    api.get<{ poolTrackingEnabled: boolean }>('/settings/labels')
-      .then(d => setPoolTrackingEnabled((d as any).poolTrackingEnabled ?? false))
+    api.get<{ associationNumberLabel: string; poolTrackingEnabled: boolean }>('/settings/labels')
+      .then(d => setPoolTrackingEnabled(d.poolTrackingEnabled))
       .catch(() => { })
   }, [router])
 
