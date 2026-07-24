@@ -177,8 +177,7 @@ public class AttendanceController : ControllerBase
                     : null,
                 coachNoShow = session.CoachNoShow,
                 capacity = session.Capacity,
-                lanesCount = session.LanesCount,
-                poolTrackingEnabled = poolTrackingEnabled,
+                lanesCount = session.LanesCount,                
                 isCancelled = session.IsCancelled,         // ← add
                 cancellationReason = session.CancellationReason,  // ← add
             },
@@ -186,6 +185,7 @@ public class AttendanceController : ControllerBase
             guests = guests,
             lanesEnabled = lanesEnabled,
             lanesLabel = lanesLabel,
+            poolTrackingEnabled = poolTrackingEnabled, 
         });
     }
 
