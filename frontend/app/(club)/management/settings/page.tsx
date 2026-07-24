@@ -630,28 +630,6 @@ export default function SettingsPage() {
                 onChange={e => update('attendanceLanesLabel', e.target.value)} />
             </Field>
           )}
-        </div>
-      </SettingsCard>
-
-      <SettingsCard title="Attendance" icon="✓">
-        <div className="space-y-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-700">Track Lanes Used</p>
-              <p className="text-xs text-gray-400 mt-0.5">Enables the lanes input on the attendance sheet</p>
-            </div>
-            <Toggle
-              checked={form.attendanceLanesEnabled}
-              onChange={v => update('attendanceLanesEnabled', v)} />
-          </div>
-          {form.attendanceLanesEnabled && (
-            <Field label="Lanes Field Label"
-              hint="What the lanes tracking field is called on the attendance sheet">
-              <input type="text" className="input w-48" value={form.attendanceLanesLabel}
-                onChange={e => update('attendanceLanesLabel', e.target.value)} />
-            </Field>
-          )}
-
           {/* ← add this new block */}
           <div className="flex items-center justify-between border-t border-gray-100 pt-5">
             <div>
