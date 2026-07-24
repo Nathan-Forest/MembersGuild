@@ -107,7 +107,7 @@ public class ClubDbContext : DbContext
 
         modelBuilder.Entity<Pool>(entity =>
         {
-            entity.ToTable("pools");
+            entity.ToTable("Pools");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
             entity.Property(e => e.HireFeePerHourPerLane).HasPrecision(10, 2);
