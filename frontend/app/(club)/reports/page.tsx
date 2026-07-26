@@ -60,6 +60,15 @@ interface CoachesReport {
   coaches: CoachReport[]
 }
 
+interface FacilityCostReport {
+  totalCost: number; sessionsWithCostData: number
+  sessions: {
+    id: number; startTime: string; title: string
+    location: string | null; pool: string | null
+    lanes: number | null; attended: number; cost: number | null
+  }[]
+}
+
 function exportCsv(filename: string, headers: string[], rows: (string | number)[][]) {
   const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`
   const lines = [
@@ -130,6 +139,7 @@ const TABS = [
   { key: 'cats', label: '🏊 CATS' },
   { key: 'attendance', label: '📊 Attendance' },
   { key: 'lanes', label: '🏊 Lanes' },
+  { key: 'facilityCost', label: '💲 Facility Cost' },
   { key: 'coaches', label: '🏋️ Coaches' },
 ]
 
@@ -212,13 +222,14 @@ export default function ReportsPage() {
   const [attendance, setAttendance] = useState<AttendanceReport | null>(null)
   const [lanes, setLanes] = useState<LanesReport | null>(null)
   const [coaches, setCoaches] = useState<CoachesReport | null>(null)
+  const [facilityCost, setFacilityCost] = useState<FacilityCostReport | null>(null)
 
   const allowedRoles = ['committee', 'membership', 'finance', 'webmaster', 'coach']
- useEffect(() => {
-  if (user && !hasPermission(user, 'committee', 'membership', 'finance', 'webmaster', 'coach')) {
-    router.replace('/dashboard')
-  }
-}, [])
+  useEffect(() => {
+    if (user && !hasPermission(user, 'committee', 'membership', 'finance', 'webmaster', 'coach')) {
+      router.replace('/dashboard')
+    }
+  }, [])
 
   const { start, end } = getPeriodDates(period, customStart, customEnd)
 
@@ -234,6 +245,7 @@ export default function ReportsPage() {
         case 'attendance': setAttendance(await api.get(`/reports/attendance${params}`)); break
         case 'lanes': setLanes(await api.get(`/reports/lanes${params}`)); break
         case 'coaches': setCoaches(await api.get(`/reports/coaches${params}`)); break
+        case 'facilityCost': setFacilityCost(await api.get(`/reports/facility-cost${params}`)); break
       }
     } catch (err) {
       console.error('Report failed:', err)
@@ -534,6 +546,50 @@ export default function ReportsPage() {
                   ])
                 )} className="btn-secondary text-sm px-3 py-1.5 mt-4">
                   ↓ Export Lanes CSV
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Facility Cost ──────────────────────────────────────────────── */}
+          {activeTab === 'facilityCost' && facilityCost && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <StatCard label="Total Facility Cost" value={`$${facilityCost.totalCost.toFixed(2)}`} color="green" />
+                <StatCard label="Sessions Costed" value={facilityCost.sessionsWithCostData} color="blue" />
+                <StatCard label="Total Sessions" value={facilityCost.sessions.length} color="gray" />
+              </div>
+              {facilityCost.sessionsWithCostData === 0 && (
+                <div className="card p-4 bg-amber-50 border border-amber-100 text-sm text-amber-700">
+                  ⚠️ No facility cost data yet. Costs are calculated when a session has both a Pool and a Lanes count set on the Attendance Sheet.
+                </div>
+              )}
+              <div className="card p-6">
+                <h3 className="font-semibold text-gray-900 mb-4">Session Cost Breakdown</h3>
+                <Table
+                  headers={['Date', 'Session', 'Location', 'Pool', 'Lanes', 'Attended', 'Cost']}
+                  rows={facilityCost.sessions.map(s => [
+                    fmtDateTime(s.startTime),
+                    s.title,
+                    s.location ?? '—',
+                    s.pool ?? '—',
+                    s.lanes ?? '—',
+                    s.attended,
+                    s.cost != null
+                      ? <span className="font-medium text-green-700">${s.cost.toFixed(2)}</span>
+                      : <span className="text-gray-300">—</span>,
+                  ])}
+                  empty="No sessions in this period"
+                />
+                <button onClick={() => exportCsv(
+                  `facility-cost-report-${start}-${end}`,
+                  ['Date', 'Session', 'Location', 'Pool', 'Lanes', 'Attended', 'Cost ($)'],
+                  facilityCost.sessions.map(s => [
+                    fmtDateTime(s.startTime), s.title, s.location ?? '', s.pool ?? '',
+                    s.lanes ?? '', s.attended, s.cost != null ? s.cost.toFixed(2) : ''
+                  ])
+                )} className="btn-secondary text-sm px-3 py-1.5 mt-4">
+                  ↓ Export Facility Cost CSV
                 </button>
               </div>
             </div>

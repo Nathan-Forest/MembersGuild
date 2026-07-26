@@ -70,4 +70,11 @@ public class ReportsController : ControllerBase
         var (s, e) = ParseDates(start, end);
         return Ok(await _reports.GetCoachesReportAsync(s, e));
     }
+
+    [HttpGet("facility-cost")]
+    public async Task<IActionResult> FacilityCost([FromQuery] string? start, [FromQuery] string? end)
+    {
+        var (s, e) = ParseDates(start, end);
+        return Ok(await _reports.GetFacilityCostReportAsync(s, e));
+    }
 }

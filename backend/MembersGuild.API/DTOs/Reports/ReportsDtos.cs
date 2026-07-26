@@ -107,3 +107,20 @@ public record CoachStatsItem(
     int SessionsAssigned,
     int SessionsCompleted,
     int SessionsCancelled);
+
+// ── Facility Cost ─────────────────────────────────────────────────────────────
+
+public record FacilityCostReport(
+    decimal TotalCost,
+    int SessionsWithCostData,
+    List<SessionCostItem> Sessions);
+
+public record SessionCostItem(
+    int Id,
+    DateTime StartTime,
+    string Title,
+    string? Location,
+    string? Pool,
+    int? Lanes,
+    int Attended,
+    decimal? Cost);

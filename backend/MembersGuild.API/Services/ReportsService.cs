@@ -290,4 +290,41 @@ ActiveCatsList: cats.OrderBy(u => u.EffectiveJoinDate)
             TotalSessions: sessions.Count,
             Coaches: coaches);
     }
+
+// ── Facility Cost ─────────────────────────────────────────────────────────────
+
+public async Task<FacilityCostReport> GetFacilityCostReportAsync(DateTime start, DateTime end)
+{
+    await using var db = _dbFactory.CreateForCurrentClub();
+
+    var sessions = await db.Sessions
+        .Include(s => s.Location)
+        .Include(s => s.Pool)
+        .Include(s => s.AttendanceRecords)
+        .Where(s => s.StartTime >= start && s.StartTime <= end && !s.IsCancelled)
+        .OrderByDescending(s => s.StartTime)
+        .ToListAsync();
+
+    var items = sessions.Select(s =>
+    {
+        var attended = s.AttendanceRecords.Count(r => r.Status == "attended");
+
+        decimal? cost = null;
+        if (s.LanesCount.HasValue && s.Pool?.HireFeePerHourPerLane != null)
+        {
+            var hours = (decimal)(s.EndTime - s.StartTime).TotalHours;
+            cost = s.LanesCount.Value * s.Pool.HireFeePerHourPerLane.Value * hours;
+        }
+
+        return new SessionCostItem(
+            s.Id, s.StartTime, s.Title,
+            s.Location?.Name, s.Pool?.Name,
+            s.LanesCount, attended, cost);
+    }).ToList();
+
+    return new FacilityCostReport(
+        TotalCost: items.Where(i => i.Cost.HasValue).Sum(i => i.Cost!.Value),
+        SessionsWithCostData: items.Count(i => i.Cost.HasValue),
+        Sessions: items);
+}
 }
