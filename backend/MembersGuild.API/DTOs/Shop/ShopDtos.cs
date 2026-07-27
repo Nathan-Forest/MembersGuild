@@ -1,4 +1,6 @@
 namespace MembersGuild.API.DTOs.Shop;
+
+using System.ComponentModel.DataAnnotations;
  
 // ── Order Status Constants ────────────────────────────────────────────────────
  
@@ -76,3 +78,4 @@ public record ConfirmPaymentRequest(string ReceiptNumber, string? Notes);
 public record DeliverOrderRequest(string? Notes);
 public record UpdateStockRequest(int Quantity);
 public record CreditPriceRequest(decimal PricePerCredit);
+public record PayByCardRequest([Required] string SourceId);

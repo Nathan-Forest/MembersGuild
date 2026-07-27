@@ -2,20 +2,20 @@ using MembersGuild.API.DTOs.Shop;
 using MembersGuild.API.Extensions;
 using MembersGuild.Data.Models.Club;
 using Microsoft.EntityFrameworkCore;
- 
+
 namespace MembersGuild.API.Services;
- 
+
 public class ShopService
 {
     private readonly ClubDbContextFactory _dbFactory;
- 
+
     public ShopService(ClubDbContextFactory dbFactory)
     {
         _dbFactory = dbFactory;
     }
- 
+
     // ── Categories ────────────────────────────────────────────────────────────
- 
+
     public async Task<List<ShopCategoryResponse>> GetCategoriesAsync(bool includeInactive = false)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -27,7 +27,7 @@ public class ShopService
                 c.Id, c.Name, c.Slug, c.IsSystem, c.DisplayOrder, c.IsActive))
             .ToListAsync();
     }
- 
+
     public async Task<ShopCategoryResponse> CreateCategoryAsync(CreateCategoryRequest req)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -39,7 +39,7 @@ public class ShopService
         await db.SaveChangesAsync();
         return new ShopCategoryResponse(cat.Id, cat.Name, cat.Slug, cat.IsSystem, cat.DisplayOrder, cat.IsActive);
     }
- 
+
     public async Task<ShopCategoryResponse> UpdateCategoryAsync(int id, UpdateCategoryRequest req)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -50,7 +50,7 @@ public class ShopService
         await db.SaveChangesAsync();
         return new ShopCategoryResponse(cat.Id, cat.Name, cat.Slug, cat.IsSystem, cat.DisplayOrder, cat.IsActive);
     }
- 
+
     public async Task DeleteCategoryAsync(int id)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -62,9 +62,9 @@ public class ShopService
         db.ShopCategories.Remove(cat);
         await db.SaveChangesAsync();
     }
- 
+
     // ── Items ─────────────────────────────────────────────────────────────────
- 
+
     public async Task<List<ShopItemResponse>> GetItemsAsync(string? categorySlug = null, bool includeInactive = false)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -80,7 +80,7 @@ public class ShopService
             .ToDictionaryAsync(c => c.Slug, c => c.Name);
         return items.Select(i => MapItem(i, catNames)).ToList();
     }
- 
+
     public async Task<ShopItemResponse?> GetItemAsync(int id)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -90,7 +90,7 @@ public class ShopService
             .Select(c => c.Name).FirstOrDefaultAsync() ?? item.Category;
         return MapItem(item, new Dictionary<string, string> { [item.Category] = catName });
     }
- 
+
     public async Task<ShopItemResponse> CreateItemAsync(CreateItemRequest req)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -98,15 +98,19 @@ public class ShopService
             ?? throw new KeyNotFoundException($"Category '{req.Category}' not found.");
         var item = new ShopItem
         {
-            Name = req.Name.Trim(), Description = req.Description?.Trim(),
-            Category = req.Category, BasePrice = req.BasePrice,
-            CreditValue = req.CreditValue, IsActive = true, DisplayOrder = req.DisplayOrder,
+            Name = req.Name.Trim(),
+            Description = req.Description?.Trim(),
+            Category = req.Category,
+            BasePrice = req.BasePrice,
+            CreditValue = req.CreditValue,
+            IsActive = true,
+            DisplayOrder = req.DisplayOrder,
         };
         db.ShopItems.Add(item);
         await db.SaveChangesAsync();
         return MapItem(item, new Dictionary<string, string> { [category.Slug] = category.Name });
     }
- 
+
     public async Task<ShopItemResponse?> UpdateItemAsync(int id, UpdateItemRequest req)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -120,7 +124,7 @@ public class ShopService
         await db.SaveChangesAsync();
         return MapItem(item, new Dictionary<string, string> { [category.Slug] = category.Name });
     }
- 
+
     public async Task UpdateItemImageAsync(int id, string imageUrl)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -128,7 +132,7 @@ public class ShopService
         item.ImageUrl = imageUrl;
         await db.SaveChangesAsync();
     }
- 
+
     public async Task<bool> DeleteItemAsync(int id)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -139,9 +143,9 @@ public class ShopService
         await db.SaveChangesAsync();
         return true;
     }
- 
+
     // ── Variants ──────────────────────────────────────────────────────────────
- 
+
     public async Task<ShopItemVariantResponse> CreateVariantAsync(int itemId, CreateVariantRequest req)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -149,14 +153,17 @@ public class ShopService
         if (item.Category == "credits") throw new InvalidOperationException("Credit items cannot have variants.");
         var variant = new ShopItemVariant
         {
-            ShopItemId = itemId, Name = req.Name.Trim(),
-            StockQuantity = req.StockQuantity, AdditionalPrice = req.AdditionalPrice, IsActive = true,
+            ShopItemId = itemId,
+            Name = req.Name.Trim(),
+            StockQuantity = req.StockQuantity,
+            AdditionalPrice = req.AdditionalPrice,
+            IsActive = true,
         };
         db.ShopItemVariants.Add(variant);
         await db.SaveChangesAsync();
         return new ShopItemVariantResponse(variant.Id, variant.Name, variant.StockQuantity, variant.AdditionalPrice, variant.IsActive);
     }
- 
+
     public async Task<ShopItemVariantResponse?> UpdateVariantAsync(int variantId, UpdateVariantRequest req)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -167,7 +174,7 @@ public class ShopService
         await db.SaveChangesAsync();
         return new ShopItemVariantResponse(variant.Id, variant.Name, variant.StockQuantity, variant.AdditionalPrice, variant.IsActive);
     }
- 
+
     public async Task UpdateVariantStockAsync(int variantId, int quantity)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -176,7 +183,7 @@ public class ShopService
         variant.StockQuantity = quantity;
         await db.SaveChangesAsync();
     }
- 
+
     public async Task<bool> DeleteVariantAsync(int variantId)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -186,16 +193,16 @@ public class ShopService
         await db.SaveChangesAsync();
         return true;
     }
- 
+
     // ── Credit Price ──────────────────────────────────────────────────────────
- 
+
     public async Task<decimal> GetCreditPriceAsync()
     {
         await using var db = _dbFactory.CreateForCurrentClub();
         var setting = await db.ClubSettings.FindAsync("credit_price_aud");
         return setting != null && decimal.TryParse(setting.Value, out var price) ? price : 5.00m;
     }
- 
+
     public async Task SetCreditPriceAsync(decimal pricePerCredit, int updatedBy)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -203,7 +210,7 @@ public class ShopService
         if (setting is null)
         {
             db.ClubSettings.Add(new ClubSetting
-                { Key = "credit_price_aud", Value = pricePerCredit.ToString("F2"), UpdatedBy = updatedBy, UpdatedAt = DateTime.UtcNow });
+            { Key = "credit_price_aud", Value = pricePerCredit.ToString("F2"), UpdatedBy = updatedBy, UpdatedAt = DateTime.UtcNow });
         }
         else
         {
@@ -217,9 +224,9 @@ public class ShopService
             pack.BasePrice = pack.CreditValue!.Value * pricePerCredit;
         await db.SaveChangesAsync();
     }
- 
+
     // ── Orders ────────────────────────────────────────────────────────────────
- 
+
     public async Task<List<ShopOrderSummaryResponse>> GetOrdersAsync(string? status = null)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -232,7 +239,7 @@ public class ShopService
                 o.Status, o.TotalAmount, o.TotalCredits, o.CreatedAt, o.PaymentConfirmedAt))
             .ToListAsync();
     }
- 
+
     public async Task<List<ShopOrderSummaryResponse>> GetMyOrdersAsync(int userId)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -244,7 +251,7 @@ public class ShopService
                 o.Status, o.TotalAmount, o.TotalCredits, o.CreatedAt, o.PaymentConfirmedAt))
             .ToListAsync();
     }
- 
+
     public async Task<ShopOrderResponse?> GetOrderAsync(int orderId)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -256,26 +263,26 @@ public class ShopService
             .FirstOrDefaultAsync(o => o.Id == orderId);
         return order is null ? null : MapOrder(order);
     }
- 
+
     public async Task<ShopOrderResponse> CreateOrderAsync(int userId, string clubSlug, CreateOrderRequest req)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
         var user = await db.Users.FindAsync(userId) ?? throw new KeyNotFoundException("User not found.");
         if (user.Role == "cats") throw new InvalidOperationException("CATS members cannot make purchases.");
- 
+
         decimal totalAmount = 0; int totalCredits = 0;
         var orderItems = new List<ShopOrderItem>();
- 
+
         foreach (var cartItem in req.Items)
         {
             if (cartItem.Quantity < 1) throw new InvalidOperationException("Quantity must be at least 1.");
             var item = await db.ShopItems.Include(i => i.Variants)
                 .FirstOrDefaultAsync(i => i.Id == cartItem.ItemId && i.IsActive)
                 ?? throw new KeyNotFoundException($"Item {cartItem.ItemId} not found or unavailable.");
- 
+
             var unitPrice = item.BasePrice;
             ShopItemVariant? variant = null;
- 
+
             if (item.Category != "credits")
             {
                 var activeVariants = item.Variants.Where(v => v.IsActive).ToList();
@@ -292,33 +299,42 @@ public class ShopService
                     unitPrice += variant.AdditionalPrice;
                 }
             }
- 
+
             var creditValue = item.CreditValue ?? 0;
             totalAmount += unitPrice * cartItem.Quantity;
             totalCredits += creditValue * cartItem.Quantity;
             orderItems.Add(new ShopOrderItem
             {
-                ShopItemId = item.Id, VariantId = variant?.Id, Quantity = cartItem.Quantity,
-                UnitPrice = unitPrice, CreditValue = creditValue,
-                ItemNameSnapshot = item.Name, VariantNameSnapshot = variant?.Name,
+                ShopItemId = item.Id,
+                VariantId = variant?.Id,
+                Quantity = cartItem.Quantity,
+                UnitPrice = unitPrice,
+                CreditValue = creditValue,
+                ItemNameSnapshot = item.Name,
+                VariantNameSnapshot = variant?.Name,
             });
         }
- 
+
         var order = new ShopOrder
         {
-            UserId = userId, PaymentReference = "", Status = OrderStatus.Pending,
-            TotalAmount = totalAmount, TotalCredits = totalCredits,
-            PaymentMethod = "bank_transfer", Items = orderItems,
-            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            UserId = userId,
+            PaymentReference = "",
+            Status = OrderStatus.Pending,
+            TotalAmount = totalAmount,
+            TotalCredits = totalCredits,
+            PaymentMethod = "bank_transfer",
+            Items = orderItems,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
         };
         db.ShopOrders.Add(order);
         await db.SaveChangesAsync();
- 
+
         order.PaymentReference = GeneratePaymentReference(clubSlug, user.LastName, order.Id);
         await db.SaveChangesAsync();
         return (await GetOrderAsync(order.Id))!;
     }
- 
+
     public async Task<ShopOrderResponse?> ConfirmPaymentAsync(int orderId, ConfirmPaymentRequest req, int confirmedByUserId)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -328,20 +344,25 @@ public class ShopService
         if (order is null) return null;
         if (order.Status != OrderStatus.Pending)
             throw new InvalidOperationException($"Order is '{order.Status}' — only pending orders can be confirmed.");
- 
+
         if (order.TotalCredits > 0)
         {
             var member = await db.Users.FindAsync(order.UserId)!;
             member!.CreditBalance += order.TotalCredits;
             db.CreditTransactions.Add(new CreditTransaction
             {
-                UserId = order.UserId, Amount = order.TotalCredits, BalanceAfter = member.CreditBalance,
-                TransactionType = TransactionTypes.PaymentConfirmed, ReferenceId = order.Id,
-                ReferenceType = "order", Notes = $"Shop order {order.PaymentReference}",
-                CreatedBy = confirmedByUserId, CreatedAt = DateTime.UtcNow,
+                UserId = order.UserId,
+                Amount = order.TotalCredits,
+                BalanceAfter = member.CreditBalance,
+                TransactionType = TransactionTypes.PaymentConfirmed,
+                ReferenceId = order.Id,
+                ReferenceType = "order",
+                Notes = $"Shop order {order.PaymentReference}",
+                CreatedBy = confirmedByUserId,
+                CreatedAt = DateTime.UtcNow,
             });
         }
- 
+
         var hasMerchandise = order.Items.Any(i => i.ShopItem?.Category != "credits");
         order.Status = hasMerchandise ? OrderStatus.PendingDelivery : OrderStatus.Delivered;
         order.PaymentConfirmedAt = DateTime.UtcNow; order.PaymentConfirmedBy = confirmedByUserId;
@@ -351,7 +372,46 @@ public class ShopService
         await db.SaveChangesAsync();
         return await GetOrderAsync(order.Id);
     }
- 
+
+    public async Task<ShopOrderResponse?> ConfirmSquarePaymentAsync(int orderId, string squarePaymentId)
+    {
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var order = await db.ShopOrders
+            .Include(o => o.Items).ThenInclude(i => i.ShopItem)
+            .FirstOrDefaultAsync(o => o.Id == orderId);
+        if (order is null) return null;
+        if (order.Status != OrderStatus.Pending)
+            throw new InvalidOperationException($"Order is '{order.Status}' — only pending orders can be confirmed.");
+
+        if (order.TotalCredits > 0)
+        {
+            var member = await db.Users.FindAsync(order.UserId)!;
+            member!.CreditBalance += order.TotalCredits;
+            db.CreditTransactions.Add(new CreditTransaction
+            {
+                UserId = order.UserId,
+                Amount = order.TotalCredits,
+                BalanceAfter = member.CreditBalance,
+                TransactionType = TransactionTypes.PaymentConfirmed,
+                ReferenceId = order.Id,
+                ReferenceType = "order",
+                Notes = $"Shop order {order.PaymentReference} — paid by card via Square",
+                CreatedBy = null,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+
+        var hasMerchandise = order.Items.Any(i => i.ShopItem?.Category != "credits");
+        order.Status = hasMerchandise ? OrderStatus.PendingDelivery : OrderStatus.Delivered;
+        order.PaymentConfirmedAt = DateTime.UtcNow;
+        order.PaymentConfirmedBy = null;              // system-confirmed, not a staff member
+        order.PaymentMethod = "square";
+        order.PaymentReceiptNumber = squarePaymentId;
+        order.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return await GetOrderAsync(order.Id);
+    }
+
     public async Task<ShopOrderResponse?> MarkDeliveredAsync(int orderId, DeliverOrderRequest req, int deliveredByUserId)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -366,7 +426,7 @@ public class ShopService
         await db.SaveChangesAsync();
         return await GetOrderAsync(order.Id);
     }
- 
+
     public async Task<ShopOrderResponse?> CancelOrderAsync(int orderId, int cancelledByUserId)
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -383,9 +443,9 @@ public class ShopService
         await db.SaveChangesAsync();
         return await GetOrderAsync(order.Id);
     }
- 
+
     // ── Inventory ─────────────────────────────────────────────────────────────
- 
+
     public async Task<List<InventoryItemResponse>> GetInventoryAsync()
     {
         await using var db = _dbFactory.CreateForCurrentClub();
@@ -403,9 +463,9 @@ public class ShopService
             v.StockQuantity, v.StockQuantity <= 3 && v.StockQuantity > 0,
             v.StockQuantity == 0, v.IsActive)).ToList();
     }
- 
+
     // ── Helpers ───────────────────────────────────────────────────────────────
- 
+
     private static string GeneratePaymentReference(string clubSlug, string surname, int orderId)
     {
         var slug = clubSlug.ToUpper();
@@ -413,7 +473,7 @@ public class ShopService
         if (name.Length > 8) name = name[..8];
         return $"{slug}-{name}-{orderId}";
     }
- 
+
     private static ShopItemResponse MapItem(ShopItem i, Dictionary<string, string> catNames) =>
         new(i.Id, i.Name, i.Description, i.Category,
             catNames.GetValueOrDefault(i.Category, i.Category),
@@ -421,7 +481,7 @@ public class ShopService
             i.Variants.Select(v =>
                 new ShopItemVariantResponse(v.Id, v.Name, v.StockQuantity, v.AdditionalPrice, v.IsActive)
             ).ToList());
- 
+
     private static ShopOrderResponse MapOrder(ShopOrder o) =>
         new(o.Id, o.PaymentReference, o.Status, o.TotalAmount, o.TotalCredits,
             o.PaymentMethod, o.PaymentReceiptNumber, o.PaymentConfirmedAt,
@@ -435,4 +495,3 @@ public class ShopService
             o.User is not null ? $"{o.User.FirstName} {o.User.LastName}" : "",
             o.User?.Email ?? "", o.CreatedAt, o.UpdatedAt);
 }
- 

@@ -32,6 +32,13 @@ interface PaymentSettings {
   bsb?: string; accountNumber?: string; paymentInstructions?: string
 }
 
+interface SquareAvailability {
+  available: boolean
+  applicationId?: string
+  locationId?: string
+  environment?: 'sandbox' | 'production'
+}
+
 // ── Cart helpers (localStorage) ───────────────────────────────────────────────
 
 function cartKey(slug: string) { return `mg_cart_${slug}` }
@@ -50,26 +57,28 @@ function persistCart(slug: string, cart: CartItem[]) {
 export default function ShopPage() {
   const user = getCurrentUser()
 
-  const [categories, setCategories]         = useState<ShopCategory[]>([])
-  const [items, setItems]                   = useState<ShopItem[]>([])
-  const [loading, setLoading]               = useState(true)
-  const [selectedCat, setSelectedCat]       = useState('all')
-  const [cart, setCart]                     = useState<CartItem[]>([])
-  const [slug, setSlug]                     = useState('')
-  const [creditBalance, setCreditBalance]   = useState(0)
+  const [categories, setCategories] = useState<ShopCategory[]>([])
+  const [items, setItems] = useState<ShopItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedCat, setSelectedCat] = useState('all')
+  const [cart, setCart] = useState<CartItem[]>([])
+  const [slug, setSlug] = useState('')
+  const [creditBalance, setCreditBalance] = useState(0)
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null)
+  const [squareInfo, setSquareInfo] = useState<SquareAvailability>({ available: false })
+  const [paidByCard, setPaidByCard] = useState(false)
 
   // Variant picker
-  const [variantItem, setVariantItem]       = useState<ShopItem | null>(null)
+  const [variantItem, setVariantItem] = useState<ShopItem | null>(null)
   const [selectedVariant, setSelectedVariant] = useState<number | null>(null)
-  const [variantQty, setVariantQty]         = useState(1)
+  const [variantQty, setVariantQty] = useState(1)
 
   // Cart & checkout
-  const [showCart, setShowCart]             = useState(false)
-  const [checkingOut, setCheckingOut]       = useState(false)
+  const [showCart, setShowCart] = useState(false)
+  const [checkingOut, setCheckingOut] = useState(false)
   const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(null)
-  const [orderError, setOrderError]         = useState('')
-  const [copied, setCopied]                 = useState(false)
+  const [orderError, setOrderError] = useState('')
+  const [copied, setCopied] = useState(false)
 
   // ── Load ────────────────────────────────────────────────────────────────────
 
@@ -83,11 +92,13 @@ export default function ShopPage() {
       api.get<ShopItem[]>('/shop/items'),
       api.get<{ creditBalance: number }>('/credits/my-account').then(r => r.creditBalance).catch(() => 0),
       api.get<PaymentSettings>('/settings/payment').catch(() => null),
-    ]).then(([cats, shopItems, balance, payment]) => {
+      api.get<SquareAvailability>('/square/available').catch(() => ({ available: false })),
+    ]).then(([cats, shopItems, balance, payment, square]) => {
       setCategories(cats)
       setItems(shopItems)
       setCreditBalance(balance)
       setPaymentSettings(payment)
+      setSquareInfo(square)
     }).finally(() => setLoading(false))
   }, [])
 
@@ -131,9 +142,9 @@ export default function ShopPage() {
     ))
   }
 
-  const cartTotal   = cart.reduce((sum, c) => sum + c.unitPrice * c.quantity, 0)
+  const cartTotal = cart.reduce((sum, c) => sum + c.unitPrice * c.quantity, 0)
   const cartCredits = cart.reduce((sum, c) => sum + c.creditValue * c.quantity, 0)
-  const cartCount   = cart.reduce((sum, c) => sum + c.quantity, 0)
+  const cartCount = cart.reduce((sum, c) => sum + c.quantity, 0)
 
   // ── Variant picker ───────────────────────────────────────────────────────────
 
@@ -161,6 +172,7 @@ export default function ShopPage() {
         items: cart.map(c => ({ itemId: c.itemId, variantId: c.variantId ?? null, quantity: c.quantity }))
       })
       setCompletedOrder(order)
+      setPaidByCard(false)
       updateCart([])
       setShowCart(false)
     } catch (err: any) {
@@ -176,6 +188,83 @@ export default function ShopPage() {
     setCopied(true); setTimeout(() => setCopied(false), 2000)
   }
 
+  function SquareCardPayment({ orderId, amount, squareInfo, onSuccess }: {
+    orderId: number
+    amount: number
+    squareInfo: SquareAvailability
+    onSuccess: () => void
+  }) {
+    const [card, setCard] = useState<any>(null)
+    const [ready, setReady] = useState(false)
+    const [paying, setPaying] = useState(false)
+    const [error, setError] = useState('')
+
+    useEffect(() => {
+      let cancelled = false
+
+      async function init() {
+        const scriptSrc = squareInfo.environment === 'production'
+          ? 'https://web.squarecdn.com/v1/square.js'
+          : 'https://sandbox.web.squarecdn.com/v1/square.js'
+
+        if (!(window as any).Square) {
+          await new Promise<void>((resolve, reject) => {
+            const script = document.createElement('script')
+            script.src = scriptSrc
+            script.onload = () => resolve()
+            script.onerror = () => reject(new Error('Failed to load Square'))
+            document.head.appendChild(script)
+          })
+        }
+        if (cancelled) return
+
+        const payments = (window as any).Square.payments(squareInfo.applicationId, squareInfo.locationId)
+        const cardInstance = await payments.card()
+        await cardInstance.attach('#square-card-container')
+        if (cancelled) return
+        setCard(cardInstance)
+        setReady(true)
+      }
+
+      init().catch(() => setError('Failed to load card payment form'))
+      return () => { cancelled = true }
+    }, [squareInfo])
+
+    async function handlePay() {
+      if (!card) return
+      setPaying(true); setError('')
+      try {
+        const result = await card.tokenize()
+        if (result.status !== 'OK') {
+          setError('Card details invalid — please check and try again')
+          setPaying(false)
+          return
+        }
+        await api.post(`/orders/${orderId}/pay-by-card`, { sourceId: result.token })
+        onSuccess()
+      } catch (err: any) {
+        setError(err.message ?? 'Payment failed — please try again')
+      } finally {
+        setPaying(false)
+      }
+    }
+
+    return (
+      <div className="space-y-3">
+        {error && (
+          <p className="text-sm text-red-500 bg-red-50 p-3 rounded-lg">{error}</p>
+        )}
+        <div id="square-card-container" className="border border-gray-200 rounded-lg p-3 min-h-[56px]" />
+        <button
+          onClick={handlePay}
+          disabled={!ready || paying}
+          className="btn-primary w-full py-2.5 text-sm font-semibold disabled:opacity-50">
+          {paying ? 'Processing…' : `Pay $${amount.toFixed(2)} by Card`}
+        </button>
+      </div>
+    )
+  }
+
   // ── Computed ──────────────────────────────────────────────────────────────────
 
   const filteredItems = selectedCat === 'all'
@@ -186,7 +275,7 @@ export default function ShopPage() {
 
   if (loading) return (
     <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {[1,2,3,4,5,6].map(i => <div key={i} className="card h-48 animate-pulse bg-gray-100" />)}
+      {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="card h-48 animate-pulse bg-gray-100" />)}
     </div>
   )
 
@@ -233,32 +322,56 @@ export default function ShopPage() {
           ))}
         </div>
 
-        {/* Payment Instructions */}
-        <div className="bg-blue-50 rounded-xl p-4 text-left space-y-2 border border-blue-100">
-          <p className="text-sm font-semibold text-blue-900">Payment Instructions</p>
-          {paymentSettings?.accountName ? (
-            <div className="text-sm text-blue-800 space-y-1">
-              {paymentSettings.bankName && <p>Bank: {paymentSettings.bankName}</p>}
-              <p>Account Name: {paymentSettings.accountName}</p>
-              {paymentSettings.bsb && <p>BSB: {paymentSettings.bsb}</p>}
-              {paymentSettings.accountNumber && <p>Account: {paymentSettings.accountNumber}</p>}
-              <p className="font-semibold">Reference: {completedOrder.paymentReference}</p>
-              {paymentSettings.paymentInstructions && (
-                <p className="text-xs mt-2">{paymentSettings.paymentInstructions}</p>
+        {paidByCard ? (
+          <div className="bg-green-50 rounded-xl p-4 border border-green-200 text-center space-y-1">
+            <p className="text-lg">✅</p>
+            <p className="text-sm font-semibold text-green-800">Paid by card</p>
+            <p className="text-xs text-green-700">Your credits are already available — no further action needed.</p>
+          </div>
+        ) : (
+          <>
+            {squareInfo.available && (
+              <div className="bg-white rounded-xl p-4 text-left space-y-3 border border-gray-200">
+                <p className="text-sm font-semibold text-gray-900">Pay by Card</p>
+                <SquareCardPayment
+                  orderId={completedOrder.id}
+                  amount={completedOrder.totalAmount}
+                  squareInfo={squareInfo}
+                  onSuccess={() => setPaidByCard(true)}
+                />
+              </div>
+            )}
+
+            {/* Payment Instructions */}
+            <div className="bg-blue-50 rounded-xl p-4 text-left space-y-2 border border-blue-100">
+              <p className="text-sm font-semibold text-blue-900">
+                {squareInfo.available ? 'Or Pay by Bank Transfer' : 'Payment Instructions'}
+              </p>
+              {paymentSettings?.accountName ? (
+                <div className="text-sm text-blue-800 space-y-1">
+                  {paymentSettings.bankName && <p>Bank: {paymentSettings.bankName}</p>}
+                  <p>Account Name: {paymentSettings.accountName}</p>
+                  {paymentSettings.bsb && <p>BSB: {paymentSettings.bsb}</p>}
+                  {paymentSettings.accountNumber && <p>Account: {paymentSettings.accountNumber}</p>}
+                  <p className="font-semibold">Reference: {completedOrder.paymentReference}</p>
+                  {paymentSettings.paymentInstructions && (
+                    <p className="text-xs mt-2">{paymentSettings.paymentInstructions}</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-blue-800">
+                  Transfer ${completedOrder.totalAmount.toFixed(2)} to your club's bank account using
+                  reference <strong>{completedOrder.paymentReference}</strong>.
+                  Contact your club treasurer for bank details.
+                </p>
               )}
             </div>
-          ) : (
-            <p className="text-sm text-blue-800">
-              Transfer ${completedOrder.totalAmount.toFixed(2)} to your club's bank account using
-              reference <strong>{completedOrder.paymentReference}</strong>.
-              Contact your club treasurer for bank details.
-            </p>
-          )}
-        </div>
 
-        <p className="text-xs text-gray-400">
-          Credits will be added to your account once payment is confirmed by the treasurer.
-        </p>
+            <p className="text-xs text-gray-400">
+              Credits will be added to your account once payment is confirmed by the treasurer.
+            </p>
+          </>
+        )}
         <button onClick={() => setCompletedOrder(null)}
           className="btn-primary px-6 py-2 text-sm w-full">
           Continue Shopping
@@ -294,17 +407,15 @@ export default function ShopPage() {
       {/* Category tabs */}
       <div className="flex gap-2 flex-wrap mb-6">
         <button onClick={() => setSelectedCat('all')}
-          className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-            selectedCat === 'all' ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
+          className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${selectedCat === 'all' ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
           style={selectedCat === 'all' ? { backgroundColor: 'var(--color-primary)' } : {}}>
           All
         </button>
         {categories.map(cat => (
           <button key={cat.slug} onClick={() => setSelectedCat(cat.slug)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              selectedCat === cat.slug ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${selectedCat === cat.slug ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
             style={selectedCat === cat.slug ? { backgroundColor: 'var(--color-primary)' } : {}}>
             {cat.name}
           </button>

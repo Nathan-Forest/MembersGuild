@@ -74,10 +74,10 @@ public class SquareService
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
 
-        var accessToken  = root.GetProperty("access_token").GetString()!;
+        var accessToken = root.GetProperty("access_token").GetString()!;
         var refreshToken = root.GetProperty("refresh_token").GetString()!;
-        var merchantId   = root.GetProperty("merchant_id").GetString()!;
-        var expiresAt    = root.GetProperty("expires_at").GetString()!;
+        var merchantId = root.GetProperty("merchant_id").GetString()!;
+        var expiresAt = root.GetProperty("expires_at").GetString()!;
 
         // Fetch merchant name + default location
         var (merchantName, locationId) = await GetMerchantInfoAsync(accessToken, merchantId);
@@ -92,14 +92,14 @@ public class SquareService
             _platformDb.SquareConnections.Add(existing);
         }
 
-        existing.MerchantId             = merchantId;
-        existing.MerchantName           = merchantName;
-        existing.LocationId             = locationId;
-        existing.AccessTokenEncrypted   = Encrypt(accessToken);
-        existing.RefreshTokenEncrypted  = Encrypt(refreshToken);
-        existing.TokenExpiresAt         = DateTime.Parse(expiresAt).ToUniversalTime();
-        existing.IsActive               = true;
-        existing.UpdatedAt              = DateTime.UtcNow;
+        existing.MerchantId = merchantId;
+        existing.MerchantName = merchantName;
+        existing.LocationId = locationId;
+        existing.AccessTokenEncrypted = Encrypt(accessToken);
+        existing.RefreshTokenEncrypted = Encrypt(refreshToken);
+        existing.TokenExpiresAt = DateTime.Parse(expiresAt).ToUniversalTime();
+        existing.IsActive = true;
+        existing.UpdatedAt = DateTime.UtcNow;
 
         await _platformDb.SaveChangesAsync();
 
@@ -155,6 +155,43 @@ public class SquareService
         return Decrypt(connection.AccessTokenEncrypted);
     }
 
+    public async Task<string> CreatePaymentAsync(int clubId, string sourceId, decimal amountAud, string orderReference)
+    {
+        var connection = await _platformDb.SquareConnections
+            .FirstOrDefaultAsync(s => s.ClubId == clubId && s.IsActive)
+            ?? throw new InvalidOperationException("Square is not connected for this club.");
+
+        var accessToken = Decrypt(connection.AccessTokenEncrypted);
+        var baseUrl = IsSandbox()
+            ? "https://connect.squareupsandbox.com"
+            : "https://connect.squareup.com";
+
+        using var http = new HttpClient();
+        http.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
+        http.DefaultRequestHeaders.Add("Square-Version", "2024-01-18");
+
+        var amountCents = (long)Math.Round(amountAud * 100);
+
+        var body = new
+        {
+            source_id = sourceId,
+            idempotency_key = Guid.NewGuid().ToString(),
+            amount_money = new { amount = amountCents, currency = "AUD" },
+            location_id = connection.LocationId,
+            reference_id = orderReference,
+            note = $"MembersGuild order {orderReference}",
+        };
+
+        var response = await http.PostAsJsonAsync($"{baseUrl}/v2/payments", body);
+        var json = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException($"Square payment failed: {json}");
+
+        using var doc = JsonDocument.Parse(json);
+        return doc.RootElement.GetProperty("payment").GetProperty("id").GetString()!;
+    }
+
     // ── Connection status ─────────────────────────────────────────────────────
 
     public async Task<object?> GetStatusAsync(int clubId)
@@ -166,12 +203,12 @@ public class SquareService
 
         return new
         {
-            connected    = true,
+            connected = true,
             merchantName = connection.MerchantName,
-            merchantId   = connection.MerchantId,
-            locationId   = connection.LocationId,
-            connectedAt  = connection.ConnectedAt,
-            expiresAt    = connection.TokenExpiresAt,
+            merchantId = connection.MerchantId,
+            locationId = connection.LocationId,
+            connectedAt = connection.ConnectedAt,
+            expiresAt = connection.TokenExpiresAt,
         };
     }
 
@@ -199,7 +236,7 @@ public class SquareService
 
             await http.PostAsJsonAsync($"{baseUrl}/oauth2/revoke", new
             {
-                client_id    = _config["Square:AppId"],
+                client_id = _config["Square:AppId"],
                 access_token = accessToken,
             });
         }
@@ -208,8 +245,8 @@ public class SquareService
             _logger.LogWarning("Failed to revoke Square token: {Message}", ex.Message);
         }
 
-        connection.IsActive   = false;
-        connection.UpdatedAt  = DateTime.UtcNow;
+        connection.IsActive = false;
+        connection.UpdatedAt = DateTime.UtcNow;
         await _platformDb.SaveChangesAsync();
     }
 
@@ -233,10 +270,10 @@ public class SquareService
             var parts = state.Split('.');
             if (parts.Length != 2) return ("", false);
 
-            var payload   = Encoding.UTF8.GetString(Convert.FromBase64String(parts[0]));
+            var payload = Encoding.UTF8.GetString(Convert.FromBase64String(parts[0]));
             var signature = parts[1];
-            var secret    = _config["JWT_SECRET"] ?? "fallback";
-            var key       = Encoding.UTF8.GetBytes(secret);
+            var secret = _config["JWT_SECRET"] ?? "fallback";
+            var key = Encoding.UTF8.GetBytes(secret);
 
             using var hmac = new System.Security.Cryptography.HMACSHA256(key);
             var expected = Convert.ToHexString(
@@ -244,8 +281,8 @@ public class SquareService
 
             if (expected != signature) return ("", false);
 
-            var segments  = payload.Split(':');
-            var clubSlug  = segments[0];
+            var segments = payload.Split(':');
+            var clubSlug = segments[0];
             var timestamp = long.Parse(segments[1]);
 
             // State token expires after 10 minutes

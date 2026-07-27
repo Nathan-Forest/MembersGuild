@@ -14,15 +14,18 @@ public class SquareController : ControllerBase
     private readonly SquareService _square;
     private readonly PlatformDbContext _platformDb;
     private readonly ClubContext _clubContext;
+    private readonly IConfiguration _config;
 
     public SquareController(
         SquareService square,
         PlatformDbContext platformDb,
-        ClubContext clubContext)
+        ClubContext clubContext,
+        IConfiguration config)
     {
         _square = square;
         _platformDb = platformDb;
         _clubContext = clubContext;
+        _config = config;
     }
 
     // GET /api/square/connect — webmaster initiates OAuth
@@ -79,6 +82,29 @@ public class SquareController : ControllerBase
         {
             return Ok(new { redirectUrl = $"https://{clubSlug}.membersguild.com.au/management/settings?square_error={Uri.EscapeDataString(ex.Message)}" });
         }
+    }
+
+    // GET /api/square/available — any authenticated member; used to show/hide Pay by Card
+    [HttpGet("available")]
+    public async Task<IActionResult> Available()
+    {
+        var club = await _platformDb.Clubs
+            .FirstOrDefaultAsync(c => c.Slug == _clubContext.Slug);
+
+        if (club is null) return Ok(new { available = false });
+
+        var connection = await _platformDb.SquareConnections
+            .FirstOrDefaultAsync(s => s.ClubId == club.Id && s.IsActive);
+
+        if (connection is null) return Ok(new { available = false });
+
+        return Ok(new
+        {
+            available = true,
+            applicationId = _config["Square:AppId"],
+            locationId = connection.LocationId,
+            environment = _config["Square:Environment"]?.ToLower() == "production" ? "production" : "sandbox",
+        });
     }
 
     // GET /api/square/status — check connection status
