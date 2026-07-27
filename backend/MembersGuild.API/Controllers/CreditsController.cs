@@ -64,5 +64,5 @@ public class CreditsController : ControllerBase
 
     private bool HasRole(params string[] roles) =>
         roles.Any(r => User.IsInRole(r));
-    private bool CanManageCredits() => HasRole("finance", "webmaster");
+    private bool CanManageCredits() => HasRole("finance", "webmaster", "membership");
 }

@@ -38,6 +38,16 @@ interface UpcomingSession {
   creditCost: number
 }
 
+interface CreditTransaction {
+  id: number
+  amount: number
+  balanceAfter: number
+  transactionLabel: string
+  notes: string | null
+  createdAt: string
+  addedByName: string | null
+}
+
 type ModalTab = 'details' | 'emergency' | 'credits' | 'role' | 'sessions'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -173,7 +183,7 @@ export default function MembersPage() {
   // Search / filter
   const [search, setSearch] = useState('')
   const [creditFilter, setCreditFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('') 
+  const [statusFilter, setStatusFilter] = useState('')
 
   // Checkbox selection for bulk actions
   const [checkedIds, setCheckedIds] = useState<number[]>([])
@@ -191,6 +201,9 @@ export default function MembersPage() {
   const [joinedAtEdit, setJoinedAtEdit] = useState('')
   const [assocNumberEdit, setAssocNumberEdit] = useState('')
   const [dobEdit, setDobEdit] = useState('')
+
+  const [creditHistory, setCreditHistory] = useState<CreditTransaction[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
 
   // Add member modal
   const [addModalOpen, setAddModalOpen] = useState(false)
@@ -307,6 +320,10 @@ export default function MembersPage() {
         .then(setMemberSessions)
         .catch(() => { })
         .finally(() => setLoadingSessions(false))
+      api.get<CreditTransaction[]>(`/credits/transactions?userId=${id}`)
+        .then(setCreditHistory)
+        .catch(() => { })
+        .finally(() => setLoadingHistory(false))
       // ──────────────────────────────────────────────────────
     } catch { }
   }
@@ -578,6 +595,7 @@ export default function MembersPage() {
   const user = getCurrentUser()
   const canManage = user ? hasPermission(user, 'membership', 'webmaster') : false
   const canManageCredits = user ? hasPermission(user, 'finance', 'webmaster', 'membership') : false
+  const canViewCreditHistory = user ? hasPermission(user, 'finance', 'webmaster', 'membership') : false
   const isWebmaster = user ? hasPermission(user, 'webmaster') : false
   const validImportRows = importRows.filter(r => r.errors.length === 0).length
   const allChecked = members.length > 0 && checkedIds.length === members.length
@@ -1079,7 +1097,47 @@ export default function MembersPage() {
                       await loadData()
                       const detail = await api.get<MemberDetailResponse>(`/members/${selected.id}`)
                       setSelected(detail)
+                      const history = await api.get<CreditTransaction[]>(`/credits/transactions?userId=${selected.id}`)
+                      setCreditHistory(history)
                     }} />
+                  )}
+
+                  {canViewCreditHistory && (
+                    <div className="border-t border-gray-100 pt-4">
+                      <p className="text-sm font-medium text-gray-700 mb-3">Transaction History</p>
+                      {loadingHistory ? (
+                        <div className="space-y-2">
+                          {[1, 2, 3].map(i => <div key={i} className="h-12 rounded-lg bg-gray-100 animate-pulse" />)}
+                        </div>
+                      ) : creditHistory.length === 0 ? (
+                        <p className="text-sm text-gray-400">No transactions recorded</p>
+                      ) : (
+                        <div className="space-y-2 max-h-80 overflow-y-auto">
+                          {creditHistory.map(t => (
+                            <div key={t.id} className="flex items-start justify-between rounded-lg border border-gray-100 px-3 py-2.5">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm font-medium text-gray-800">{t.transactionLabel}</span>
+                                  <span className={`text-sm font-semibold ${t.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    {t.amount > 0 ? '+' : ''}{t.amount}
+                                  </span>
+                                </div>
+                                {t.notes && <p className="text-xs text-gray-500 mt-0.5">{t.notes}</p>}
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                  {new Date(t.createdAt).toLocaleDateString('en-AU', {
+                                    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                                  })}
+                                  {t.addedByName && ` · by ${t.addedByName}`}
+                                </p>
+                              </div>
+                              <span className="text-xs text-gray-400 flex-shrink-0 ml-3">
+                                Bal: {t.balanceAfter}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               )}

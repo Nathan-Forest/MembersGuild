@@ -20,7 +20,8 @@ public record TransactionResponse(
     int? ReferenceId,
     string? ReferenceType,
     string? Notes,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string? AddedByName
 );
 
 public record AdjustCreditsRequest(

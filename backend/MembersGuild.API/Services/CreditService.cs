@@ -21,14 +21,14 @@ public class CreditService : ICreditService
 
     private static readonly Dictionary<string, string> TypeLabels = new()
     {
-        ["session_booking"]   = "Session booking",
-        ["session_refund"]    = "Session refund",
-        ["nsba_refund"]       = "NSBA refund",
-        ["manual_add"]        = "Credits added",
-        ["manual_remove"]     = "Credits removed",
-        ["shop_purchase"]     = "Shop purchase",
-        ["shop_refund"]       = "Shop refund",
-        ["cats_initial"]      = "Welcome credits",
+        ["session_booking"] = "Session booking",
+        ["session_refund"] = "Session refund",
+        ["nsba_refund"] = "NSBA refund",
+        ["manual_add"] = "Credits added",
+        ["manual_remove"] = "Credits removed",
+        ["shop_purchase"] = "Shop purchase",
+        ["shop_refund"] = "Shop refund",
+        ["cats_initial"] = "Welcome credits",
         ["payment_confirmed"] = "Payment confirmed",
     };
 
@@ -49,12 +49,15 @@ public class CreditService : ICreditService
             .Where(o => o.UserId == userId && o.Status == OrderStatus.Pending)
             .SumAsync(o => o.TotalCredits);
 
-        var transactions = await db.CreditTransactions
+        var transactionRows = await db.CreditTransactions
             .Where(t => t.UserId == userId)
             .OrderByDescending(t => t.CreatedAt)
             .Take(50)
-            .Select(t => MapTransaction(t, null))
             .ToListAsync();
+
+        var transactions = transactionRows
+            .Select(t => MapTransaction(t, null, null))
+            .ToList();
 
         return new MyAccountResponse(user.CreditBalance, pendingCredits, transactions);
     }
@@ -75,7 +78,20 @@ public class CreditService : ICreditService
             .Take(200)
             .ToListAsync();
 
-        return transactions.Select(t => MapTransaction(t, t.User?.FullName)).ToList();
+        var creatorIds = transactions
+            .Where(t => t.CreatedBy.HasValue)
+            .Select(t => t.CreatedBy!.Value)
+            .Distinct()
+            .ToList();
+
+        var creatorNames = await db.Users
+            .Where(u => creatorIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.FullName);
+
+        return transactions.Select(t => MapTransaction(
+            t, t.User?.FullName,
+            t.CreatedBy.HasValue ? creatorNames.GetValueOrDefault(t.CreatedBy.Value, "Unknown") : "System"
+        )).ToList();
     }
 
     public async Task<List<CreditBalanceResponse>> GetAllBalancesAsync()
@@ -108,38 +124,38 @@ public class CreditService : ICreditService
         var user = await db.Users.FindAsync(request.UserId)
             ?? throw new InvalidOperationException("User not found");
 
+        var adjuster = await db.Users.FindAsync(adjustedBy);
+
         var newBalance = user.CreditBalance + request.Amount;
         user.CreditBalance = newBalance;
-        user.UpdatedAt     = DateTime.UtcNow;
+        user.UpdatedAt = DateTime.UtcNow;
 
         var type = request.Amount > 0 ? TransactionTypes.ManualAdd : TransactionTypes.ManualRemove;
 
         var transaction = new CreditTransaction
         {
-            UserId          = user.Id,
-            Amount          = request.Amount,
-            BalanceAfter    = newBalance,
+            UserId = user.Id,
+            Amount = request.Amount,
+            BalanceAfter = newBalance,
             TransactionType = type,
-            Notes           = request.Notes,
-            CreatedBy       = adjustedBy,
+            Notes = request.Notes,
+            CreatedBy = adjustedBy,
         };
 
         db.CreditTransactions.Add(transaction);
         await db.SaveChangesAsync();
 
-        // ── Credit alert hook ─────────────────────────────────────
-        // Only check on deductions (negative amount)
         if (request.Amount < 0)
             await _creditAlerts.CheckAndSendAsync(user.Id, newBalance);
-        // ─────────────────────────────────────────────────────────
 
-        return MapTransaction(transaction, user.FullName);
+        return MapTransaction(transaction, user.FullName, adjuster?.FullName ?? "Unknown");
     }
 
-    private static TransactionResponse MapTransaction(CreditTransaction t, string? userName) => new(
-        t.Id, t.UserId, userName, t.Amount, t.BalanceAfter,
-        t.TransactionType,
-        TypeLabels.GetValueOrDefault(t.TransactionType, t.TransactionType),
-        t.ReferenceId, t.ReferenceType, t.Notes, t.CreatedAt
-    );
+    private static TransactionResponse MapTransaction(CreditTransaction t, string? userName, string? addedByName = null) => new(
+    t.Id, t.UserId, userName, t.Amount, t.BalanceAfter,
+    t.TransactionType,
+    TypeLabels.GetValueOrDefault(t.TransactionType, t.TransactionType),
+    t.ReferenceId, t.ReferenceType, t.Notes, t.CreatedAt,
+    addedByName
+);
 }
