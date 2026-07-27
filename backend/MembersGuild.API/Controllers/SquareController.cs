@@ -44,33 +44,40 @@ public class SquareController : ControllerBase
     {
         if (!string.IsNullOrEmpty(error))
         {
-            return Redirect($"https://membersguild.com.au/management/settings" +
-                            $"?square_error={Uri.EscapeDataString(error)}");
+            // Try to recover the club slug from state even on error, so the user
+            // lands back on their own club's settings rather than the root domain
+            var (errorSlug, errorValid) = state is not null
+                ? _square.ValidateStateToken(state)
+                : (null, false);
+
+            var target = errorValid
+                ? $"https://{errorSlug}.membersguild.com.au/management/settings?square_error={Uri.EscapeDataString(error)}"
+                : $"https://membersguild.com.au/management/settings?square_error={Uri.EscapeDataString(error)}";
+
+            return Ok(new { redirectUrl = target });
         }
 
         if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
-            return BadRequest(new { error = "Missing code or state" });
+            return Ok(new { redirectUrl = "https://membersguild.com.au/management/settings?square_error=missing_code_or_state" });
 
         var (clubSlug, valid) = _square.ValidateStateToken(state);
         if (!valid)
-            return BadRequest(new { error = "Invalid or expired state token" });
+            return Ok(new { redirectUrl = "https://membersguild.com.au/management/settings?square_error=invalid_state" });
 
         var club = await _platformDb.Clubs
             .FirstOrDefaultAsync(c => c.Slug == clubSlug && c.IsActive);
 
         if (club is null)
-            return NotFound(new { error = "Club not found" });
+            return Ok(new { redirectUrl = "https://membersguild.com.au/management/settings?square_error=club_not_found" });
 
         try
         {
             await _square.ExchangeCodeAsync(code, club.Id);
-            return Redirect($"https://{clubSlug}.membersguild.com.au/management/settings" +
-                            $"?square_connected=true");
+            return Ok(new { redirectUrl = $"https://{clubSlug}.membersguild.com.au/management/settings?square_connected=true" });
         }
         catch (Exception ex)
         {
-            return Redirect($"https://{clubSlug}.membersguild.com.au/management/settings" +
-                            $"?square_error={Uri.EscapeDataString(ex.Message)}");
+            return Ok(new { redirectUrl = $"https://{clubSlug}.membersguild.com.au/management/settings?square_error={Uri.EscapeDataString(ex.Message)}" });
         }
     }
 

@@ -31,23 +31,19 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
     const res = await fetch(callbackUrl, {
       method: request.method,
       headers: { 'Content-Type': 'application/json' },
-      redirect: 'manual',  // ← don't follow redirects — pass them through
       cache: 'no-store',
+      // no redirect: 'manual' needed — backend now returns plain JSON, never a redirect
     })
 
-    // If backend returns a redirect, forward it to the browser
-    if (res.status === 301 || res.status === 302 || res.status === 307 || res.status === 308) {
-      const location = res.headers.get('location')
-      if (location) {
-        return NextResponse.redirect(location)
-      }
+    let redirectUrl = 'https://membersguild.com.au/management/settings?square_error=proxy_failed'
+    try {
+      const data = await res.json()
+      if (data.redirectUrl) redirectUrl = data.redirectUrl
+    } catch {
+      // fall through to the default error redirect above
     }
 
-    const body = await res.text()
-    return new NextResponse(body, {
-      status: res.status,
-      headers: { 'Content-Type': res.headers.get('Content-Type') ?? 'application/json' }
-    })
+    return NextResponse.redirect(redirectUrl)
   }
 
   // ... existing handler logic continues unchanged below
