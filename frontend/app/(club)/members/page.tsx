@@ -388,8 +388,12 @@ export default function MembersPage() {
       await api.put(`/members/${id}/active`, !current)
       await loadData()
       if (selected) setSelected({ ...selected, isActive: !current })
+      alert('About to set statusChangeMsg to: ' + (!current ? 'ACTIVE' : 'INACTIVE'))
       setStatusChangeMsg(!current ? 'ACTIVE' : 'INACTIVE')
-    } catch { }
+      alert('statusChangeMsg has been set — check DOM now')
+    } catch (err) {
+      alert('ERROR in handleToggleActive: ' + (err instanceof Error ? err.message : String(err)))
+    }
   }
 
   async function handleResetPassword(id: number) {
@@ -830,7 +834,7 @@ export default function MembersPage() {
 
             <div className="p-6">
 
-             
+
               {/* Details tab */}
               {modalTab === 'details' && (
                 <div className="space-y-4">
