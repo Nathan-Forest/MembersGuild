@@ -73,6 +73,7 @@ builder.Services.AddScoped<ReportsService>();
 builder.Services.AddScoped<PlatformService>();
 builder.Services.AddScoped<StorageService>();
 builder.Services.AddScoped<CreditAlertService>();
+builder.Services.AddScoped<BackupsService>();
 builder.Services.AddResend(options =>
 {
     options.ApiToken = builder.Configuration["Resend:ApiKey"] ?? "";
