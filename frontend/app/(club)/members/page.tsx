@@ -238,6 +238,8 @@ export default function MembersPage() {
   const [emergencyNameEdit, setEmergencyNameEdit] = useState('')
   const [emergencyPhoneEdit, setEmergencyPhoneEdit] = useState('')
 
+  const [statusChangeMsg, setStatusChangeMsg] = useState<string | null>(null)
+
   // ── Init ───────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -386,6 +388,7 @@ export default function MembersPage() {
       await api.put(`/members/${id}/active`, !current)
       await loadData()
       if (selected) setSelected({ ...selected, isActive: !current })
+      setStatusChangeMsg(!current ? 'ACTIVE' : 'INACTIVE')
     } catch { }
   }
 
@@ -826,6 +829,27 @@ export default function MembersPage() {
             </div>
 
             <div className="p-6">
+
+              {/* ── Status Change Confirmation ───────────────────────────────────────── */}
+              {statusChangeMsg && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+                  <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8 text-center space-y-4">
+                    <p className="text-4xl">{statusChangeMsg === 'ACTIVE' ? '✅' : '⏸️'}</p>
+                    <div>
+                      <p className="text-lg font-bold text-gray-900">Membership Status Changed</p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Status set to{' '}
+                        <span className={`font-semibold ${statusChangeMsg === 'ACTIVE' ? 'text-green-600' : 'text-gray-600'}`}>
+                          {statusChangeMsg}
+                        </span>
+                      </p>
+                    </div>
+                    <button onClick={() => setStatusChangeMsg(null)} className="btn-primary w-full py-2.5">
+                      Close
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Details tab */}
               {modalTab === 'details' && (
