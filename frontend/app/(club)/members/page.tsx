@@ -388,12 +388,8 @@ export default function MembersPage() {
       await api.put(`/members/${id}/active`, !current)
       await loadData()
       if (selected) setSelected({ ...selected, isActive: !current })
-      alert('About to set statusChangeMsg to: ' + (!current ? 'ACTIVE' : 'INACTIVE'))
       setStatusChangeMsg(!current ? 'ACTIVE' : 'INACTIVE')
-      alert('statusChangeMsg has been set — check DOM now')
-    } catch (err) {
-      alert('ERROR in handleToggleActive: ' + (err instanceof Error ? err.message : String(err)))
-    }
+    } catch { }
   }
 
   async function handleResetPassword(id: number) {

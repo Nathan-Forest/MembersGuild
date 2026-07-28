@@ -132,7 +132,7 @@ public class MembersController : ControllerBase
         if (!CanManageMembers()) return Forbid();
 
         var success = await _members.SetActiveAsync(id, isActive);
-        return success ? Ok() : NotFound();
+        return success ? Ok(new { isActive }) : NotFound();
     }
 
     /// <summary>POST /api/members/{id}/reset-password — Webmaster only</summary>
