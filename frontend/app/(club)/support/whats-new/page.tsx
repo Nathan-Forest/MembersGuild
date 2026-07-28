@@ -17,21 +17,43 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'July 2026',
+    date: '28 July 2026',
+    label: 'Latest',
+    summary: 'Facility cost tracking, backups and exports, Square card payments, and a big batch of member management improvements.',
+    changes: [
+      { type: 'new', text: 'Pay by Card — clubs with Square connected can now accept instant card payments in the shop, alongside bank transfer' },
+      { type: 'new', text: 'Pool tracking — record which pool and how many lanes were used per session, with configurable hire fees' },
+      { type: 'new', text: 'New Facility Cost report — see the calculated hire cost per session, exportable to CSV over any date range' },
+      { type: 'new', text: 'New Backups & Exports page — download full attendance, membership, and credit history data as CSV for your own records' },
+      { type: 'new', text: 'Credit transaction history — see exactly who added or adjusted a member\'s credits, when, and why, right on their profile' },
+      { type: 'new', text: 'Cancel Session — cancel a session with one click, with credits automatically refunded to eligible members and a reason kept on record' },
+      { type: 'new', text: 'Guest registration and Quick CATS sign-up now available directly from the attendance sheet' },
+      { type: 'new', text: 'Members can now opt out of marketing communications from their profile — committee can export a marketing list of everyone who hasn\'t opted out' },
+      { type: 'new', text: 'Committee-level staff can now update a member\'s emergency contact and email address directly, with a safety check before changing anyone\'s login email' },
+      { type: 'improved', text: 'Attendance sheet location can now be changed after a session is created, the same way as reassigning a coach' },
+      { type: 'improved', text: 'Members page now shows a clearer breakdown of Active, Inactive and Total Membership numbers, with filtering by status' },
+      { type: 'improved', text: 'Confirmation message now shown whenever a member\'s status is changed to Active or Inactive' },
+      { type: 'fixed', text: 'Reports page no longer redirects staff back to the dashboard when opened' },
+      { type: 'fixed', text: 'Activating or deactivating a member now updates immediately, without needing to refresh the page' },
+    ],
+  },
+  {
     version: 'June 2026',
     date: '6 June 2026',
     label: 'Latest',
     summary: 'Attendance improvements, billing fixes, and a smoother onboarding experience.',
     changes: [
-      { type: 'new',      text: 'Attendance report recipients — save named contacts (e.g. President, Secretary) in Site Settings and tick them when sending a report' },
-      { type: 'new',      text: 'What\'s New page — release notes are now visible to all members' },
-      { type: 'fixed',    text: 'Attendance report emails now show the correct Brisbane date and time instead of UTC' },
-      { type: 'fixed',    text: 'Recurring sessions now created on the correct day of the week' },
-      { type: 'fixed',    text: 'Session times now display correctly in Brisbane local time throughout the portal' },
+      { type: 'new', text: 'Attendance report recipients — save named contacts (e.g. President, Secretary) in Site Settings and tick them when sending a report' },
+      { type: 'new', text: 'What\'s New page — release notes are now visible to all members' },
+      { type: 'fixed', text: 'Attendance report emails now show the correct Brisbane date and time instead of UTC' },
+      { type: 'fixed', text: 'Recurring sessions now created on the correct day of the week' },
+      { type: 'fixed', text: 'Session times now display correctly in Brisbane local time throughout the portal' },
       { type: 'improved', text: 'Attendance list now sorted soonest upcoming at top, most recent past at top' },
-      { type: 'fixed',    text: 'Custom roles (e.g. Club Captain) now correctly show all menu items based on inherited permissions' },
-      { type: 'fixed',    text: 'Club portal data now correctly isolated between clubs — no cross-club data leakage' },
-      { type: 'new',      text: 'Webmaster can now reset a member\'s password directly from the admin panel' },
-      { type: 'new',      text: 'Webmaster can now disable or enable a member\'s account' },
+      { type: 'fixed', text: 'Custom roles (e.g. Club Captain) now correctly show all menu items based on inherited permissions' },
+      { type: 'fixed', text: 'Club portal data now correctly isolated between clubs — no cross-club data leakage' },
+      { type: 'new', text: 'Webmaster can now reset a member\'s password directly from the admin panel' },
+      { type: 'new', text: 'Webmaster can now disable or enable a member\'s account' },
       { type: 'improved', text: 'Welcome email now includes getting started steps and support contact details' },
     ],
   },
@@ -57,9 +79,9 @@ const RELEASES: Release[] = [
 ]
 
 const TYPE_CONFIG = {
-  new:      { label: 'New',      bg: 'bg-green-50',  text: 'text-green-700',  border: 'border-green-200',  dot: 'bg-green-500'  },
-  fixed:    { label: 'Fixed',    bg: 'bg-blue-50',   text: 'text-blue-700',   border: 'border-blue-200',   dot: 'bg-blue-500'   },
-  improved: { label: 'Improved', bg: 'bg-amber-50',  text: 'text-amber-700',  border: 'border-amber-200',  dot: 'bg-amber-500'  },
+  new: { label: 'New', bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+  fixed: { label: 'Fixed', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500' },
+  improved: { label: 'Improved', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
 }
 
 export default function WhatsNewPage() {
@@ -102,14 +124,13 @@ export default function WhatsNewPage() {
                 <div className="flex items-center gap-2 mb-1">
                   <h2 className="text-lg font-bold text-gray-900">{release.version}</h2>
                   {release.label && (
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                      release.label === 'Latest'
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${release.label === 'Latest'
                         ? 'text-white'
                         : 'bg-gray-100 text-gray-500'
-                    }`}
-                    style={release.label === 'Latest'
-                      ? { backgroundColor: 'var(--color-primary)' }
-                      : {}}>
+                      }`}
+                      style={release.label === 'Latest'
+                        ? { backgroundColor: 'var(--color-primary)' }
+                        : {}}>
                       {release.label}
                     </span>
                   )}
