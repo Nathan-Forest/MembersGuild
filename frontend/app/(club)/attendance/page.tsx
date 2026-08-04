@@ -63,7 +63,7 @@ export default function AttendancePage() {
     const user = getCurrentUser()
     if (!user) { router.replace('/login'); return }
     const role = user.role as UserRole
-    if (!hasPermission(user, 'coach', 'committee', 'membership', 'finance', 'webmaster')) {
+    if (!hasPermission(user, 'coach', 'committee', 'membership', 'finance', 'webmaster', 'attendance')) {
       router.replace('/dashboard'); return
     }
     loadSessions()
