@@ -24,12 +24,16 @@ const BASE_ROLE_LABELS: Record<string, string> = {
   committee:  'Committee',
   membership: 'Membership',
   finance:    'Finance',
+  member:     'Member',
+  attendance: 'Attendance',
 }
 
 const BASE_ROLE_DESC: Record<string, string> = {
   committee:  'Session management, attendance, shop orders',
   membership: 'Member profiles, role changes, member import',
   finance:    'Credits, payment confirmation, financial reports',
+  member:     'Booking sessions, calendar, training, shop, my account',
+  attendance: 'View attendance sheets, mark attendance, walk-ins, guests, QR check-in',
 }
 
 export default function RolesPage() {

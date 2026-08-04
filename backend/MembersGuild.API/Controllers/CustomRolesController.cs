@@ -14,8 +14,8 @@ public class CustomRolesController : ControllerBase
     private readonly ClubDbContextFactory _dbFactory;
     public CustomRolesController(ClubDbContextFactory dbFactory) => _dbFactory = dbFactory;
 
-    private static readonly string[] LockedRoles = ["cats", "member", "coach", "webmaster"];
-    private static readonly string[] BaseRoles   = ["committee", "membership", "finance"];
+    private static readonly string[] LockedRoles = ["cats", "coach", "webmaster"];
+    private static readonly string[] BaseRoles = ["committee", "membership", "finance", "member", "attendance"];
 
     // GET /api/roles — all roles (custom + base info)
     [HttpGet]
@@ -29,11 +29,13 @@ public class CustomRolesController : ControllerBase
 
         return Ok(new
         {
-            baseRoles  = BaseRoles,
+            baseRoles = BaseRoles,
             lockedRoles = LockedRoles,
             customRoles = custom.Select(r => new
             {
-                r.Id, r.RoleName, r.DisplayLabel,
+                r.Id,
+                r.RoleName,
+                r.DisplayLabel,
                 inheritsFrom = r.BaseRoles,
             })
         });
@@ -65,7 +67,7 @@ public class CustomRolesController : ControllerBase
 
         var role = new ClubCustomRole
         {
-            RoleName     = roleName,
+            RoleName = roleName,
             DisplayLabel = req.DisplayLabel.Trim(),
             InheritsFrom = string.Join(",", req.InheritsFrom),
         };
@@ -96,7 +98,7 @@ public class CustomRolesController : ControllerBase
 }
 
 public record CreateCustomRoleRequest(
-    string   RoleName,
-    string   DisplayLabel,
+    string RoleName,
+    string DisplayLabel,
     string[] InheritsFrom
 );

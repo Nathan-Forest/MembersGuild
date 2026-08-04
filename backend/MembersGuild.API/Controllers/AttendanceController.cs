@@ -45,7 +45,7 @@ public class AttendanceController : ControllerBase
     private bool HasRole(params string[] roles) =>
         roles.Any(r => User.IsInRole(r));
     private bool CanManageAttendance() =>
-    HasRole("coach", "committee", "membership", "finance", "webmaster");
+    HasRole("coach", "committee", "membership", "finance", "webmaster", "attendance");
 
     // ── GET /api/attendance/sessions ────────────────────────────────────────
     [HttpGet("sessions")]

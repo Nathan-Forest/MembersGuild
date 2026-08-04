@@ -46,6 +46,7 @@ export type UserRole =
   | 'finance'
   | 'webmaster'
   | 'platform_admin'
+  | 'attendance'
 
 // ─── Role helpers ─────────────────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   finance: 'Finance',
   webmaster: 'Webmaster',
   platform_admin: 'Platform Admin',
+  attendance: "Attendance Marshal"
 }
 
 export function isStaff(role: UserRole): boolean {
