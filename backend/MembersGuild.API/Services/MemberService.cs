@@ -92,9 +92,18 @@ public class MemberService : IMemberService
             .Select(g => new { UserId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.UserId, x => x.Count);
 
+        var customRoleLabels = await db.ClubCustomRoles
+            .Where(r => r.IsActive)
+            .ToDictionaryAsync(r => r.RoleName, r => r.DisplayLabel);
+
+        string ResolveRoleLabel(string role) =>
+            RoleLabels.TryGetValue(role, out var builtIn) ? builtIn :
+            customRoleLabels.TryGetValue(role, out var custom) ? custom :
+            role;
+
         return users.Select(u => new MemberListResponse(
             u.Id, u.Email, u.FirstName, u.LastName, u.FullName,
-            u.Role, RoleLabels.GetValueOrDefault(u.Role, u.Role),
+            u.Role, ResolveRoleLabel(u.Role),
             u.CreditBalance, u.Phone, u.MemberNumber, u.ProfilePhotoUrl,
             u.IsActive, u.CreatedAt,
             upcomingCounts.GetValueOrDefault(u.Id, 0)
@@ -244,18 +253,18 @@ public class MemberService : IMemberService
     }
 
     public async Task<MemberStatsResponse> GetStatsAsync()
-{
-    await using var db = _dbFactory.CreateForCurrentClub();
-    var users = await db.Users.ToListAsync();
+    {
+        await using var db = _dbFactory.CreateForCurrentClub();
+        var users = await db.Users.ToListAsync();
 
-    return new MemberStatsResponse(
-        users.Count(u => u.Role != "coach" && u.IsActive),
-        users.Count(u => u.IsActive),
-        users.Count(u => !u.IsActive),
-        users.Count(u => u.CreditBalance > 0 && u.CreditBalance <= 2),
-        users.Count(u => u.CreditBalance <= 0)
-    );
-}
+        return new MemberStatsResponse(
+            users.Count(u => u.Role != "coach" && u.IsActive),
+            users.Count(u => u.IsActive),
+            users.Count(u => !u.IsActive),
+            users.Count(u => u.CreditBalance > 0 && u.CreditBalance <= 2),
+            users.Count(u => u.CreditBalance <= 0)
+        );
+    }
 
     public async Task<List<MarketingContactResponse>> GetMarketingContactsAsync()
     {

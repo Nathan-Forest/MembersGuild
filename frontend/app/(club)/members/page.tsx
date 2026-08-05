@@ -101,7 +101,8 @@ function roleBadgeClass(role: string) {
     case 'membership': return 'bg-indigo-100 text-indigo-800'
     case 'committee': return 'bg-cyan-100 text-cyan-800'
     case 'cats': return 'bg-amber-100 text-amber-800'
-    default: return 'bg-gray-100 text-gray-700'
+    case 'member': return 'bg-gray-100 text-gray-700'
+    default: return 'bg-pink-100 text-pink-800'   // anything else = a custom role
   }
 }
 
@@ -275,7 +276,9 @@ export default function MembersPage() {
             { value: 'member', label: 'Member' },
             { value: 'coach', label: 'Coach' },
           ]
-          const base = d.baseRoles.map(r => ({ value: r, label: r.charAt(0).toUpperCase() + r.slice(1) }))
+          const base = d.baseRoles
+            .filter(r => r !== 'member' && r !== 'attendance')   // inheritance-only, not directly assignable
+            .map(r => ({ value: r, label: r.charAt(0).toUpperCase() + r.slice(1) }))
           const custom = d.customRoles.map(r => ({ value: r.roleName, label: r.displayLabel }))
           setAvailableRoles([...locked, ...base, ...custom, { value: 'webmaster', label: 'Webmaster' }])
         })
